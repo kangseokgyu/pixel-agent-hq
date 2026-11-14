@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+dist/
+.wips-data.local.json
+.agents/
+drag-verification.png
+node_modules/
+*.log

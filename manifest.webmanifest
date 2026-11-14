@@ -1,0 +1,24 @@
+{
+  "name": "Pixel Agent HQ",
+  "short_name": "Pixel Agent HQ",
+  "description": "Interactive top-down virtual office powered by your own Notion read-only connection",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "theme_color": "#c96442",
+  "background_color": "#f4ece0",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

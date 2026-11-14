@@ -1,0 +1,4363 @@
+<!doctype html>
+<html lang="en" data-visualize-standalone>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#c96442">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; worker-src 'self'; manifest-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<title>Pixel Agent HQ</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+
+</head>
+<body>
+<iframe id="codex-visualization" sandbox="allow-scripts allow-same-origin" referrerpolicy="no-referrer" title="Pixel Agent HQ" data-srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot; data-visualize-standalone&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'&quot;&gt;
+&lt;title&gt;Pixel Agent HQ&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(
+    --background,
+    var(--color-background-primary, light-dark(rgb(255 255 255), rgb(24 24 24)))
+  ) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --color-background-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --card: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --card-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --popover: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255), rgb(45 45 45))
+  );
+  --popover-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --primary: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --primary-foreground: var(
+    --color-text-inverse,
+    light-dark(rgb(255 255 255), rgb(13 13 13))
+  );
+  --secondary: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%))
+  );
+  --secondary-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: var(
+    --color-text-secondary,
+    light-dark(rgb(26 28 31 / 49.4%), rgb(255 255 255 / 49.8%))
+  );
+  --accent: var(
+    --color-background-info,
+    light-dark(rgb(229 242 255), rgb(13 39 63))
+  );
+  --accent-foreground: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --destructive: var(
+    --color-text-warning,
+    light-dark(rgb(226 85 7), rgb(255 133 73))
+  );
+  --border: var(
+    --color-border-secondary,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+  --input: var(
+    --color-border-primary,
+    light-dark(
+      rgb(26 28 31 / 11.8%),
+      color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+    )
+  );
+  --ring: var(
+    --color-ring-primary,
+    light-dark(rgb(51 156 255), rgb(131 195 255 / 76%))
+  );
+  --font-size-base: var(--font-text-md-size, 16px);
+  --blue: light-dark(rgb(51 156 255), rgb(51 156 255));
+  --orange: light-dark(rgb(226 85 7), rgb(251 106 34));
+  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
+  --red: light-dark(rgb(224 46 42), rgb(255 103 100));
+  --purple: light-dark(rgb(146 79 247), rgb(173 123 249));
+  --yellow: light-dark(rgb(255 195 0), rgb(255 210 64));
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans:
+    -apple-system-body, ui-sans-serif, -apple-system, system-ui, &quot;Segoe UI&quot;,
+    Helvetica, &quot;Apple Color Emoji&quot;, Arial, sans-serif, &quot;Segoe UI Emoji&quot;,
+    &quot;Segoe UI Symbol&quot;;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --icon-size: 16px;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --corner-shape: round;
+  --radius: var(--border-radius-lg, 8px);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 2);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 17'%3E%3Cpath d='M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z'/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  /* Preserve MCP aliases for older inline renderers without creating :root cycles. */
+  --color-background-primary: var(
+    --background,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --color-text-primary: var(
+    --foreground,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --color-border-secondary: var(
+    --border,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+
+  margin: 0;
+  padding: var(--visualize-paint-gutter, 0px);
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans) !important;
+  -webkit-font-smoothing: antialiased;
+  font-size: var(--font-size-base);
+  line-height: calc(var(--font-size-base) * 1.625);
+  font-weight: var(--font-weight-normal);
+}
+
+.cursor-interaction {
+  cursor: var(--cursor-interaction, pointer);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: var(--cursor-interaction, pointer);
+  text-decoration: none;
+  text-underline-offset: 2px;
+  font-weight: inherit;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+li,
+.table {
+  font-family: var(--font-sans);
+}
+
+h1 {
+  font-size: calc(var(--font-size-base) * 1.5);
+  line-height: 1.3333333333;
+}
+
+h2 {
+  font-size: calc(var(--font-size-base) * 1.25);
+  line-height: 1.4;
+}
+h3 {
+  font-size: calc(var(--font-size-base) * 1.125);
+  line-height: 1.5555555556;
+}
+h4 {
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+}
+h5,
+h6 {
+  font-size: var(--font-size-base);
+  line-height: calc(var(--font-size-base) * 1.625);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+b,
+strong,
+th {
+  font-weight: 600;
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+pre,
+pre code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: calc(var(--font-size-base) * 0.875);
+  line-height: calc(var(--font-size-base) * 1.625);
+  font-family: var(--font-sans);
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+.table :is(th, td):not(:last-child) {
+  padding-inline-end: calc(var(--font-size-base) * 1.5);
+}
+
+.table-responsive &gt; .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead :is(th, td) {
+  border-bottom-color: var(--border-strong, var(--input));
+  padding-block: calc(var(--font-size-base) / 2);
+  line-height: var(--font-size-base);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+.table tbody :is(th, td) {
+  padding-block: calc(var(--font-size-base) * 0.625);
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 8px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align=&quot;right&quot;]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align=&quot;center&quot;]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: var(--corner-shape);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+.widget {
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  box-shadow: 0 0 0 0.5px var(--border-strong, var(--border));
+  color: var(--foreground);
+  background: var(--background);
+}
+
+#widget &gt; :not(.card, .widget, .progress) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  border: 1px solid var(--border);
+  corner-shape: var(--corner-shape);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+  font-family: var(--font-sans);
+  padding: 5px 12px;
+  border-color: color-mix(
+    in oklab,
+    light-dark(var(--primary-foreground), var(--foreground)) 5%,
+    transparent
+  );
+  border-radius: var(--radius-2xl);
+  color: light-dark(var(--primary-foreground), var(--foreground));
+  background: light-dark(var(--foreground), var(--popover));
+  box-shadow: 0 8px 18px rgb(15 23 42 / 20%);
+  letter-spacing: -0.15px;
+  font-size: calc(var(--font-size-base) * 14 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 14 / 16), 1px);
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+hr {
+  width: 100%;
+  height: 1px;
+  margin-block: 6px;
+  border: 0;
+  background: var(--border);
+}
+
+.nav {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress {
+  display: flex;
+  height: 8px;
+  margin-block: calc((var(--line-height-normal, 1.5em) - 8px) / 2);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+}
+
+.progress-bar:only-child {
+  border-radius: var(--radius-full);
+}
+
+.progress-bar {
+  height: 100%;
+  flex-shrink: 0;
+  border: 0;
+  background: var(--viz-series-1);
+}
+
+.viz-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  color: color-mix(in srgb, var(--foreground) 40%, var(--muted-foreground));
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  font-family: var(--font-sans);
+  font-size: calc(var(--font-size-base) * 14 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 14 / 16), 1px);
+  font-weight: var(--font-weight-normal);
+  line-height: 1;
+}
+
+small,
+.text-small {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.nav-link,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+/* Match inline alignment without overriding a containing flex or grid layout. */
+.btn,
+.nav-link,
+.form-control,
+.form-select,
+.form-range,
+.form-check {
+  vertical-align: middle;
+}
+
+.btn,
+.nav-link {
+  --btn-size: calc(12px + 2 * var(--control-spacing, 12px));
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  corner-shape: var(--corner-shape);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: inherit;
+  font-family: var(--font-sans);
+  height: fit-content;
+  min-height: var(--btn-size);
+  padding-inline: var(--control-spacing, 12px);
+  border-color: transparent;
+  border-radius: var(--radius-full);
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  font-size: calc(var(--font-size-base) * 14 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 14 / 16), 1px);
+  font-weight: var(--font-weight-normal);
+  line-height: 18px;
+}
+
+.btn {
+  border-color: var(--border);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+}
+
+/* Codex Button size=&quot;compact&quot;; appearance stays with the button variant. */
+.btn-sm {
+  --btn-size: 24px;
+  padding-inline: 8px;
+  font-size: calc(var(--font-size-base) * 12 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 12 / 16), 1px);
+  line-height: 16px;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: var(--cursor-interaction, pointer);
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover {
+  background: light-dark(
+    color-mix(in srgb, var(--foreground) 5.5%, transparent),
+    color-mix(in srgb, var(--foreground) 8%, transparent)
+  );
+}
+
+.nav-link:not(:disabled):not([aria-disabled=&quot;true&quot;]):hover {
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.btn-primary {
+  border-color: var(--border);
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: border-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: border-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--muted-foreground);
+  background: light-dark(
+    color-mix(in srgb, var(--foreground) 5.5%, transparent),
+    color-mix(in srgb, var(--foreground) 8%, transparent)
+  );
+}
+
+.nav-pills .nav-link {
+  min-width: 0;
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.nav-justified .nav-link {
+  flex: 1 1 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.nav-pills .nav-link.active {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+/* Shared preview chrome; product styles stay inside each variant. */
+.viz-dotted-background {
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--foreground) 14%, transparent) 0.8px,
+    transparent 0.8px
+  );
+  background-position: center;
+  background-size: 16px 16px;
+}
+
+.viz-carousel {
+  position: relative;
+  min-width: 0;
+}
+
+.viz-carousel:has(&gt; .viz-carousel-controls) {
+  min-height: calc(60px + var(--viz-carousel-picker-height, 0px));
+  padding-bottom: 60px;
+}
+
+.viz-carousel &gt; [data-variant][hidden] {
+  display: none !important;
+}
+
+.viz-carousel &gt; [data-variant] {
+  isolation: isolate;
+}
+
+.viz-carousel-controls {
+  --viz-carousel-hover: light-dark(
+    color-mix(in srgb, var(--foreground) 5.4%, transparent),
+    color-mix(in srgb, var(--foreground) 7.8%, transparent)
+  );
+  position: absolute;
+  z-index: 2;
+  bottom: 8px;
+  left: 50%;
+  display: flex;
+  width: max-content;
+  /* Leave room for the host's design-controls launcher at the trailing edge. */
+  max-width: calc(100% - 96px);
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-sans);
+  /* Match the settings dropdown chrome independently of the content font size. */
+  font-size: 13px;
+  font-weight: var(--font-weight-normal);
+  line-height: 18px;
+  transform: translateX(-50%);
+  user-select: none;
+}
+
+/* Keep authored mockup button styles out of the shared carousel chrome. */
+.viz-carousel-controls button,
+.viz-carousel-picker &gt; summary {
+  display: flex !important;
+  height: auto !important;
+  min-height: 30px;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px;
+  padding: 0 6px !important;
+  -webkit-app-region: no-drag;
+  border: 0 !important;
+  border-radius: 14px !important;
+  color: inherit !important;
+  background: transparent !important;
+  font: inherit !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.viz-carousel-controls &gt; button,
+.viz-carousel-picker &gt; summary {
+  position: relative;
+  isolation: isolate;
+}
+
+.viz-carousel-controls &gt; button {
+  --icon-size: 16px;
+  width: 30px !important;
+  padding: 0 !important;
+}
+
+.viz-carousel-picker &gt; summary {
+  padding-inline: 12px !important;
+}
+
+.viz-carousel-controls .viz-carousel-caret {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  margin: 0;
+  color: inherit;
+  transform: rotate(180deg);
+}
+
+.viz-carousel-controls &gt; button &gt; svg,
+.viz-carousel-controls .viz-carousel-caret,
+.viz-carousel-count {
+  opacity: 0.5;
+}
+
+.viz-carousel-controls &gt; button::before,
+.viz-carousel-picker &gt; summary::before {
+  position: absolute;
+  z-index: -1;
+  inset: 3px;
+  border-radius: 12px;
+  content: &quot;&quot;;
+  pointer-events: none;
+}
+
+.viz-carousel-controls &gt; button:hover::before,
+.viz-carousel-picker &gt; summary:hover::before {
+  background: var(--viz-carousel-hover);
+}
+
+.viz-carousel-controls &gt; button,
+.viz-carousel-controls [data-lucide],
+.viz-carousel-controls .lucide {
+  flex-shrink: 0;
+}
+
+.viz-carousel-picker {
+  min-width: 0;
+}
+
+.viz-carousel-picker &gt; summary {
+  min-width: 0;
+  list-style: none;
+}
+
+.viz-carousel-picker &gt; summary::-webkit-details-marker {
+  display: none;
+}
+
+.viz-carousel-count {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.viz-carousel-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viz-carousel-options {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px);
+  left: 0;
+  display: flex;
+  max-height: 240px;
+  flex-direction: column;
+  gap: 2px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--background);
+  box-shadow: 0 4px 12px light-dark(rgb(0 0 0 / 6%), rgb(0 0 0 / 25%));
+}
+
+.viz-carousel-options &gt; button {
+  border-radius: max(0px, calc(var(--radius-lg) - 5px)) !important;
+  width: 100% !important;
+  min-height: 28px;
+  justify-content: flex-start !important;
+  padding: 4px 8px !important;
+  font-size: var(--font-size-small) !important;
+  text-align: start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.viz-carousel-options &gt; [aria-current=&quot;true&quot;],
+.viz-carousel-options &gt; button:hover {
+  background: var(--viz-carousel-hover) !important;
+}
+
+.btn:disabled,
+.nav-link:disabled,
+.nav-link[aria-disabled=&quot;true&quot;] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  height: calc(12px + 2 * var(--control-spacing, 12px));
+  min-height: calc(12px + 2 * var(--control-spacing, 12px));
+  padding-inline: calc(4px + var(--control-spacing, 12px) / 2);
+  border-color: var(--input);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--popover) 96%, transparent);
+  font-size: calc(var(--font-size-base) * 14 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 14 / 16), 1px);
+  font-weight: var(--font-weight-normal);
+  line-height: 1.4285714286;
+}
+.form-control:is(
+  [type=&quot;file&quot;],
+  [type=&quot;date&quot;],
+  [type=&quot;datetime-local&quot;],
+  [type=&quot;month&quot;],
+  [type=&quot;week&quot;],
+  [type=&quot;color&quot;]
+) {
+  height: calc(12px + 2 * var(--control-spacing, 12px));
+  min-height: calc(12px + 2 * var(--control-spacing, 12px));
+  line-height: 18px;
+}
+.form-control:is(
+  [type=&quot;date&quot;],
+  [type=&quot;datetime-local&quot;],
+  [type=&quot;month&quot;],
+  [type=&quot;week&quot;]
+) {
+  padding-inline: var(--control-spacing, 12px);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+  padding: 0;
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+  min-height: calc(10px + 2 * var(--control-spacing, 12px));
+  padding-inline: var(--control-spacing, 12px);
+  margin-inline-end: var(--control-spacing, 12px);
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: calc(12px + 2 * var(--control-spacing, 12px));
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: var(--corner-shape);
+}
+
+textarea.form-control {
+  height: auto;
+  resize: vertical;
+  min-height: 96px;
+  padding: 8px 10px;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: none;
+}
+.form-control:disabled {
+  color: var(--muted-foreground);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  opacity: 1;
+}
+.form-control[aria-invalid=&quot;true&quot;] {
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--red) 20%, transparent);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: fit-content;
+  min-height: calc(12px + 2 * var(--control-spacing, 12px));
+  margin: 0;
+  /* The secondary icon role is 14px at compact density and 16px at web density. */
+  --icon-size: calc(10px + var(--control-spacing, 12px) / 2);
+  /* Settings dropdowns retain a 12px inset and a 4px text-to-chevron gap. */
+  padding: 0 calc(16px + var(--icon-size)) 0 12px;
+  outline: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent calc(50% - 0.6px),
+      var(--muted-foreground) calc(50% - 0.6px) calc(50% + 0.6px),
+      transparent calc(50% + 0.6px)
+    ),
+    linear-gradient(
+      135deg,
+      transparent calc(50% - 0.6px),
+      var(--muted-foreground) calc(50% - 0.6px) calc(50% + 0.6px),
+      transparent calc(50% + 0.6px)
+    );
+  background-position:
+    calc(100% - 12px - var(--icon-size) / 2) 50%,
+    calc(100% - 12px - var(--icon-size) * 0.18) 50%;
+  background-repeat: no-repeat;
+  background-size: calc(var(--icon-size) * 0.32) calc(var(--icon-size) * 0.32);
+  cursor: var(--cursor-interaction, default);
+  font-size: calc(var(--font-size-base) * 14 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 14 / 16), 1px);
+  font-weight: var(--font-weight-normal);
+  line-height: 18px;
+}
+
+.form-select :is(option, optgroup) {
+  color: var(--popover-foreground);
+  background-color: var(--popover);
+}
+
+.form-select :is(option, optgroup):disabled {
+  color: var(--muted-foreground);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: light-dark(
+    color-mix(in srgb, var(--foreground) 5.5%, transparent),
+    color-mix(in srgb, var(--foreground) 8%, transparent)
+  );
+}
+
+.form-select:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+.form-select:disabled {
+  opacity: 0.4;
+}
+
+.form-check {
+  display: flex;
+  min-height: calc(12px + 2 * var(--control-spacing, 12px));
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  corner-shape: round;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  width: calc(10px + var(--control-spacing, 12px) / 2);
+  height: calc(10px + var(--control-spacing, 12px) / 2);
+  border-color: var(--border-strong, var(--input));
+  border-radius: calc(var(--radius-sm) / 2);
+  background-color: transparent;
+  color: var(--foreground);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:is(:checked, :indeterminate) {
+  border-color: var(--border-strong, var(--input));
+  background-color: color-mix(in srgb, var(--popover) 96%, transparent);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+  background-color: var(--foreground);
+}
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:indeterminate::before {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 65%;
+  height: 6.65%;
+  margin: auto;
+  border-radius: var(--radius-full);
+  background: var(--foreground);
+  mask: none;
+  content: &quot;&quot;;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  border-radius: var(--radius-full);
+  width: 16px;
+  height: 16px;
+  border: 0;
+  box-shadow: inset 0 0 0 1px var(--input);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 0;
+  background: radial-gradient(
+    circle,
+    var(--primary-foreground) 0 3px,
+    var(--foreground) 3px
+  );
+  box-shadow: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:focus-visible {
+  border-color: var(--ring);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+.form-check:not(.form-switch) .form-check-input[type=&quot;radio&quot;]:disabled,
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;radio&quot;]:disabled
+  + .form-check-label {
+  opacity: 0.5;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+  border-color: #fff;
+  background: #fff;
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--blue);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+  outline: none;
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  accent-color: var(--primary);
+  height: calc(12px + 2 * var(--control-spacing, 12px));
+  min-height: calc(12px + 2 * var(--control-spacing, 12px));
+  outline: none;
+  border-radius: var(--radius-full);
+  color: var(--foreground);
+  background: transparent;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  background: var(--form-range-track, var(--border));
+  height: 2px;
+  border-radius: var(--radius-full);
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  margin-top: -9px;
+  border-color: transparent;
+  background: currentColor;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Outline the native track and thumb, preserving the larger input hit area. */
+.form-range:focus-visible::-webkit-slider-runnable-track {
+  outline: 2px auto Highlight;
+  outline-color: -webkit-focus-ring-color;
+}
+
+.form-range::-moz-range-track {
+  background: var(--form-range-track, var(--border));
+  height: 2px;
+  border-radius: var(--radius-full);
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  border-color: transparent;
+  background: currentColor;
+  box-shadow: var(--shadow-sm);
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  outline: 2px solid Highlight;
+  outline-offset: 2px;
+}
+
+.form-range:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+  [aria-pressed=&quot;true&quot;],
+  [aria-selected=&quot;true&quot;],
+  .is-selected
+) {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--blue);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible,
+.nav-link:focus-visible {
+  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.viz-carousel-controls :is(button, summary):focus-visible {
+  outline: 2px solid var(--ring) !important;
+  outline-offset: 2px !important;
+}
+
+/* Web recipes are the default, including on renderers without inline style queries. */
+@supports (border-radius: if(style(--corner-shape: round): 1px; else: 2px)) {
+  /* Match the host's proportional text-sm scale at every text preference. */
+  .tooltip,
+  .viz-badge,
+  .btn,
+  .nav-link,
+  .form-control,
+  .form-select {
+    font-size: if(
+      style(--corner-shape: round): round(
+          nearest,
+          calc(var(--font-size-base) * 14 / 16),
+          1px
+        );
+        else: round(nearest, calc(var(--font-size-base) * 13 / 14), 1px)
+    );
+  }
+
+  .btn-sm {
+    font-size: if(
+      style(--corner-shape: round): round(
+          nearest,
+          calc(var(--font-size-base) * 12 / 16),
+          1px
+        );
+        else: round(nearest, calc(var(--font-size-base) * 12 / 14), 1px)
+    );
+  }
+
+  .btn,
+  .nav-link,
+  .form-select {
+    border-radius: if(
+      style(--corner-shape: round): var(--radius-full); else: var(--radius-lg)
+    );
+  }
+
+  .form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+    border-radius: if(
+      style(--corner-shape: round): calc(var(--radius-sm) / 2);
+        else: calc(var(--radius-lg) * 0.4)
+    );
+  }
+
+  .tooltip {
+    font-weight: if(
+      style(--corner-shape: round): 600; else: var(--font-weight-normal)
+    );
+  }
+}
+
+@media (pointer: coarse) {
+  .viz-carousel:has(&gt; .viz-carousel-controls) {
+    min-height: calc(76px + var(--viz-carousel-picker-height, 0px));
+    padding-bottom: 76px;
+  }
+
+  .btn,
+  .nav-link,
+  .viz-carousel-controls button,
+  .viz-carousel-picker &gt; summary,
+  .form-control,
+  .form-select {
+    --btn-size: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Keep small-screen WebKit from zooming when a text field receives focus. */
+  .form-control,
+  .form-select {
+    font-size: max(16px, calc(var(--font-size-base) * 14 / 16));
+    font-size: max(
+      16px,
+      round(nearest, calc(var(--font-size-base) * 14 / 16), 1px)
+    );
+  }
+  .form-control:is(
+    [type=&quot;file&quot;],
+    [type=&quot;date&quot;],
+    [type=&quot;datetime-local&quot;],
+    [type=&quot;month&quot;],
+    [type=&quot;week&quot;],
+    [type=&quot;time&quot;],
+    [type=&quot;color&quot;]
+  ) {
+    height: 44px;
+    min-height: 44px;
+    font-size: max(16px, calc(var(--font-size-base) * 14 / 16));
+    font-size: max(
+      16px,
+      round(nearest, calc(var(--font-size-base) * 14 / 16), 1px)
+    );
+  }
+
+  .form-control[type=&quot;file&quot;]::file-selector-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .form-control-color[type=&quot;color&quot;] {
+    width: 44px;
+    height: 44px;
+  }
+
+  .form-control:is(
+    [type=&quot;date&quot;],
+    [type=&quot;datetime-local&quot;],
+    [type=&quot;month&quot;],
+    [type=&quot;time&quot;],
+    [type=&quot;week&quot;]
+  ) {
+    min-width: 0;
+    max-width: 100%;
+    padding-block: 8px;
+  }
+
+  .form-check {
+    min-height: 44px;
+    padding-inline: 15px;
+  }
+
+  .form-check-input {
+    position: relative;
+  }
+
+  .form-check-input::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    content: &quot;&quot;;
+    transform: translate(-50%, -50%);
+  }
+
+  .form-check-label {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .form-range {
+    height: 44px;
+    touch-action: pan-y;
+  }
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+/* Model-authored chart rules can otherwise stretch icons after these styles load. */
+svg.lucide {
+  display: block;
+  width: var(--icon-size) !important;
+  height: var(--icon-size) !important;
+  flex: none;
+  margin: 0 !important;
+  stroke-width: 1.6;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;script type=&quot;application/json&quot; id=&quot;codex-visualization-widget-state&quot;&gt;__CODEX_VISUALIZATION_WIDGET_STATE__&lt;/script&gt;
+&lt;script&gt;(() =&gt; {
+  const root = document.documentElement;
+  const mediaQuery = globalThis.matchMedia(&quot;(prefers-color-scheme: dark)&quot;);
+  const apply = Reflect.apply;
+  const isArray = Array.isArray;
+  const hasOwn = Object.hasOwn;
+  const parentWindow = globalThis.parent;
+  const stringify = JSON.stringify;
+  const parse = JSON.parse;
+  const encode = TextEncoder.prototype.encode.bind(new TextEncoder());
+  const initialStateElement = document.getElementById(
+    &quot;codex-visualization-widget-state&quot;,
+  );
+  const initialGlobals = parse(initialStateElement?.textContent ?? &quot;{}&quot;);
+  initialStateElement?.remove();
+  /** @type {Record&lt;string, unknown&gt; | null} */
+  let state = initialGlobals.widgetState ?? null;
+  const statePersistence = initialGlobals.statePersistence ?? &quot;none&quot;;
+  let nextStateRequestId = 0;
+  /** @type {Map&lt;number, { resolve: () =&gt; void; reject: (error: Error) =&gt; void; timeout: ReturnType&lt;typeof globalThis.setTimeout&gt;; serializedState: string }&gt;} */
+  const pendingStateWrites = new Map();
+  const persistenceError = () =&gt;
+    Object.assign(
+      new Error(&quot;The host could not persist the widget state update&quot;),
+      {
+        code: -32000,
+        data: { code: &quot;widget_state_persistence_failed&quot;, retryable: false },
+      },
+    );
+  /**
+   * @param {object} prototype
+   * @param {string} property
+   */
+  const getPrototypeGetter = (prototype, property) =&gt; {
+    // oxlint-disable-next-line typescript/unbound-method -- invoked through captured Reflect.apply
+    const getter = Object.getOwnPropertyDescriptor(prototype, property)?.get;
+    if (getter == null) {
+      throw new Error(`Missing ${property} getter`);
+    }
+    return getter;
+  };
+  const getMessageData = getPrototypeGetter(MessageEvent.prototype, &quot;data&quot;);
+  const getMessagePorts = getPrototypeGetter(MessageEvent.prototype, &quot;ports&quot;);
+  const getMessageSource = getPrototypeGetter(MessageEvent.prototype, &quot;source&quot;);
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const addHostMessageListener = MessagePort.prototype.addEventListener;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const postHostMessage = MessagePort.prototype.postMessage;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const startHostPort = MessagePort.prototype.start;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const stopMessagePropagation = Event.prototype.stopImmediatePropagation;
+  /** @type {MessagePort | null} */
+  let hostPort = null;
+  const postToHost = (type, payload) =&gt; {
+    if (hostPort != null) {
+      apply(postHostMessage, hostPort, [{ type, ...payload }]);
+    }
+  };
+  const openExternal = ({ href }) =&gt; {
+    if (globalThis.navigator.userActivation?.isActive === true) {
+      postToHost(&quot;open-external&quot;, { href });
+    }
+  };
+  const sendFollowUpMessage = ({ context, prompt, title }) =&gt; {
+    if (globalThis.navigator.userActivation?.isActive === true) {
+      postToHost(&quot;follow-up&quot;, { context, prompt, title });
+    }
+    return Promise.resolve();
+  };
+  /**
+   * @param {Record&lt;string, unknown&gt; | ((previous: Record&lt;string, unknown&gt; | null) =&gt; Record&lt;string, unknown&gt;)} next
+   * @returns {Promise&lt;void&gt;}
+   */
+  const setWidgetState = async (next) =&gt; {
+    const nextState = typeof next === &quot;function&quot; ? next(state) : next;
+    if (
+      nextState == null ||
+      typeof nextState !== &quot;object&quot; ||
+      isArray(nextState)
+    ) {
+      throw new TypeError(&quot;Widget state must be a JSON object&quot;);
+    }
+    const inputState = stringify(
+      nextState,
+      (_key, /** @type {unknown} */ value) =&gt; {
+        if (
+          typeof value === &quot;undefined&quot; ||
+          typeof value === &quot;function&quot; ||
+          typeof value === &quot;symbol&quot; ||
+          (typeof value === &quot;number&quot; &amp;&amp; !Number.isFinite(value))
+        ) {
+          throw new TypeError(&quot;Widget state must be a JSON object&quot;);
+        }
+        return value;
+      },
+    );
+    const parsedState = parse(inputState);
+    if (
+      parsedState == null ||
+      typeof parsedState !== &quot;object&quot; ||
+      isArray(parsedState)
+    ) {
+      throw new TypeError(&quot;Widget state must be a JSON object&quot;);
+    }
+    const storedState = {
+      modelContent: null,
+      privateContent: null,
+      ...parsedState,
+    };
+    const serializedState = stringify(storedState);
+    if (encode(serializedState).length &gt; 16 * 1024) {
+      throw new TypeError(
+        &quot;Widget state must be a JSON object of at most 16 KiB&quot;,
+      );
+    }
+    if (
+      hasOwn(storedState, &quot;imageIds&quot;) &amp;&amp;
+      (!isArray(storedState.imageIds) ||
+        storedState.imageIds.some(
+          (/** @type {unknown} */ id) =&gt; typeof id !== &quot;string&quot;,
+        ))
+    ) {
+      throw new TypeError(&quot;Widget state imageIds must be an array of strings&quot;);
+    }
+    if (storedState.imageIds?.length &gt; 0) {
+      throw Object.assign(
+        new TypeError(&quot;Visualization state does not support image attachments&quot;),
+        { code: -32602, data: { code: &quot;images_unsupported&quot; } },
+      );
+    }
+    state = storedState;
+    globalThis.openai.widgetState = state;
+    globalThis.dispatchEvent(
+      new CustomEvent(&quot;openai:set_globals&quot;, {
+        detail: { globals: { widgetState: state } },
+      }),
+    );
+    if (statePersistence === &quot;none&quot;) {
+      throw persistenceError();
+    }
+    const id = ++nextStateRequestId;
+    return new Promise((resolve, reject) =&gt; {
+      const timeout = globalThis.setTimeout(() =&gt; {
+        pendingStateWrites.delete(id);
+        reject(persistenceError());
+      }, 30_000);
+      pendingStateWrites.set(id, { resolve, reject, timeout, serializedState });
+      postToHost(&quot;widget-state-write&quot;, { id, state: serializedState });
+    });
+  };
+  const mockElement = document.getElementById(&quot;codex-connector-mocks&quot;);
+  const connectorGlobals = {};
+  if (mockElement != null) {
+    const values = new Map(Object.entries(parse(mockElement.textContent)));
+    mockElement.remove();
+    connectorGlobals.visualizationData = {
+      updates: Array.from(values, ([name, value]) =&gt; ({
+        name,
+        revision: 1,
+        state: &quot;ready&quot;,
+        value: { type: &quot;json&quot;, value },
+      })),
+    };
+    connectorGlobals.visualization = {
+      /** @param {string} name @param {(value: unknown) =&gt; void} callback */
+      onData(name, callback) {
+        if (typeof callback !== &quot;function&quot;) {
+          throw new TypeError(&quot;onData requires a callback&quot;);
+        }
+        try {
+          callback(values.get(name));
+        } catch (error) {
+          // oxlint-disable-next-line no-console -- Keep authored callback failures local.
+          console.error(&quot;Live visualization data callback failed&quot;, error);
+        }
+        // A static preview delivers the current fixture once per subscription.
+        return () =&gt; {};
+      },
+    };
+  }
+  const syncTheme = () =&gt; {
+    const theme = mediaQuery.matches ? &quot;dark&quot; : &quot;light&quot;;
+    root.dataset.theme = theme;
+    globalThis.openai = {
+      ...globalThis.openai,
+      ...connectorGlobals,
+      openExternal,
+      sendFollowUpMessage,
+      setWidgetState,
+      theme,
+      visualizationStyleVariables: {},
+      visualizationTheme: theme,
+      widgetState: state,
+      statePersistence,
+      stateModelContext: &quot;none&quot;,
+    };
+    globalThis.dispatchEvent(
+      new CustomEvent(&quot;openai:set_globals&quot;, {
+        detail: { globals: globalThis.openai },
+      }),
+    );
+  };
+  const sendHeight = () =&gt; {
+    postToHost(&quot;height&quot;, {
+      height: Math.ceil(
+        Math.max(
+          document.body.scrollHeight,
+          document.body.getBoundingClientRect().height,
+        ),
+      ),
+    });
+  };
+
+  globalThis.addEventListener(
+    &quot;message&quot;,
+    (event) =&gt; {
+      const data = apply(getMessageData, event, []);
+      const ports = apply(getMessagePorts, event, []);
+      const source = apply(getMessageSource, event, []);
+      if (
+        hostPort != null ||
+        source !== parentWindow ||
+        typeof data !== &quot;object&quot; ||
+        data?.type !== &quot;codex-visualization-initialize&quot; ||
+        !isArray(ports) ||
+        ports.length !== 1
+      ) {
+        return;
+      }
+      apply(stopMessagePropagation, event, []);
+      const nextHostPort = ports[0];
+      try {
+        apply(addHostMessageListener, nextHostPort, [
+          &quot;message&quot;,
+          (event) =&gt; {
+            const data = apply(getMessageData, event, []);
+            if (typeof data === &quot;object&quot; &amp;&amp; data?.type === &quot;measure&quot;) {
+              sendHeight();
+            } else if (
+              typeof data === &quot;object&quot; &amp;&amp;
+              data?.type === &quot;widget-state-result&quot;
+            ) {
+              /** @type {unknown} */
+              const id = data.id;
+              if (typeof id !== &quot;number&quot;) {
+                return;
+              }
+              const pending = pendingStateWrites.get(id);
+              if (pending != null) {
+                pendingStateWrites.delete(id);
+                globalThis.clearTimeout(pending.timeout);
+                if (data.ok === true) {
+                  pending.resolve();
+                } else {
+                  pending.reject(persistenceError());
+                }
+              }
+            }
+          },
+        ]);
+        apply(startHostPort, nextHostPort, []);
+      } catch {
+        return;
+      }
+      hostPort = nextHostPort;
+      for (const [id, { serializedState }] of pendingStateWrites) {
+        postToHost(&quot;widget-state-write&quot;, { id, state: serializedState });
+      }
+      sendHeight();
+    },
+    { capture: true },
+  );
+  document.currentScript?.remove();
+  mediaQuery.addEventListener(&quot;change&quot;, syncTheme);
+  globalThis.addEventListener(&quot;click&quot;, (event) =&gt; {
+    if (event.defaultPrevented) {
+      return;
+    }
+    let element = null;
+    if (event.target instanceof globalThis.Element) {
+      element = event.target;
+    } else if (event.target instanceof globalThis.Node) {
+      element = event.target.parentElement;
+    }
+    const link = element?.closest(&quot;a[href]&quot;);
+    const href = link?.getAttribute(&quot;href&quot;);
+    if (href == null) {
+      return;
+    }
+    if (href.startsWith(&quot;#&quot;)) {
+      let id;
+      try {
+        id = decodeURIComponent(href.slice(1));
+      } catch {
+        return;
+      }
+      const target = id.length === 0 ? root : document.getElementById(id);
+      if (
+        target == null ||
+        globalThis.navigator.userActivation?.isActive !== true
+      ) {
+        return;
+      }
+      event.preventDefault();
+      postToHost(&quot;scroll-to&quot;, {
+        top: target.getBoundingClientRect().top + globalThis.scrollY,
+      });
+      return;
+    }
+    event.preventDefault();
+    openExternal({ href });
+  });
+  new ResizeObserver(sendHeight).observe(document.body);
+  syncTheme();
+})();
+&lt;/script&gt;
+&lt;div id=&quot;wips-office-root&quot;&gt;
+&lt;script type=&quot;application/json&quot; id=&quot;wips-office-data&quot;&gt;
+{
+  &quot;snapshotDate&quot;: &quot;2026-11-11&quot;,
+  &quot;timezone&quot;: &quot;Asia/Seoul&quot;,
+  &quot;sourceUrl&quot;: &quot;https://app.notion.com/p/00000000000000000000000000000000&quot;,
+  &quot;results&quot;: [
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000001&quot;,
+      &quot;title&quot;: &quot;샘플 업무 01&quot;,
+      &quot;owner&quot;: &quot;sb&quot;,
+      &quot;status&quot;: &quot;예정&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;인증&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 01&quot;,
+      &quot;doneCondition&quot;: &quot;샘플 완료 조건 01&quot;,
+      &quot;startDate&quot;: &quot;2026-11-13&quot;,
+      &quot;endDate&quot;: null,
+      &quot;checkDate&quot;: null,
+      &quot;parentTaskIds&quot;: [
+        &quot;00000000-0000-4000-8000-000000000101&quot;
+      ]
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000002&quot;,
+      &quot;title&quot;: &quot;샘플 업무 02&quot;,
+      &quot;owner&quot;: null,
+      &quot;status&quot;: &quot;검증&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;품질&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 02&quot;,
+      &quot;doneCondition&quot;: &quot;샘플 완료 조건 02&quot;,
+      &quot;startDate&quot;: null,
+      &quot;endDate&quot;: null,
+      &quot;checkDate&quot;: null,
+      &quot;parentTaskIds&quot;: []
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000003&quot;,
+      &quot;title&quot;: &quot;샘플 업무 03&quot;,
+      &quot;owner&quot;: &quot;sb&quot;,
+      &quot;status&quot;: &quot;진행&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;인증&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 03&quot;,
+      &quot;doneCondition&quot;: null,
+      &quot;startDate&quot;: &quot;2026-11-13&quot;,
+      &quot;endDate&quot;: null,
+      &quot;checkDate&quot;: null,
+      &quot;parentTaskIds&quot;: []
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000004&quot;,
+      &quot;title&quot;: &quot;샘플 업무 04&quot;,
+      &quot;owner&quot;: &quot;이요원&quot;,
+      &quot;status&quot;: &quot;대기&quot;,
+      &quot;project&quot;: null,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;양산&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 04&quot;,
+      &quot;doneCondition&quot;: &quot;샘플 완료 조건 04&quot;,
+      &quot;startDate&quot;: null,
+      &quot;endDate&quot;: null,
+      &quot;checkDate&quot;: null,
+      &quot;parentTaskIds&quot;: []
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000005&quot;,
+      &quot;title&quot;: &quot;샘플 업무 05&quot;,
+      &quot;owner&quot;: &quot;sb&quot;,
+      &quot;status&quot;: &quot;완료&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;인증&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 05&quot;,
+      &quot;doneCondition&quot;: &quot;샘플 완료 조건 05&quot;,
+      &quot;startDate&quot;: &quot;2026-11-10&quot;,
+      &quot;endDate&quot;: null,
+      &quot;checkDate&quot;: null,
+      &quot;parentTaskIds&quot;: [
+        &quot;00000000-0000-4000-8000-000000000101&quot;
+      ]
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000006&quot;,
+      &quot;title&quot;: &quot;샘플 업무 06&quot;,
+      &quot;owner&quot;: &quot;sb&quot;,
+      &quot;status&quot;: &quot;예정&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;인증&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 06&quot;,
+      &quot;doneCondition&quot;: &quot;샘플 완료 조건 06&quot;,
+      &quot;startDate&quot;: &quot;2026-11-12&quot;,
+      &quot;endDate&quot;: null,
+      &quot;checkDate&quot;: null,
+      &quot;parentTaskIds&quot;: [
+        &quot;00000000-0000-4000-8000-000000000101&quot;
+      ]
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000007&quot;,
+      &quot;title&quot;: &quot;샘플 업무 07&quot;,
+      &quot;owner&quot;: &quot;UI&quot;,
+      &quot;status&quot;: &quot;예정&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;릴리스&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 07&quot;,
+      &quot;doneCondition&quot;: &quot;샘플 완료 조건 07&quot;,
+      &quot;startDate&quot;: &quot;2026-11-13&quot;,
+      &quot;endDate&quot;: null,
+      &quot;checkDate&quot;: &quot;2026-11-12&quot;,
+      &quot;parentTaskIds&quot;: []
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000008&quot;,
+      &quot;title&quot;: &quot;샘플 업무 08&quot;,
+      &quot;owner&quot;: &quot;이요원&quot;,
+      &quot;status&quot;: &quot;진행&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;품질&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 08&quot;,
+      &quot;doneCondition&quot;: &quot;샘플 완료 조건 08&quot;,
+      &quot;startDate&quot;: &quot;2026-11-13&quot;,
+      &quot;endDate&quot;: null,
+      &quot;checkDate&quot;: &quot;2026-11-12&quot;,
+      &quot;parentTaskIds&quot;: []
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000009&quot;,
+      &quot;title&quot;: &quot;샘플 업무 09&quot;,
+      &quot;owner&quot;: &quot;석규&quot;,
+      &quot;status&quot;: &quot;예정&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;품질&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 09&quot;,
+      &quot;doneCondition&quot;: &quot;샘플 완료 조건 09&quot;,
+      &quot;startDate&quot;: &quot;2026-11-11&quot;,
+      &quot;endDate&quot;: null,
+      &quot;checkDate&quot;: null,
+      &quot;parentTaskIds&quot;: []
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000010&quot;,
+      &quot;title&quot;: &quot;샘플 업무 10&quot;,
+      &quot;owner&quot;: &quot;석규&quot;,
+      &quot;status&quot;: &quot;완료&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;품질&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 10&quot;,
+      &quot;doneCondition&quot;: null,
+      &quot;startDate&quot;: &quot;2026-11-10&quot;,
+      &quot;endDate&quot;: &quot;2026-11-11&quot;,
+      &quot;checkDate&quot;: null,
+      &quot;parentTaskIds&quot;: []
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000011&quot;,
+      &quot;title&quot;: &quot;샘플 업무 11&quot;,
+      &quot;owner&quot;: &quot;sb&quot;,
+      &quot;status&quot;: &quot;예정&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;인증&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 11&quot;,
+      &quot;doneCondition&quot;: &quot;샘플 완료 조건 11&quot;,
+      &quot;startDate&quot;: &quot;2026-11-25&quot;,
+      &quot;endDate&quot;: null,
+      &quot;checkDate&quot;: null,
+      &quot;parentTaskIds&quot;: [
+        &quot;00000000-0000-4000-8000-000000000101&quot;
+      ]
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000012&quot;,
+      &quot;title&quot;: &quot;샘플 업무 12&quot;,
+      &quot;owner&quot;: &quot;여이전트&quot;,
+      &quot;status&quot;: &quot;진행&quot;,
+      &quot;project&quot;: &quot;기타&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;품질&quot;,
+      &quot;nextAction&quot;: null,
+      &quot;doneCondition&quot;: null,
+      &quot;startDate&quot;: &quot;2026-11-11&quot;,
+      &quot;endDate&quot;: &quot;2026-11-12&quot;,
+      &quot;checkDate&quot;: null,
+      &quot;parentTaskIds&quot;: []
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000013&quot;,
+      &quot;title&quot;: &quot;샘플 업무 13&quot;,
+      &quot;owner&quot;: &quot;이요원&quot;,
+      &quot;status&quot;: &quot;진행&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: null,
+      &quot;nextAction&quot;: null,
+      &quot;doneCondition&quot;: null,
+      &quot;startDate&quot;: &quot;2026-11-13&quot;,
+      &quot;endDate&quot;: null,
+      &quot;checkDate&quot;: &quot;2026-11-12&quot;,
+      &quot;parentTaskIds&quot;: []
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000014&quot;,
+      &quot;title&quot;: &quot;샘플 업무 14&quot;,
+      &quot;owner&quot;: &quot;석규&quot;,
+      &quot;status&quot;: &quot;완료&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;품질&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 14&quot;,
+      &quot;doneCondition&quot;: null,
+      &quot;startDate&quot;: &quot;2026-11-10&quot;,
+      &quot;endDate&quot;: &quot;2026-11-11&quot;,
+      &quot;checkDate&quot;: null,
+      &quot;parentTaskIds&quot;: []
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000015&quot;,
+      &quot;title&quot;: &quot;샘플 업무 15&quot;,
+      &quot;owner&quot;: &quot;sb&quot;,
+      &quot;status&quot;: &quot;진행&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;인증&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 15&quot;,
+      &quot;doneCondition&quot;: &quot;샘플 완료 조건 15&quot;,
+      &quot;startDate&quot;: null,
+      &quot;endDate&quot;: null,
+      &quot;checkDate&quot;: null,
+      &quot;parentTaskIds&quot;: [
+        &quot;00000000-0000-4000-8000-000000000101&quot;
+      ]
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000016&quot;,
+      &quot;title&quot;: &quot;샘플 업무 16&quot;,
+      &quot;owner&quot;: null,
+      &quot;status&quot;: &quot;예정&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;릴리스&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 16&quot;,
+      &quot;doneCondition&quot;: &quot;샘플 완료 조건 16&quot;,
+      &quot;startDate&quot;: &quot;2026-12-02&quot;,
+      &quot;endDate&quot;: null,
+      &quot;checkDate&quot;: null,
+      &quot;parentTaskIds&quot;: []
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000017&quot;,
+      &quot;title&quot;: &quot;샘플 업무 17&quot;,
+      &quot;owner&quot;: &quot;sb&quot;,
+      &quot;status&quot;: &quot;예정&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;품질&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 17&quot;,
+      &quot;doneCondition&quot;: null,
+      &quot;startDate&quot;: &quot;2026-11-16&quot;,
+      &quot;endDate&quot;: &quot;2026-11-20&quot;,
+      &quot;checkDate&quot;: null,
+      &quot;parentTaskIds&quot;: []
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000018&quot;,
+      &quot;title&quot;: &quot;샘플 업무 18&quot;,
+      &quot;owner&quot;: null,
+      &quot;status&quot;: &quot;예정&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;품질&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 18&quot;,
+      &quot;doneCondition&quot;: &quot;샘플 완료 조건 18&quot;,
+      &quot;startDate&quot;: &quot;2026-11-23&quot;,
+      &quot;endDate&quot;: &quot;2026-11-27&quot;,
+      &quot;checkDate&quot;: null,
+      &quot;parentTaskIds&quot;: []
+    },
+    {
+      &quot;url&quot;: &quot;https://app.notion.com/00000000000000000000000000000019&quot;,
+      &quot;title&quot;: &quot;샘플 업무 19&quot;,
+      &quot;owner&quot;: null,
+      &quot;status&quot;: &quot;진행&quot;,
+      &quot;project&quot;: &quot;2.3&quot;,
+      &quot;priority&quot;: null,
+      &quot;category&quot;: &quot;품질&quot;,
+      &quot;nextAction&quot;: &quot;샘플 다음 조치 19&quot;,
+      &quot;doneCondition&quot;: &quot;샘플 완료 조건 19&quot;,
+      &quot;startDate&quot;: &quot;2026-11-20&quot;,
+      &quot;endDate&quot;: null,
+      &quot;checkDate&quot;: null,
+      &quot;parentTaskIds&quot;: []
+    }
+  ],
+  &quot;has_more&quot;: false,
+  &quot;data_source_ids&quot;: [
+    &quot;00000000-0000-4000-8000-000000000000&quot;
+  ]
+}
+&lt;/script&gt;
+&lt;style&gt;
+#wips-office-root {
+  --office-wall: #d2c8b9;
+  --office-floor: #eee7dc;
+  --office-desk: #c89b68;
+  --office-desk-front: #ae7e4d;
+  --office-chair: #4b565b;
+  --office-skin: #efc9aa;
+  --office-skin-line: #b97b58;
+  --office-hair: #382d29;
+  --office-hair-highlight: #80634f;
+  --office-screen: #31586b;
+  --office-bubble: #fffdf8;
+  --office-ink: #292c2e;
+  --office-muted: #60666a;
+  color: var(--foreground);
+  width: 100%;
+  min-width: 0;
+  font-size: var(--font-size-base);
+}
+#wips-office-root h1,
+#wips-office-root h2,
+#wips-office-root h3,
+#wips-office-root p {
+  margin: 0;
+}
+#wips-office-root .office-header,
+#wips-office-root .section-heading,
+#wips-office-root .count-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--font-size-base) * 0.75);
+  flex-wrap: wrap;
+}
+#wips-office-root .office-header {
+  align-items: flex-start;
+  margin-block-end: calc(var(--font-size-base) * 0.8);
+}
+#wips-office-root .title-stack {
+  display: grid;
+  gap: calc(var(--font-size-base) * 0.35);
+  min-width: 0;
+}
+#wips-office-root .snapshot-meta,
+#wips-office-root .section-note,
+#wips-office-root .count-line,
+#wips-office-root .task-facts dt {
+  color: var(--muted-foreground);
+}
+#wips-office-root .snapshot-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: calc(var(--font-size-base) * 0.5);
+}
+#wips-office-root .snapshot-meta a,
+#wips-office-root .task-source {
+  color: var(--primary);
+}
+#wips-office-root .sync-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: calc(var(--font-size-base) * 0.6);
+  margin-block-start: calc(var(--font-size-base) * 0.5);
+}
+#wips-office-root .sync-status {
+  color: var(--muted-foreground);
+  margin: 0;
+}
+#wips-office-root .sync-status[data-state=&quot;error&quot;] { color: var(--destructive); }
+#wips-office-root .sync-button {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.35em 0.8em;
+  color: var(--foreground);
+  background: var(--secondary);
+  font: inherit;
+  cursor: pointer;
+}
+#wips-office-root .sync-button:disabled { cursor: wait; opacity: 0.65; }
+#wips-office-root .employee-button {
+  appearance: none; display: block; position: relative;
+  margin: 0; padding: 4px 8px; width: auto; height: auto;
+  border: 1px solid transparent; border-radius: 14px;
+  background: transparent; color: var(--foreground);
+  font: inherit; cursor: pointer; box-shadow: none;
+}
+#wips-office-root .employee-button:hover {
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+}
+#wips-office-root .employee-button[aria-pressed=&quot;true&quot;] {
+  border-color: color-mix(in srgb, var(--blue) 45%, transparent);
+  background: color-mix(in srgb, var(--blue) 6%, transparent);
+}
+#wips-office-root .employee-button:focus-visible {
+  outline: 2px solid var(--blue); outline-offset: 4px;
+}
+#wips-office-root .employee-button[draggable=&quot;true&quot;] { cursor: grab; }
+#wips-office-root .employee-button[draggable=&quot;true&quot;]:active { cursor: grabbing; }
+#wips-office-root .employee-button.is-dragging { opacity: 0.45; }
+#wips-office-root .employee-button[aria-pressed=&quot;true&quot;] .employee-name {
+  color: var(--office-ink);
+  background: #e2edf3;
+  border-color: #91b1c3;
+}
+#wips-office-root .employee-button[aria-pressed=&quot;true&quot;] .employee-name::before {
+  content: &quot;✓&quot;; margin-inline-end: 5px; color: #416c83;
+}
+#wips-office-root .person-art { --shirt: #647f72; }
+#wips-office-root .viz-controls {
+  margin-block: calc(var(--font-size-base) * 0.9);
+}
+#wips-office-root .filter-field {
+  display: grid;
+  gap: calc(var(--font-size-base) * 0.25);
+  min-width: min(100%, 180px);
+}
+#wips-office-root .status-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--font-size-base) * 0.35) calc(var(--font-size-base) * 0.85);
+  margin-block: calc(var(--font-size-base) * 0.45) calc(var(--font-size-base) * 0.9);
+}
+#wips-office-root .status-count {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--font-size-base) * 0.28);
+  white-space: normal;
+}
+#wips-office-root .status-dot {
+  display: inline-block;
+  flex: none;
+  width: 0.62em;
+  height: 0.62em;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+}
+#wips-office-root .status-dot[data-status=&quot;진행&quot;] { background: #2383e2; }
+#wips-office-root .status-dot[data-status=&quot;검증&quot;] { background: #9d68d3; }
+#wips-office-root .status-dot[data-status=&quot;장시간 테스트 중&quot;] { background: #dfab01; }
+#wips-office-root .status-dot[data-status=&quot;대기&quot;] { background: #d9730d; }
+#wips-office-root .status-dot[data-status=&quot;예정&quot;] { background: #91918e; }
+#wips-office-root .status-dot[data-status=&quot;완료&quot;] { background: #448361; }
+#wips-office-root .office-room {
+  position: relative;
+  min-width: 0;
+  padding: 26px 16px 22px;
+  border: 8px solid var(--office-wall);
+  border-bottom-width: 12px;
+  background-color: var(--office-floor);
+  background-image:
+    linear-gradient(rgba(99, 77, 55, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99, 77, 55, 0.09) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+#wips-office-root .room-dressing { position: absolute; inset: 0; pointer-events: none; }
+#wips-office-root .window-frame {
+  position: absolute; top: -8px; left: 12%; width: 25%; height: 8px;
+  background: #a8c8d8;
+  border-inline: 3px solid #74848c;
+}
+#wips-office-root .window-frame::after {
+  content: &quot;&quot;; position: absolute; top: 0; left: 50%; width: 3px; height: 8px;
+  background: #74848c;
+}
+#wips-office-root .wall-clock {
+  position: absolute; top: -8px; right: 12%; width: 25%; height: 8px;
+  background: #a8c8d8;
+  border-inline: 3px solid #74848c;
+}
+#wips-office-root .seating-toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-block: 12px;
+}
+#wips-office-root .seating-toolbar [hidden] { display: none; }
+#wips-office-root .seating-toolbar p { color: var(--muted-foreground); }
+#wips-office-root .seat-control { display: grid; gap: 4px; width: 100%; min-width: 0; color: var(--office-ink); }
+#wips-office-root .seat-control select { width: 100%; min-width: 0; }
+#wips-office-root .office-grid {
+  position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 38px 22px; align-items: end; min-width: 0;
+}
+#wips-office-root .workstation {
+  display: grid; align-content: end; justify-items: center;
+  gap: 12px; min-width: 0;
+}
+#wips-office-root .workstation.is-drop-target {
+  outline: 2px dashed var(--blue); outline-offset: 6px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--blue) 8%, transparent);
+}
+#wips-office-root .speech-bubble {
+  position: relative; display: grid; gap: 3px; align-content: start;
+  width: 100%; min-width: 0; padding: 8px;
+  border: 1px solid #d6cfc3; border-radius: 8px;
+  background: var(--office-bubble); color: var(--office-ink); overflow-wrap: anywhere;
+}
+#wips-office-root .speech-bubble::after {
+  content: &quot;&quot;; position: absolute; left: calc(50% - 5px); bottom: -6px;
+  width: 10px; height: 10px; transform: rotate(45deg);
+  background: var(--office-bubble); border-right: 1px solid #d6cfc3; border-bottom: 1px solid #d6cfc3;
+}
+#wips-office-root .speech-status { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+#wips-office-root .speech-title { font-weight: 500; overflow-wrap: anywhere; }
+#wips-office-root .speech-other { color: var(--office-muted); }
+#wips-office-root .person-art { position: relative; display: block; width: 150px; height: 154px; --motion-delay: 0s; }
+#wips-office-root .person-art[data-employee=&quot;sb&quot;] { --shirt: #577e91; }
+#wips-office-root .person-art[data-employee=&quot;이요원&quot;] { --shirt: #85945f; }
+#wips-office-root .person-art[data-employee=&quot;여이전트&quot;] { --shirt: #766c8e; }
+#wips-office-root .person-art[data-employee=&quot;석규&quot;] { --shirt: #be7956; }
+#wips-office-root .person-art[data-employee=&quot;UI&quot;] { --shirt: #587d88; }
+#wips-office-root .person-art[data-motion-phase=&quot;0&quot;] { --motion-delay: 0s; }
+#wips-office-root .person-art[data-motion-phase=&quot;1&quot;] { --motion-delay: -0.12s; }
+#wips-office-root .person-art[data-motion-phase=&quot;2&quot;] { --motion-delay: -0.24s; }
+#wips-office-root .person-art[data-motion-phase=&quot;3&quot;] { --motion-delay: -0.36s; }
+#wips-office-root .person-art[data-motion-phase=&quot;4&quot;] { --motion-delay: -0.48s; }
+@keyframes office-focus-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.5px); }
+}
+@keyframes office-type-left {
+  0%, 100% { transform: rotate(-18deg); }
+  50% { transform: rotate(-10deg); }
+}
+@keyframes office-type-right {
+  0%, 100% { transform: rotate(18deg); }
+  50% { transform: rotate(10deg); }
+}
+#wips-office-root .workstation[data-activity=&quot;working&quot;] .person-head,
+#wips-office-root .workstation[data-activity=&quot;working&quot;] .person-hair {
+  animation: office-focus-bob 1.7s ease-in-out infinite;
+  animation-delay: var(--motion-delay);
+}
+#wips-office-root .workstation[data-activity=&quot;working&quot;] .person-body::before {
+  animation: office-type-left 0.52s ease-in-out infinite;
+  animation-delay: var(--motion-delay);
+  transform-origin: 50% 0;
+}
+#wips-office-root .workstation[data-activity=&quot;working&quot;] .person-body::after {
+  animation: office-type-right 0.52s ease-in-out infinite;
+  animation-delay: calc(var(--motion-delay) - 0.18s);
+  transform-origin: 50% 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-head,
+  #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-hair,
+  #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-body::before,
+  #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-body::after {
+    animation: none;
+  }
+}
+#wips-office-root .desk-top {
+  position: absolute; z-index: 2; left: 9px; top: 8px; width: 132px; height: 66px;
+  background: var(--office-desk); border: 2px solid #a97849;
+  border-radius: 5px; box-shadow: 0 4px rgba(63, 50, 37, 0.16);
+}
+#wips-office-root .desk-front {
+  position: absolute; z-index: 3; left: 119px; top: 22px; width: 13px; height: 19px;
+  background: var(--office-desk-front);
+  border: 1px solid #916741; transform: rotate(7deg);
+}
+#wips-office-root .monitor-screen {
+  position: absolute; z-index: 4; left: 45px; top: 19px; width: 58px; height: 9px;
+  border: 2px solid var(--office-chair); border-radius: 2px; background: var(--office-screen);
+}
+#wips-office-root .monitor-stand {
+  position: absolute; z-index: 3; left: 65px; top: 29px; width: 18px; height: 8px;
+  border-radius: 2px; background: var(--office-chair);
+}
+#wips-office-root .keyboard {
+  position: absolute; z-index: 4; left: 48px; top: 47px; width: 47px; height: 13px;
+  border: 2px solid var(--office-chair); border-radius: 2px;
+  background: repeating-linear-gradient(90deg, var(--office-chair) 0 1px, #f5efe4 1px 5px);
+}
+#wips-office-root .desk-leg {
+  position: absolute; z-index: 4; left: 105px; top: 48px; width: 7px; height: 11px;
+  border-radius: 45%; background: var(--office-chair);
+}
+#wips-office-root .desk-leg-right {
+  left: 20px; top: 44px; width: 13px; height: 13px;
+  border: 3px solid var(--office-desk); background: var(--office-chair);
+  border-radius: 50%;
+}
+#wips-office-root .chair-base {
+  position: absolute; z-index: 0; left: 51px; top: 84px; width: 48px; height: 40px;
+  border-radius: 12px; background: rgba(41, 44, 46, 0.12);
+}
+#wips-office-root .chair-back {
+  position: absolute; z-index: 1; left: 54px; top: 91px; width: 42px; height: 31px;
+  border: 5px solid var(--office-chair); border-radius: 10px; background: #768084;
+}
+#wips-office-root .chair-stem { display: none; }
+#wips-office-root .person-body {
+  position: absolute; z-index: 5; left: 53px; top: 77px; width: 44px; height: 29px;
+  border-radius: 14px 14px 10px 10px; background: color-mix(in srgb, var(--shirt) 72%, #ffffff);
+}
+#wips-office-root .person-body::before,
+#wips-office-root .person-body::after {
+  content: &quot;&quot;; position: absolute; top: -12px; width: 10px; height: 24px;
+  border-radius: 6px; background: var(--office-skin); transform-origin: 50% 0;
+}
+#wips-office-root .person-body::before { left: -3px; transform: rotate(-18deg); }
+#wips-office-root .person-body::after { right: -3px; transform: rotate(18deg); }
+#wips-office-root .person-head {
+  position: absolute; z-index: 6; left: 62px; top: 76px; width: 26px; height: 28px;
+  border-radius: 50%; background: var(--office-skin);
+}
+#wips-office-root .person-hair {
+  position: absolute; z-index: 7; left: 61px; top: 80px; width: 28px; height: 26px;
+  border-radius: 45% 45% 50% 50%; background: var(--office-hair);
+}
+#wips-office-root .person-hair::after {
+  content: &quot;&quot;; position: absolute; left: 7px; top: 4px; width: 10px; height: 8px;
+  border-top: 2px solid var(--office-hair-highlight); border-radius: 50%;
+}
+#wips-office-root .employee-name {
+  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+  min-width: 54px; padding: 2px 10px; border: 1px solid transparent; border-radius: 999px;
+  font-weight: 500; text-align: center; color: var(--office-ink); white-space: nowrap;
+}
+#wips-office-root .employee-count { position: absolute; left: 10px; top: 109px; color: var(--office-muted); }
+#wips-office-root .room-floor {
+  position: absolute; bottom: -12px; left: 43%; width: 14%; height: 12px;
+  background: var(--office-floor); border-inline: 3px solid var(--office-wall);
+}
+@media (max-width: 620px) {
+  #wips-office-root .office-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 14px; }
+  #wips-office-root .office-room { padding-inline: 10px; }
+}
+@media (max-width: 420px) {
+  #wips-office-root .office-grid { grid-template-columns: minmax(0, 1fr); }
+  #wips-office-root .speech-bubble { max-width: 260px; }
+}
+
+#wips-office-root .selected-work h2,
+#wips-office-root .communal-board h2 {
+  margin-block-end: calc(var(--font-size-base) * 0.25);
+}
+#wips-office-root .selected-work,
+#wips-office-root .communal-board {
+  margin-block-start: calc(var(--font-size-base) * 1.1);
+}
+#wips-office-root .section-heading {
+  align-items: flex-end;
+  margin-block-end: calc(var(--font-size-base) * 0.55);
+}
+#wips-office-root .task-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(var(--font-size-base) * 0.65);
+  min-width: 0;
+}
+#wips-office-root .task-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#wips-office-root .task-card h3 {
+  margin-block-end: calc(var(--font-size-base) * 0.4);
+  overflow-wrap: anywhere;
+}
+#wips-office-root .task-status {
+  display: inline-flex; align-items: center; gap: 6px;
+}
+#wips-office-root .task-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--font-size-base) * 0.3);
+  margin-block-end: calc(var(--font-size-base) * 0.5);
+}
+#wips-office-root .task-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(var(--font-size-base) * 0.48) calc(var(--font-size-base) * 0.65);
+  margin: 0;
+}
+#wips-office-root .task-fact {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#wips-office-root .task-fact--wide {
+  grid-column: 1 / -1;
+}
+#wips-office-root .task-facts dt {
+  margin-block-end: calc(var(--font-size-base) * 0.15);
+}
+#wips-office-root .task-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+#wips-office-root .task-source {
+  display: inline-block;
+  margin-block-start: calc(var(--font-size-base) * 0.55);
+}
+#wips-office-root .empty-note {
+  padding-block: calc(var(--font-size-base) * 0.5);
+  color: var(--muted-foreground);
+}
+@media (max-width: 620px) {
+  #wips-office-root .office-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #wips-office-root .task-list { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 380px) {
+  #wips-office-root .office-grid { grid-template-columns: minmax(0, 1fr); }
+  #wips-office-root .filter-field { min-width: 100%; }
+  #wips-office-root .task-facts { grid-template-columns: minmax(0, 1fr); }
+  #wips-office-root .task-fact--wide { grid-column: auto; }
+}
+#wips-office-root [hidden] { display: none !important; }
+#wips-office-root .sync-button--danger {
+  border-color: color-mix(in srgb, var(--destructive) 45%, var(--border));
+  color: var(--destructive);
+}
+#wips-office-root .offline-banner {
+  margin-block: calc(var(--font-size-base) * 0.65);
+  padding: 0.65em 0.9em;
+  border: 1px solid color-mix(in srgb, #d9730d 55%, var(--border));
+  border-radius: var(--radius);
+  background: color-mix(in srgb, #d9730d 10%, var(--card));
+  color: var(--foreground);
+}
+#wips-office-root .connection-panel {
+  display: grid;
+  gap: calc(var(--font-size-base) * 0.75);
+  margin-block: calc(var(--font-size-base) * 0.75) calc(var(--font-size-base) * 1.1);
+  padding: calc(var(--font-size-base) * 0.95);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+#wips-office-root .connection-header {
+  display: grid;
+  gap: calc(var(--font-size-base) * 0.25);
+}
+#wips-office-root .security-checklist {
+  margin: 0;
+  padding-inline-start: 1.25em;
+  display: grid;
+  gap: 0.3em;
+  color: var(--muted-foreground);
+}
+#wips-office-root .connection-form {
+  display: grid;
+  gap: calc(var(--font-size-base) * 0.65);
+  max-width: 560px;
+}
+#wips-office-root .connection-field {
+  display: grid;
+  gap: 0.25em;
+  min-width: 0;
+}
+#wips-office-root .form-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 0.45em 0.65em;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+#wips-office-root .connection-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--font-size-base) * 0.5);
+}
+#wips-office-root .connection-message {
+  margin: 0;
+  color: var(--muted-foreground);
+}
+#wips-office-root .connection-message[data-state=&quot;error&quot;] {
+  color: var(--destructive);
+}
+#wips-office-root,
+#wips-office-root *,
+#wips-office-root *::before,
+#wips-office-root *::after {
+  box-sizing: border-box;
+}
+#wips-office-root {
+  max-width: 100%;
+  overflow-x: clip;
+}
+#wips-office-root .sync-button,
+#wips-office-root .employee-button,
+#wips-office-root .btn,
+#wips-office-root select,
+#wips-office-root input {
+  touch-action: manipulation;
+}
+#wips-office-root .sync-button,
+#wips-office-root .seating-toolbar .btn,
+#wips-office-root .form-select,
+#wips-office-root .form-input {
+  min-height: 40px;
+}
+@media (max-width: 480px) {
+  #wips-office-root .sync-controls {
+    gap: 8px;
+  }
+  #wips-office-root .sync-status {
+    flex-basis: 100%;
+  }
+  #wips-office-root .sync-button,
+  #wips-office-root .seating-toolbar .btn {
+    min-height: 44px;
+    padding: 0.45em 0.9em;
+  }
+  #wips-office-root .form-input,
+  #wips-office-root .form-select {
+    font-size: 16px;
+    min-height: 44px;
+  }
+  #wips-office-root .connection-panel {
+    padding: 12px;
+  }
+  #wips-office-root .connection-actions {
+    flex-direction: column;
+  }
+  #wips-office-root .office-room {
+    border-width: 6px;
+    border-bottom-width: 10px;
+    padding: 20px 8px 18px;
+  }
+}
+&lt;/style&gt;
+&lt;section aria-labelledby=&quot;wips-office-title&quot;&gt;
+  &lt;header class=&quot;office-header&quot;&gt;
+    &lt;div class=&quot;title-stack&quot;&gt;
+      &lt;h1 id=&quot;wips-office-title&quot;&gt;Pixel Agent HQ · 탑뷰&lt;/h1&gt;
+      &lt;p class=&quot;snapshot-meta&quot;&gt;
+        &lt;span id=&quot;wips-office-snapshot&quot;&gt;&lt;/span&gt;
+        &lt;a id=&quot;wips-office-source&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;Notion 원본 스냅샷&lt;/a&gt;
+      &lt;/p&gt;
+      &lt;div class=&quot;sync-controls&quot;&gt;
+        &lt;button class=&quot;sync-button&quot; id=&quot;wips-office-refresh&quot; type=&quot;button&quot;&gt;지금 갱신&lt;/button&gt;
+        &lt;button class=&quot;sync-button&quot; id=&quot;wips-office-connect-toggle&quot; type=&quot;button&quot; hidden&gt;연결 설정&lt;/button&gt;
+        &lt;button class=&quot;sync-button sync-button--danger&quot; id=&quot;wips-office-logout&quot; type=&quot;button&quot; hidden&gt;로그아웃&lt;/button&gt;
+        &lt;p class=&quot;sync-status&quot; id=&quot;wips-office-sync-status&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;&lt;/p&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/header&gt;
+  &lt;p class=&quot;offline-banner&quot; id=&quot;wips-office-offline-banner&quot; role=&quot;status&quot; aria-live=&quot;polite&quot; hidden&gt;&lt;/p&gt;
+  &lt;section class=&quot;connection-panel&quot; id=&quot;wips-office-connection-panel&quot; aria-labelledby=&quot;wips-office-connection-title&quot; hidden&gt;
+    &lt;div class=&quot;connection-header&quot;&gt;
+      &lt;h2 id=&quot;wips-office-connection-title&quot;&gt;Notion 실시간 연결 설정&lt;/h2&gt;
+      &lt;p class=&quot;section-note&quot;&gt;개인 기기의 비공개 OPFS(wips-office-private-v1)에만 보관되며 localStorage에는 저장되지 않습니다.&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;ul class=&quot;security-checklist&quot; aria-label=&quot;보안 체크리스트&quot;&gt;
+      &lt;li&gt;Notion Integration에서 &lt;strong&gt;Read content&lt;/strong&gt; 권한만 허용&lt;/li&gt;
+      &lt;li&gt;대상 DB 페이지 하나에만 연결&lt;/li&gt;
+      &lt;li&gt;공용 PC에서 입력 금지 (사용 후 상단 로그아웃으로 즉시 삭제)&lt;/li&gt;
+    &lt;/ul&gt;
+    &lt;form class=&quot;connection-form&quot; id=&quot;wips-office-connection-form&quot;&gt;
+      &lt;label class=&quot;connection-field&quot;&gt;
+        &lt;span class=&quot;form-label&quot;&gt;Notion 토큰 (Read content 전용)&lt;/span&gt;
+        &lt;input class=&quot;form-input&quot; id=&quot;wips-office-token&quot; type=&quot;password&quot; autocomplete=&quot;off&quot; spellcheck=&quot;false&quot; required placeholder=&quot;ntn_... 또는 secret_...&quot;&gt;
+      &lt;/label&gt;
+      &lt;label class=&quot;connection-field&quot;&gt;
+        &lt;span class=&quot;form-label&quot;&gt;데이터 소스 ID (UUID)&lt;/span&gt;
+        &lt;input class=&quot;form-input&quot; id=&quot;wips-office-datasource-id&quot; type=&quot;text&quot; autocomplete=&quot;off&quot; spellcheck=&quot;false&quot; required placeholder=&quot;xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx&quot;&gt;
+      &lt;/label&gt;
+      &lt;label class=&quot;connection-field&quot;&gt;
+        &lt;span class=&quot;form-label&quot;&gt;무상태 CORS 중계 URL&lt;/span&gt;
+        &lt;input class=&quot;form-input&quot; id=&quot;wips-office-proxy-url&quot; type=&quot;url&quot; autocomplete=&quot;off&quot; spellcheck=&quot;false&quot; required placeholder=&quot;https://your-cors-relay.workers.dev/v1&quot;&gt;
+      &lt;/label&gt;
+      &lt;div class=&quot;connection-actions&quot;&gt;
+        &lt;button class=&quot;sync-button&quot; id=&quot;wips-office-connect-submit&quot; type=&quot;submit&quot;&gt;연결하고 조회&lt;/button&gt;
+        &lt;button class=&quot;sync-button&quot; id=&quot;wips-office-connect-cancel&quot; type=&quot;button&quot; hidden&gt;닫기&lt;/button&gt;
+      &lt;/div&gt;
+      &lt;p class=&quot;connection-message&quot; id=&quot;wips-office-connection-message&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;&lt;/p&gt;
+    &lt;/form&gt;
+  &lt;/section&gt;
+  &lt;div id=&quot;wips-office-main-view&quot;&gt;
+  &lt;div class=&quot;viz-controls&quot; aria-label=&quot;업무 필터&quot;&gt;
+    &lt;label class=&quot;filter-field&quot;&gt;
+      &lt;span class=&quot;form-label&quot;&gt;상태&lt;/span&gt;
+      &lt;select class=&quot;form-select&quot; id=&quot;wips-office-status&quot;&gt;
+        &lt;option&gt;전체 상태&lt;/option&gt;
+        &lt;option&gt;진행&lt;/option&gt;
+        &lt;option&gt;검증&lt;/option&gt;
+        &lt;option&gt;장시간 테스트 중&lt;/option&gt;
+        &lt;option&gt;대기&lt;/option&gt;
+        &lt;option&gt;예정&lt;/option&gt;
+        &lt;option&gt;완료&lt;/option&gt;
+      &lt;/select&gt;
+    &lt;/label&gt;
+    &lt;label class=&quot;filter-field&quot;&gt;
+      &lt;span class=&quot;form-label&quot;&gt;프로젝트&lt;/span&gt;
+      &lt;select class=&quot;form-select&quot; id=&quot;wips-office-project&quot;&gt;
+        &lt;option&gt;전체 프로젝트&lt;/option&gt;
+        &lt;option&gt;2.3&lt;/option&gt;
+        &lt;option&gt;2.2.1&lt;/option&gt;
+        &lt;option&gt;기타&lt;/option&gt;
+        &lt;option&gt;프로젝트 미지정&lt;/option&gt;
+      &lt;/select&gt;
+    &lt;/label&gt;
+  &lt;/div&gt;
+  &lt;p class=&quot;count-line&quot; id=&quot;wips-office-summary&quot; aria-live=&quot;polite&quot;&gt;&lt;/p&gt;
+  &lt;div class=&quot;status-counts&quot; id=&quot;wips-office-status-counts&quot; aria-label=&quot;필터 결과 상태별 건수&quot;&gt;&lt;/div&gt;
+
+  &lt;div class=&quot;seating-toolbar&quot;&gt;
+    &lt;button type=&quot;button&quot; class=&quot;btn&quot; id=&quot;wips-office-edit-seating&quot; aria-pressed=&quot;false&quot;&gt;자리 배치&lt;/button&gt;
+    &lt;button type=&quot;button&quot; class=&quot;btn&quot; id=&quot;wips-office-reset-seating&quot; hidden&gt;기본 배치로&lt;/button&gt;
+    &lt;p id=&quot;wips-office-seating-message&quot; aria-live=&quot;polite&quot;&gt;자리 배치는 이 브라우저에 저장됩니다.&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;section class=&quot;office-room&quot; aria-label=&quot;위에서 내려다본 직원 사무실 배치도&quot;&gt;
+    &lt;div class=&quot;room-dressing&quot; aria-hidden=&quot;true&quot;&gt;
+      &lt;div class=&quot;window-frame&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;wall-clock&quot;&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;office-grid&quot; id=&quot;wips-office-employees&quot;&gt;&lt;/div&gt;
+    &lt;div class=&quot;room-floor&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;section class=&quot;selected-work&quot; aria-labelledby=&quot;wips-office-selected-title&quot;&gt;
+    &lt;div class=&quot;section-heading&quot;&gt;
+      &lt;div&gt;
+        &lt;h2 id=&quot;wips-office-selected-title&quot;&gt;&lt;/h2&gt;
+        &lt;p class=&quot;section-note&quot; id=&quot;wips-office-selected-note&quot;&gt;&lt;/p&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;p class=&quot;empty-note&quot; id=&quot;wips-office-selected-empty&quot; hidden&gt;&lt;/p&gt;
+    &lt;div class=&quot;task-list&quot; id=&quot;wips-office-selected-tasks&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
+  &lt;/section&gt;
+
+  &lt;section class=&quot;communal-board&quot; aria-labelledby=&quot;wips-office-communal-title&quot;&gt;
+    &lt;div class=&quot;section-heading&quot;&gt;
+      &lt;div&gt;
+        &lt;h2 id=&quot;wips-office-communal-title&quot;&gt;공용 업무 게시판&lt;/h2&gt;
+        &lt;p class=&quot;section-note&quot;&gt;담당자가 지정되지 않은 일감&lt;/p&gt;
+      &lt;/div&gt;
+      &lt;p class=&quot;section-note&quot; id=&quot;wips-office-communal-count&quot;&gt;&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;p class=&quot;empty-note&quot; id=&quot;wips-office-communal-empty&quot; hidden&gt;&lt;/p&gt;
+    &lt;div class=&quot;task-list&quot; id=&quot;wips-office-communal-tasks&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
+  &lt;/section&gt;
+  &lt;/div&gt;
+&lt;/section&gt;
+&lt;/div&gt;
+&lt;script id=&quot;office-model&quot;&gt;
+(() =&gt; {
+  const STATUS_ORDER = [&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;, &quot;대기&quot;, &quot;예정&quot;, &quot;완료&quot;];
+  const STATUS_RANK = new Map(STATUS_ORDER.map((status, index) =&gt; [status, index]));
+  const EMPLOYEES = [&quot;sb&quot;, &quot;이요원&quot;, &quot;여이전트&quot;, &quot;석규&quot;, &quot;UI&quot;];
+  const ALL_STATUS = &quot;전체 상태&quot;;
+  const ALL_PROJECTS = &quot;전체 프로젝트&quot;;
+  const UNSPECIFIED_PROJECT = &quot;프로젝트 미지정&quot;;
+
+  function projectLabel(task) {
+    return task.project === null || task.project === undefined ? UNSPECIFIED_PROJECT : task.project;
+  }
+
+  function matches(task, filters) {
+    const statusMatches = filters.status === ALL_STATUS || task.status === filters.status;
+    const projectMatches = filters.project === ALL_PROJECTS || projectLabel(task) === filters.project;
+    return statusMatches &amp;&amp; projectMatches;
+  }
+
+  function safeNotionUrl(value) {
+    if (typeof value !== &quot;string&quot;) return &quot;&quot;;
+    try {
+      const parsed = new URL(value);
+      const notionHosts = [&quot;app.notion.com&quot;, &quot;notion.so&quot;, &quot;www.notion.so&quot;];
+      return parsed.protocol === &quot;https:&quot; &amp;&amp; notionHosts.includes(parsed.hostname) ? parsed.href : &quot;&quot;;
+    } catch {
+      return &quot;&quot;;
+    }
+  }
+
+  function formatGoalDate(task) {
+    if (task.startDate &amp;&amp; task.endDate) return task.startDate + &quot; — &quot; + task.endDate;
+    if (task.startDate) return task.startDate + &quot; · 종료일 미지정&quot;;
+    if (task.endDate) return &quot;시작일 미지정 · &quot; + task.endDate;
+    return &quot;미지정&quot;;
+  }
+
+  function describeTask(task) {
+    return {
+      title: task.title,
+      status: task.status,
+      project: projectLabel(task),
+      priority: task.priority ?? &quot;미지정&quot;,
+      goalDate: formatGoalDate(task),
+      nextCheck: task.checkDate ?? &quot;미지정&quot;,
+      nextAction: task.nextAction ?? &quot;미지정&quot;,
+      doneCondition: task.doneCondition ?? &quot;미지정&quot;,
+      sourceUrl: safeNotionUrl(task.url),
+    };
+  }
+
+  function createOfficeModel(snapshot) {
+    const tasks = Array.isArray(snapshot.results) ? snapshot.results.slice() : [];
+    const statuses = STATUS_ORDER.concat([...new Set(tasks.map((task) =&gt; task.status).filter(Boolean))]
+      .filter((status) =&gt; !STATUS_ORDER.includes(status)));
+    const employees = EMPLOYEES.concat([...new Set(tasks.map((task) =&gt; task.owner).filter(Boolean))]
+      .filter((owner) =&gt; !EMPLOYEES.includes(owner)));
+    const projects = [&quot;2.3&quot;, &quot;2.2.1&quot;, &quot;기타&quot;].concat([...new Set(tasks.map((task) =&gt; task.project).filter(Boolean))]
+      .filter((project) =&gt; ![&quot;2.3&quot;, &quot;2.2.1&quot;, &quot;기타&quot;].includes(project)));
+
+    function parseStateCandidate(candidate) {
+      if (typeof candidate === &quot;string&quot;) {
+        try { return JSON.parse(candidate); } catch { return null; }
+      }
+      return candidate &amp;&amp; typeof candidate === &quot;object&quot; ? candidate : null;
+    }
+
+    function stateFromHost(candidate) {
+      const outer = parseStateCandidate(candidate);
+      if (!outer) return null;
+      const nested = parseStateCandidate(outer.privateContent) || parseStateCandidate(outer.modelContent);
+      const saved = nested || outer;
+      const selectedEmployee = employees.includes(saved.selectedEmployee) ? saved.selectedEmployee : &quot;sb&quot;;
+      const status = [ALL_STATUS].concat(statuses).includes(saved.status) ? saved.status : ALL_STATUS;
+      const projectOptions = [ALL_PROJECTS, ...projects, UNSPECIFIED_PROJECT];
+      const project = projectOptions.includes(saved.project) ? saved.project : ALL_PROJECTS;
+      return { selectedEmployee, status, project };
+    }
+
+    function restorePendingState(candidate, currentState, userChangedState) {
+      if (userChangedState) return currentState;
+      return stateFromHost(candidate) || currentState;
+    }
+
+    function filteredTasks(filters) {
+      return tasks.filter((task) =&gt; matches(task, filters));
+    }
+
+    function summary(filters) {
+      const shown = filteredTasks(filters);
+      const statusCounts = Object.fromEntries(statuses.map((status) =&gt; [
+        status,
+        shown.filter((task) =&gt; task.status === status).length,
+      ]));
+      return {
+        total: shown.length,
+        snapshotTotal: tasks.length,
+        unassigned: shown.filter((task) =&gt; task.owner === null || task.owner === undefined).length,
+        statuses: statusCounts,
+      };
+    }
+
+    function employeeTasks(owner, filters) {
+      return filteredTasks(filters).filter((task) =&gt; task.owner === owner &amp;&amp; task.status !== &quot;완료&quot;);
+    }
+
+    function unassignedTasks(filters) {
+      return filteredTasks(filters).filter((task) =&gt; (task.owner === null || task.owner === undefined) &amp;&amp; task.status !== &quot;완료&quot;);
+    }
+
+    function representativeTask(owner, filters) {
+      const owned = employeeTasks(owner, filters).filter((task) =&gt; !task.parentTaskIds?.length);
+      if (owned.length === 0) return null;
+      return owned
+        .map((task, index) =&gt; ({ task, index }))
+        .sort((left, right) =&gt; {
+          const leftRank = STATUS_RANK.get(left.task.status) ?? STATUS_ORDER.length;
+          const rightRank = STATUS_RANK.get(right.task.status) ?? STATUS_ORDER.length;
+          return leftRank - rightRank || left.index - right.index;
+        })[0].task;
+    }
+
+    function viewForEmployee(owner, filters) {
+      const owned = employeeTasks(owner, filters);
+      const topLevelCount = owned.filter((task) =&gt; !task.parentTaskIds?.length).length;
+      const representative = representativeTask(owner, filters);
+      return {
+        owner,
+        tasks: owned,
+        topLevelCount,
+        representative,
+        otherCount: representative ? topLevelCount - 1 : 0,
+        empty: owned.length === 0,
+      };
+    }
+
+    function normalizeSeating(saved) {
+      const valid = Array.isArray(saved) ? saved.filter((owner) =&gt; employees.includes(owner)) : [];
+      return [...new Set([...valid, ...employees])];
+    }
+
+    function swapSeats(saved, owner, target) {
+      const order = normalizeSeating(saved);
+      const from = order.indexOf(owner);
+      const to = order.indexOf(target);
+      if (from &gt;= 0 &amp;&amp; to &gt;= 0) [order[from], order[to]] = [order[to], order[from]];
+      return order;
+    }
+
+    function focusEmployeeButton(buttons, owner) {
+      const button = buttons.find((candidate) =&gt; candidate.dataset.owner === owner);
+      if (!button || typeof button.focus !== &quot;function&quot;) return null;
+      button.focus();
+      return button;
+    }
+
+    return {
+      employees,
+      statuses,
+      projects,
+      stateFromHost,
+      restorePendingState,
+      filteredTasks,
+      summary,
+      employeeTasks,
+      unassignedTasks,
+      representativeTask,
+      viewForEmployee,
+      focusEmployeeButton,
+      normalizeSeating,
+      swapSeats,
+      describeTask,
+    };
+  }
+
+  window.__wipsOfficeModel = createOfficeModel;
+
+  const root = document.getElementById(&quot;wips-office-root&quot;);
+  if (!root) return;
+
+  const dataNode = document.getElementById(&quot;wips-office-data&quot;);
+  let snapshot = JSON.parse(dataNode.textContent);
+  let model = createOfficeModel(snapshot);
+  const statusSelect = document.getElementById(&quot;wips-office-status&quot;);
+  const projectSelect = document.getElementById(&quot;wips-office-project&quot;);
+  const refreshButton = document.getElementById(&quot;wips-office-refresh&quot;);
+  const syncStatus = document.getElementById(&quot;wips-office-sync-status&quot;);
+  const summaryNode = document.getElementById(&quot;wips-office-summary&quot;);
+  const countsNode = document.getElementById(&quot;wips-office-status-counts&quot;);
+  const employeeNode = document.getElementById(&quot;wips-office-employees&quot;);
+  const seatingEdit = document.getElementById(&quot;wips-office-edit-seating&quot;);
+  const seatingReset = document.getElementById(&quot;wips-office-reset-seating&quot;);
+  const seatingMessage = document.getElementById(&quot;wips-office-seating-message&quot;);
+  const seatingKey = &quot;wips-office-seating-v1&quot;;
+  let editingSeating = false;
+  let draggingOwner = null;
+  let suppressEmployeeClick = false;
+  let savedSeating = [];
+  try { savedSeating = JSON.parse(window.localStorage.getItem(seatingKey)); } catch {}
+  let seatingOrder = model.normalizeSeating(savedSeating);
+
+  function persistSeating(message) {
+    try {
+      window.localStorage.setItem(seatingKey, JSON.stringify(seatingOrder));
+      seatingMessage.textContent = message + &quot; 이 브라우저에 저장했습니다.&quot;;
+    } catch {
+      seatingMessage.textContent = message + &quot; 저장할 수 없어 현재 화면에만 적용됩니다.&quot;;
+    }
+  }
+
+  function canDropSeat(owner) {
+    return editingSeating &amp;&amp; draggingOwner !== null &amp;&amp; draggingOwner !== owner &amp;&amp;
+      model.employees.includes(draggingOwner) &amp;&amp; model.employees.includes(owner);
+  }
+
+  seatingEdit.addEventListener(&quot;click&quot;, () =&gt; {
+    editingSeating = !editingSeating;
+    seatingEdit.setAttribute(&quot;aria-pressed&quot;, String(editingSeating));
+    seatingEdit.textContent = editingSeating ? &quot;배치 완료&quot; : &quot;자리 배치&quot;;
+    seatingReset.hidden = !editingSeating;
+    seatingMessage.textContent = editingSeating
+      ? &quot;요원을 다른 자리로 끌거나 아래 선택 메뉴에서 고르면 두 요원의 자리를 서로 바꿉니다. 변경 즉시 저장됩니다.&quot;
+      : &quot;자리 배치는 이 브라우저에 저장됩니다.&quot;;
+    render();
+  });
+  seatingReset.addEventListener(&quot;click&quot;, () =&gt; {
+    seatingOrder = model.normalizeSeating([]);
+    persistSeating(&quot;기본 배치로 되돌렸습니다.&quot;);
+    render();
+  });
+  const selectedTitle = document.getElementById(&quot;wips-office-selected-title&quot;);
+  const selectedNote = document.getElementById(&quot;wips-office-selected-note&quot;);
+  const selectedEmpty = document.getElementById(&quot;wips-office-selected-empty&quot;);
+  const selectedTasksNode = document.getElementById(&quot;wips-office-selected-tasks&quot;);
+  const communalCount = document.getElementById(&quot;wips-office-communal-count&quot;);
+  const communalEmpty = document.getElementById(&quot;wips-office-communal-empty&quot;);
+  const communalTasksNode = document.getElementById(&quot;wips-office-communal-tasks&quot;);
+  const snapshotNode = document.getElementById(&quot;wips-office-snapshot&quot;);
+  const sourceNode = document.getElementById(&quot;wips-office-source&quot;);
+  let pendingHostState = window.openai &amp;&amp; window.openai.widgetState;
+  let hasLiveModel = false;
+  let userChangedState = false;
+  const initialState = model.stateFromHost(pendingHostState);
+  const state = initialState || {
+    selectedEmployee: &quot;sb&quot;,
+    status: ALL_STATUS,
+    project: ALL_PROJECTS,
+  };
+  const WORKING_STATUSES = new Set([&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;]);
+  statusSelect.value = state.status;
+  projectSelect.value = state.project;
+
+  function setSafeHref(anchor, url) {
+    const safeUrl = safeNotionUrl(url);
+    if (safeUrl) {
+      anchor.href = safeUrl;
+      anchor.target = &quot;_blank&quot;;
+      anchor.rel = &quot;noopener noreferrer&quot;;
+    } else {
+      anchor.removeAttribute(&quot;href&quot;);
+    }
+  }
+
+  function addText(parent, tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined &amp;&amp; text !== null) node.textContent = String(text);
+    parent.append(node);
+    return node;
+  }
+
+  function createPersonArt(owner, count) {
+    const art = document.createElement(&quot;span&quot;);
+    art.className = &quot;person-art&quot;;
+    art.dataset.employee = owner;
+    let motionPhase = 0;
+    for (const character of owner) motionPhase = (motionPhase * 31 + character.codePointAt(0)) % 5;
+    art.dataset.motionPhase = String(motionPhase);
+    art.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+    const shapeClasses = [
+      &quot;chair-back&quot;,
+      &quot;chair-stem&quot;,
+      &quot;chair-base&quot;,
+      &quot;person-body&quot;,
+      &quot;person-head&quot;,
+      &quot;person-hair&quot;,
+      &quot;desk-top&quot;,
+      &quot;desk-front&quot;,
+      &quot;monitor-screen&quot;,
+      &quot;monitor-stand&quot;,
+      &quot;keyboard&quot;,
+      &quot;desk-leg desk-leg-left&quot;,
+      &quot;desk-leg desk-leg-right&quot;,
+    ];
+    shapeClasses.forEach((classNames) =&gt; {
+      const shape = document.createElement(&quot;span&quot;);
+      shape.className = classNames;
+      art.append(shape);
+    });
+    addText(art, &quot;span&quot;, &quot;employee-count&quot;, count + &quot;건&quot;);
+    addText(art, &quot;span&quot;, &quot;employee-name&quot;, owner);
+    return art;
+  }
+
+  function createWorkstation(owner, filters) {
+    const view = model.viewForEmployee(owner, filters);
+    const station = document.createElement(&quot;article&quot;);
+    station.className = &quot;workstation&quot;;
+    station.dataset.activity = view.representative &amp;&amp; WORKING_STATUSES.has(view.representative.status)
+      ? &quot;working&quot;
+      : &quot;idle&quot;;
+
+    const bubble = document.createElement(&quot;div&quot;);
+    bubble.className = &quot;speech-bubble&quot;;
+    if (view.representative) {
+      const statusLine = document.createElement(&quot;p&quot;);
+      statusLine.className = &quot;speech-status&quot;;
+      const dot = document.createElement(&quot;span&quot;);
+      dot.className = &quot;status-dot&quot;;
+      dot.dataset.status = view.representative.status;
+      dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+      statusLine.append(dot);
+      addText(statusLine, &quot;span&quot;, &quot;&quot;, view.representative.status);
+      addText(statusLine, &quot;span&quot;, &quot;&quot;, &quot;·&quot;);
+      addText(statusLine, &quot;span&quot;, &quot;&quot;, view.topLevelCount + &quot;건&quot;);
+      bubble.append(statusLine);
+      addText(bubble, &quot;p&quot;, &quot;speech-title&quot;, view.representative.title);
+      if (view.otherCount &gt; 0) addText(bubble, &quot;p&quot;, &quot;speech-other&quot;, &quot;외 &quot; + view.otherCount + &quot;건&quot;);
+    } else {
+      addText(bubble, &quot;p&quot;, &quot;speech-title&quot;, &quot;이 조건에 맞는 최상위 일감이 없습니다&quot;);
+      addText(bubble, &quot;p&quot;, &quot;speech-other&quot;, &quot;0건&quot;);
+    }
+
+    const button = document.createElement(&quot;button&quot;);
+    button.type = &quot;button&quot;;
+    button.className = &quot;employee-button&quot;;
+    button.dataset.owner = owner;
+    button.setAttribute(&quot;aria-label&quot;, owner + &quot;의 최상위 일감 &quot; + view.topLevelCount + &quot;개 보기&quot;);
+    button.setAttribute(&quot;aria-pressed&quot;, String(state.selectedEmployee === owner));
+    button.draggable = editingSeating;
+    button.append(createPersonArt(owner, view.topLevelCount));
+    button.addEventListener(&quot;click&quot;, (event) =&gt; {
+      if (suppressEmployeeClick) {
+        event.preventDefault();
+        event.stopPropagation();
+        suppressEmployeeClick = false;
+        return;
+      }
+      userChangedState = true;
+      state.selectedEmployee = owner;
+      render();
+      model.focusEmployeeButton(Array.from(employeeNode.querySelectorAll(&quot;button&quot;)), owner);
+      saveState();
+    });
+    button.addEventListener(&quot;dragstart&quot;, (event) =&gt; {
+      if (!editingSeating) {
+        event.preventDefault();
+        return;
+      }
+      draggingOwner = owner;
+      suppressEmployeeClick = true;
+      button.classList.add(&quot;is-dragging&quot;);
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = &quot;move&quot;;
+        event.dataTransfer.setData(&quot;text/plain&quot;, owner);
+      }
+    });
+
+    station.append(bubble, button);
+    if (editingSeating) {
+      station.addEventListener(&quot;dragover&quot;, (event) =&gt; {
+        if (!canDropSeat(owner)) return;
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = &quot;move&quot;;
+        station.classList.add(&quot;is-drop-target&quot;);
+      });
+      station.addEventListener(&quot;dragleave&quot;, (event) =&gt; {
+        if (station.contains(event.relatedTarget)) return;
+        station.classList.remove(&quot;is-drop-target&quot;);
+      });
+      station.addEventListener(&quot;drop&quot;, (event) =&gt; {
+        if (!canDropSeat(owner)) return;
+        event.preventDefault();
+        const source = draggingOwner;
+        draggingOwner = null;
+        seatingOrder = model.swapSeats(seatingOrder, source, owner);
+        persistSeating(source + &quot;와 &quot; + owner + &quot;의 자리를 바꿨습니다.&quot;);
+        render();
+      });
+      button.addEventListener(&quot;dragend&quot;, () =&gt; {
+        draggingOwner = null;
+        button.classList.remove(&quot;is-dragging&quot;);
+        employeeNode.querySelectorAll(&quot;.workstation.is-drop-target&quot;).forEach((target) =&gt; {
+          target.classList.remove(&quot;is-drop-target&quot;);
+        });
+        window.setTimeout(() =&gt; { suppressEmployeeClick = false; }, 0);
+      });
+      const label = document.createElement(&quot;label&quot;);
+      label.className = &quot;seat-control&quot;;
+      addText(label, &quot;span&quot;, &quot;&quot;, (seatingOrder.indexOf(owner) + 1) + &quot;번 자리 · &quot; + owner);
+      const select = document.createElement(&quot;select&quot;);
+      select.className = &quot;form-select&quot;;
+      select.dataset.seatOwner = owner;
+      select.setAttribute(&quot;aria-label&quot;, owner + &quot; 이동할 자리&quot;);
+      seatingOrder.forEach((occupant, index) =&gt; {
+        const option = document.createElement(&quot;option&quot;);
+        option.value = occupant;
+        option.textContent = (index + 1) + &quot;번 · &quot; + occupant + (occupant === owner ? &quot; (현재)&quot; : &quot;와 교환&quot;);
+        select.append(option);
+      });
+      select.value = owner;
+      select.addEventListener(&quot;change&quot;, () =&gt; {
+        const target = select.value;
+        seatingOrder = model.swapSeats(seatingOrder, owner, target);
+        persistSeating(owner + &quot;와 &quot; + target + &quot;의 자리를 바꿨습니다.&quot;);
+        render();
+        Array.from(employeeNode.querySelectorAll(&quot;select&quot;)).find((node) =&gt; node.dataset.seatOwner === owner)?.focus();
+      });
+      label.append(select);
+      station.append(label);
+    }
+    return station;
+  }
+
+  function addFact(list, label, value, isWide) {
+    const wrapper = document.createElement(&quot;div&quot;);
+    wrapper.className = &quot;task-fact&quot; + (isWide ? &quot; task-fact--wide&quot; : &quot;&quot;);
+    addText(wrapper, &quot;dt&quot;, &quot;&quot;, label);
+    addText(wrapper, &quot;dd&quot;, &quot;&quot;, value);
+    list.append(wrapper);
+  }
+
+  function createTaskCard(task) {
+    const details = model.describeTask(task);
+    const card = document.createElement(&quot;article&quot;);
+    card.className = &quot;card task-card&quot;;
+    addText(card, &quot;h3&quot;, &quot;&quot;, details.title);
+    const tags = document.createElement(&quot;div&quot;);
+    tags.className = &quot;task-tags&quot;;
+    const status = document.createElement(&quot;span&quot;);
+    status.className = &quot;viz-badge task-status&quot;;
+    const statusDot = document.createElement(&quot;span&quot;);
+    statusDot.className = &quot;status-dot&quot;;
+    statusDot.dataset.status = details.status;
+    statusDot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+    status.append(statusDot);
+    addText(status, &quot;span&quot;, &quot;&quot;, details.status);
+    tags.append(status);
+    addText(tags, &quot;span&quot;, &quot;&quot;, &quot;프로젝트 · &quot; + details.project);
+    card.append(tags);
+    const facts = document.createElement(&quot;dl&quot;);
+    facts.className = &quot;task-facts&quot;;
+    addFact(facts, &quot;우선순위&quot;, details.priority, false);
+    addFact(facts, &quot;목표 일정&quot;, details.goalDate, false);
+    addFact(facts, &quot;다음 확인일&quot;, details.nextCheck, false);
+    addFact(facts, &quot;완료 조건&quot;, details.doneCondition, true);
+    addFact(facts, &quot;다음 행동&quot;, details.nextAction, true);
+    card.append(facts);
+    if (details.sourceUrl) {
+      const link = document.createElement(&quot;a&quot;);
+      link.className = &quot;task-source&quot;;
+      link.textContent = &quot;Notion에서 보기&quot;;
+      setSafeHref(link, details.sourceUrl);
+      card.append(link);
+    }
+    return card;
+  }
+
+  function renderTaskList(container, tasks) {
+    container.replaceChildren(...tasks.map(createTaskCard));
+  }
+
+  function renderStatusCounts(summary) {
+    countsNode.replaceChildren();
+    model.statuses.forEach((status) =&gt; {
+      const item = document.createElement(&quot;span&quot;);
+      item.className = &quot;status-count&quot;;
+      const dot = document.createElement(&quot;span&quot;);
+      dot.className = &quot;status-dot&quot;;
+      dot.dataset.status = status;
+      dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+      item.append(dot);
+      addText(item, &quot;span&quot;, &quot;&quot;, status);
+      addText(item, &quot;strong&quot;, &quot;tabular-nums&quot;, summary.statuses[status]);
+      countsNode.append(item);
+    });
+  }
+
+  function render() {
+    const filters = { status: statusSelect.value, project: projectSelect.value };
+    const summary = model.summary(filters);
+    const view = model.viewForEmployee(state.selectedEmployee, filters);
+    summaryNode.textContent = &quot;현재 표시 &quot; + summary.total + &quot; / &quot; + summary.snapshotTotal + &quot;개 · 미배정 &quot; + summary.unassigned + &quot;개&quot;;
+    renderStatusCounts(summary);
+    seatingOrder = model.normalizeSeating(seatingOrder);
+    employeeNode.replaceChildren(...seatingOrder.map((owner) =&gt; createWorkstation(owner, filters)));
+
+    selectedTitle.textContent = state.selectedEmployee + &quot;의 일감 · &quot; + view.tasks.length + &quot;개&quot;;
+    selectedNote.textContent = view.empty ? &quot;선택한 직원은 유지되며, 조건에 맞는 일감이 없습니다.&quot; : &quot;대표 일감 외 &quot; + view.otherCount + &quot;개를 포함합니다.&quot;;
+    selectedEmpty.hidden = !view.empty;
+    selectedEmpty.textContent = &quot;현재 필터에 맞는 &quot; + state.selectedEmployee + &quot;의 일감이 없습니다.&quot;;
+    renderTaskList(selectedTasksNode, view.tasks);
+
+    const unassigned = model.unassignedTasks(filters);
+    communalCount.textContent = unassigned.length + &quot;개&quot;;
+    communalEmpty.hidden = unassigned.length &gt; 0;
+    communalEmpty.textContent = &quot;현재 조건에 맞는 미배정 일감이 없습니다.&quot;;
+    renderTaskList(communalTasksNode, unassigned);
+  }
+
+  function setSelectOptions(select, values, selectedValue) {
+    const options = [...new Set(values.concat(selectedValue ? [selectedValue] : []))];
+    select.replaceChildren(...options.map((value) =&gt; {
+      const option = document.createElement(&quot;option&quot;);
+      option.value = value;
+      option.textContent = value;
+      return option;
+    }));
+    select.value = selectedValue;
+  }
+
+  function formatSuccessTime(value) {
+    if (!value) return &quot;마지막 성공: &quot; + (snapshot.snapshotDate || &quot;저장된 스냅샷&quot;) + &quot; 스냅샷&quot;;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return &quot;마지막 성공: &quot; + value;
+    return &quot;마지막 성공: &quot; + date.toLocaleString(&quot;ko-KR&quot;, { timeZone: &quot;Asia/Seoul&quot;, hour12: false });
+  }
+
+  function setSyncStatus(message, stateName) {
+    syncStatus.textContent = message;
+    syncStatus.dataset.state = stateName;
+  }
+
+  const connectToggleButton = document.getElementById(&quot;wips-office-connect-toggle&quot;);
+  const logoutButton = document.getElementById(&quot;wips-office-logout&quot;);
+  const offlineBanner = document.getElementById(&quot;wips-office-offline-banner&quot;);
+  const connectionPanel = document.getElementById(&quot;wips-office-connection-panel&quot;);
+  const connectionForm = document.getElementById(&quot;wips-office-connection-form&quot;);
+  const tokenInput = document.getElementById(&quot;wips-office-token&quot;);
+  const dataSourceIdInput = document.getElementById(&quot;wips-office-datasource-id&quot;);
+  const proxyUrlInput = document.getElementById(&quot;wips-office-proxy-url&quot;);
+  const connectSubmitButton = document.getElementById(&quot;wips-office-connect-submit&quot;);
+  const connectCancelButton = document.getElementById(&quot;wips-office-connect-cancel&quot;);
+  const connectionMessage = document.getElementById(&quot;wips-office-connection-message&quot;);
+  const mainView = document.getElementById(&quot;wips-office-main-view&quot;);
+
+  const OPFS_DIR_NAME = &quot;wips-office-private-v1&quot;;
+  const OPFS_CONNECTION_FILE = &quot;connection.json&quot;;
+  const OPFS_SNAPSHOT_FILE = &quot;snapshot-cache.json&quot;;
+  const STATIC_NOTION_VERSION = &quot;2026-03-11&quot;;
+  const STATIC_MAX_RETRY_AFTER_MS = 10_000;
+  const STATIC_MAX_RETRIES = 2;
+  const STATIC_MAX_PAGES = 100;
+  const STATIC_REQUEST_TIMEOUT_MS = 10_000;
+  const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const TOKEN_INVALID_PATTERN = /[\s\u0000-\u001F\u007F]/;
+  const CONTROL_PATTERN = /[\u0000-\u001F\u007F]/;
+  const LOCAL_HTTP_HOSTS = new Set([&quot;127.0.0.1&quot;, &quot;localhost&quot;, &quot;[::1]&quot;]);
+
+  function createEmptySnapshotObject() {
+    return {
+      snapshotDate: &quot;&quot;,
+      timezone: &quot;Asia/Seoul&quot;,
+      sourceUrl: &quot;&quot;,
+      results: [],
+      has_more: false,
+      data_source_ids: [],
+    };
+  }
+
+  function isEmptySnapshotData(data) {
+    return Boolean(
+      data &amp;&amp;
+      Array.isArray(data.results) &amp;&amp;
+      data.results.length === 0 &amp;&amp;
+      (data.snapshotDate || &quot;&quot;) === &quot;&quot; &amp;&amp;
+      (data.sourceUrl || &quot;&quot;) === &quot;&quot; &amp;&amp;
+      (!Array.isArray(data.data_source_ids) || data.data_source_ids.length === 0)
+    );
+  }
+
+  const IS_STATIC_MODE =
+    window.__WIPS_RUNTIME_MODE === &quot;static&quot; ||
+    (window.__WIPS_RUNTIME_MODE !== &quot;local&quot; &amp;&amp; isEmptySnapshotData(snapshot));
+
+  let activeConnection = null;
+  let activeFetchController = null;
+  let pollTimerId = null;
+  let sessionEpoch = 0;
+  let isRefreshing = false;
+
+  function validateStaticConnection(input) {
+    const rawToken = typeof input?.token === &quot;string&quot; ? input.token : &quot;&quot;;
+    if (!rawToken || TOKEN_INVALID_PATTERN.test(rawToken)) {
+      return { ok: false, error: &quot;Notion 토큰은 공백이나 제어 문자 없이 입력해야 합니다.&quot; };
+    }
+    const rawId = typeof input?.dataSourceId === &quot;string&quot; ? input.dataSourceId.trim() : &quot;&quot;;
+    if (!UUID_PATTERN.test(rawId)) {
+      return { ok: false, error: &quot;데이터 소스 ID는 표준 UUID(8-4-4-4-12) 형식이어야 합니다.&quot; };
+    }
+    const rawProxy = typeof input?.corsProxyUrl === &quot;string&quot; ? input.corsProxyUrl.trim() : &quot;&quot;;
+    if (!rawProxy || CONTROL_PATTERN.test(rawProxy)) {
+      return { ok: false, error: &quot;CORS 중계 URL을 올바르게 입력하세요.&quot; };
+    }
+    let normalizedProxy = &quot;&quot;;
+    try {
+      const parsed = new URL(rawProxy);
+      const isHttps = parsed.protocol === &quot;https:&quot;;
+      const isLocal = parsed.protocol === &quot;http:&quot; &amp;&amp; LOCAL_HTTP_HOSTS.has(parsed.hostname);
+      if (!isHttps &amp;&amp; !isLocal) {
+        return { ok: false, error: &quot;CORS 중계 URL은 https:// (또는 로컬 테스트용 http://127.0.0.1)만 허용됩니다.&quot; };
+      }
+      if (parsed.username || parsed.password || parsed.search || parsed.hash) {
+        return { ok: false, error: &quot;CORS 중계 URL에 자격증명이나 쿼리스트링을 포함할 수 없습니다.&quot; };
+      }
+      normalizedProxy = parsed.href.replace(/\/$/, &quot;&quot;);
+    } catch {
+      return { ok: false, error: &quot;CORS 중계 URL 형식이 올바르지 않습니다.&quot; };
+    }
+    return {
+      ok: true,
+      value: {
+        token: rawToken,
+        dataSourceId: rawId.toLowerCase(),
+        corsProxyUrl: normalizedProxy,
+      },
+    };
+  }
+
+  function createBrowserOpfsStore() {
+    function isSupported() {
+      return typeof navigator !== &quot;undefined&quot; &amp;&amp; Boolean(navigator.storage) &amp;&amp; typeof navigator.storage.getDirectory === &quot;function&quot;;
+    }
+    async function getPrivateDir(create) {
+      if (!isSupported()) throw new Error(&quot;OPFS를 지원하지 않는 브라우저입니다.&quot;);
+      const rootDir = await navigator.storage.getDirectory();
+      try {
+        return await rootDir.getDirectoryHandle(OPFS_DIR_NAME, { create });
+      } catch (error) {
+        if (!create &amp;&amp; error?.name === &quot;NotFoundError&quot;) return null;
+        throw error;
+      }
+    }
+    async function writeVerified(fileName, payload) {
+      const dir = await getPrivateDir(true);
+      const serialized = JSON.stringify(payload);
+      const handle = await dir.getFileHandle(fileName, { create: true });
+      const writable = await handle.createWritable();
+      await writable.write(serialized);
+      await writable.close();
+      const file = await handle.getFile();
+      const readback = await file.text();
+      if (JSON.stringify(JSON.parse(readback)) !== JSON.stringify(JSON.parse(serialized))) {
+        throw new Error(&quot;OPFS 저장 검증에 실패했습니다.&quot;);
+      }
+      return payload;
+    }
+    async function readJson(fileName) {
+      const dir = await getPrivateDir(false);
+      if (!dir) return null;
+      let handle;
+      try {
+        handle = await dir.getFileHandle(fileName, { create: false });
+      } catch (error) {
+        if (error?.name === &quot;NotFoundError&quot;) return null;
+        throw error;
+      }
+      const file = await handle.getFile();
+      const text = await file.text();
+      return text ? JSON.parse(text) : null;
+    }
+    return {
+      isSupported,
+      async saveConnection(config) {
+        const check = validateStaticConnection(config);
+        if (!check.ok) throw new Error(check.error);
+        return writeVerified(OPFS_CONNECTION_FILE, check.value);
+      },
+      async loadConnection() {
+        if (!isSupported()) return null;
+        const stored = await readJson(OPFS_CONNECTION_FILE);
+        if (!stored) return null;
+        const check = validateStaticConnection(stored);
+        return check.ok ? check.value : null;
+      },
+      async saveSnapshot(nextSnapshot) {
+        if (!isSupported()) return nextSnapshot;
+        return writeVerified(OPFS_SNAPSHOT_FILE, nextSnapshot);
+      },
+      async loadSnapshot() {
+        if (!isSupported()) return null;
+        const stored = await readJson(OPFS_SNAPSHOT_FILE);
+        if (!stored || !Array.isArray(stored.results)) return null;
+        return stored;
+      },
+      async clearAll() {
+        if (!isSupported()) return;
+        const dir = await getPrivateDir(false);
+        if (!dir) return;
+        for (const name of [OPFS_CONNECTION_FILE, OPFS_SNAPSHOT_FILE]) {
+          try {
+            await dir.removeEntry(name);
+          } catch (error) {
+            if (error?.name !== &quot;NotFoundError&quot;) throw error;
+          }
+        }
+      },
+    };
+  }
+
+  const opfsStore = createBrowserOpfsStore();
+
+  function staticPlainText(items) {
+    if (!Array.isArray(items)) return null;
+    const text = items.map((item) =&gt; {
+      if (typeof item?.plain_text === &quot;string&quot;) return item.plain_text;
+      if (typeof item?.text?.content === &quot;string&quot;) return item.text.content;
+      return &quot;&quot;;
+    }).join(&quot;&quot;);
+    return text || null;
+  }
+
+  function staticSelectName(value) {
+    return typeof value?.name === &quot;string&quot; &amp;&amp; value.name.trim() ? value.name : null;
+  }
+
+  function staticMapNotionPage(page) {
+    const properties = page?.properties || {};
+    const taskDate = properties[&quot;목표일&quot;]?.date;
+    return {
+      url: typeof page?.url === &quot;string&quot; ? page.url : &quot;&quot;,
+      title: staticPlainText(properties[&quot;일감&quot;]?.title) || &quot;제목 없음&quot;,
+      parentTaskIds: (properties[&quot;상위 일감&quot;]?.relation || []).map((parent) =&gt; parent.id),
+      owner: staticSelectName(properties[&quot;담당자&quot;]?.select),
+      status: staticSelectName(properties[&quot;상태&quot;]?.status) || &quot;미지정&quot;,
+      project: staticSelectName(properties[&quot;프로젝트&quot;]?.select),
+      priority: staticSelectName(properties[&quot;우선순위&quot;]?.select),
+      category: staticSelectName(properties[&quot;구분&quot;]?.select),
+      nextAction: staticPlainText(properties[&quot;다음 조치&quot;]?.rich_text),
+      doneCondition: staticPlainText(properties[&quot;완료 조건&quot;]?.rich_text),
+      startDate: typeof taskDate?.start === &quot;string&quot; ? taskDate.start : null,
+      endDate: typeof taskDate?.end === &quot;string&quot; ? taskDate.end : null,
+      checkDate: typeof properties[&quot;다음 확인일&quot;]?.date?.start === &quot;string&quot;
+        ? properties[&quot;다음 확인일&quot;].date.start
+        : null,
+    };
+  }
+
+  function staticTodayInKorea() {
+    const values = Object.fromEntries(new Intl.DateTimeFormat(&quot;en&quot;, {
+      timeZone: &quot;Asia/Seoul&quot;,
+      year: &quot;numeric&quot;,
+      month: &quot;2-digit&quot;,
+      day: &quot;2-digit&quot;,
+    }).formatToParts(new Date()).filter((part) =&gt; part.type !== &quot;literal&quot;).map(({ type, value }) =&gt; [type, value]));
+    return values.year + &quot;-&quot; + values.month + &quot;-&quot; + values.day;
+  }
+
+  function staticParseRetryAfter(value) {
+    if (value == null || value === &quot;&quot;) return null;
+    const seconds = Number(value);
+    if (Number.isFinite(seconds) &amp;&amp; seconds &gt;= 0) return Math.ceil(seconds * 1000);
+    const parsedDate = Date.parse(value);
+    return Number.isFinite(parsedDate) ? Math.max(0, parsedDate - Date.now()) : null;
+  }
+
+  async function fetchNotionSnapshotStatic(connection, signal) {
+    const valid = validateStaticConnection(connection);
+    if (!valid.ok) throw new Error(valid.error);
+    const { token, dataSourceId, corsProxyUrl } = valid.value;
+    const endpoint = corsProxyUrl + &quot;/data_sources/&quot; + encodeURIComponent(dataSourceId) + &quot;/query&quot;;
+    const results = [];
+    let cursor;
+    let pageCount = 0;
+
+    while (true) {
+      if (pageCount &gt;= STATIC_MAX_PAGES) {
+        throw new Error(&quot;Notion 페이지네이션 안전 한도(&quot; + STATIC_MAX_PAGES + &quot;)를 초과했습니다.&quot;);
+      }
+      const body = { page_size: 100 };
+      if (cursor) body.start_cursor = cursor;
+
+      let retryCount = 0;
+      let pagePayload = null;
+      while (true) {
+        if (signal?.aborted) {
+          const abortErr = new Error(&quot;요청이 취소되었습니다.&quot;);
+          abortErr.code = &quot;NOTION_ABORTED&quot;;
+          throw abortErr;
+        }
+        const controller = new AbortController();
+        let timedOut = false;
+        let cancelled = false;
+        const onAbort = () =&gt; {
+          cancelled = true;
+          controller.abort();
+        };
+        signal?.addEventListener(&quot;abort&quot;, onAbort, { once: true });
+        const timer = setTimeout(() =&gt; {
+          timedOut = true;
+          controller.abort();
+        }, STATIC_REQUEST_TIMEOUT_MS);
+
+        let response;
+        try {
+          response = await fetch(endpoint, {
+            method: &quot;POST&quot;,
+            headers: {
+              Authorization: &quot;Bearer &quot; + token,
+              &quot;Content-Type&quot;: &quot;application/json&quot;,
+              &quot;Notion-Version&quot;: STATIC_NOTION_VERSION,
+            },
+            body: JSON.stringify(body),
+            redirect: &quot;error&quot;,
+            credentials: &quot;omit&quot;,
+            cache: &quot;no-store&quot;,
+            signal: controller.signal,
+          });
+        } catch (error) {
+          clearTimeout(timer);
+          signal?.removeEventListener(&quot;abort&quot;, onAbort);
+          if (cancelled || signal?.aborted) {
+            const abortErr = new Error(&quot;요청이 취소되었습니다.&quot;);
+            abortErr.code = &quot;NOTION_ABORTED&quot;;
+            throw abortErr;
+          }
+          if (timedOut || error?.name === &quot;AbortError&quot;) {
+            throw new Error(&quot;Notion 조회 요청 시간이 초과되었습니다.&quot;);
+          }
+          throw new Error(&quot;CORS 중계 서버 또는 네트워크에 연결할 수 없습니다.&quot;);
+        }
+
+        if (response.status === 429) {
+          const retryDelay = staticParseRetryAfter(response.headers.get(&quot;retry-after&quot;)) ??
+            Math.min(1000 * (2 ** retryCount), STATIC_MAX_RETRY_AFTER_MS);
+          try { await response.body?.cancel(); } catch {}
+          clearTimeout(timer);
+          signal?.removeEventListener(&quot;abort&quot;, onAbort);
+          if (retryDelay &gt; STATIC_MAX_RETRY_AFTER_MS || retryCount &gt;= STATIC_MAX_RETRIES) {
+            throw new Error(&quot;Notion 요청 한도(429)에 도달했습니다. 잠시 후 다시 시도하세요.&quot;);
+          }
+          await new Promise((resolve) =&gt; setTimeout(resolve, retryDelay));
+          retryCount += 1;
+          continue;
+        }
+
+        if (!response.ok) {
+          const upstreamStatus = response.status;
+          try { await response.body?.cancel(); } catch {}
+          clearTimeout(timer);
+          signal?.removeEventListener(&quot;abort&quot;, onAbort);
+          const err = upstreamStatus === 401 || upstreamStatus === 403
+            ? new Error(&quot;인증 또는 권한 오류(HTTP &quot; + upstreamStatus + &quot;): Notion Integration의 Read content 권한과 단일 DB 연결, 토큰·데이터 소스 ID를 확인하세요.&quot;)
+            : new Error(&quot;Notion 조회가 실패했습니다 (HTTP &quot; + upstreamStatus + &quot;).&quot;);
+          err.upstreamStatus = upstreamStatus;
+          throw err;
+        }
+
+        try {
+          pagePayload = await response.json();
+        } catch (error) {
+          clearTimeout(timer);
+          signal?.removeEventListener(&quot;abort&quot;, onAbort);
+          if (cancelled || signal?.aborted) {
+            const abortErr = new Error(&quot;요청이 취소되었습니다.&quot;);
+            abortErr.code = &quot;NOTION_ABORTED&quot;;
+            throw abortErr;
+          }
+          if (timedOut || error?.name === &quot;AbortError&quot;) {
+            throw new Error(&quot;Notion 응답 본문 수신 시간이 초과되었습니다.&quot;);
+          }
+          throw new Error(&quot;Notion API가 유효한 JSON 응답을 반환하지 않았습니다.&quot;);
+        }
+        clearTimeout(timer);
+        signal?.removeEventListener(&quot;abort&quot;, onAbort);
+        break;
+      }
+
+      if (pagePayload?.request_status?.type === &quot;incomplete&quot;) {
+        throw new Error(&quot;Notion 조회 결과가 불완전(incomplete)하여 기존 데이터를 유지합니다.&quot;);
+      }
+      if (!Array.isArray(pagePayload?.results)) {
+        throw new Error(&quot;Notion 응답에 results 목록이 없습니다.&quot;);
+      }
+      results.push(...pagePayload.results.map(staticMapNotionPage));
+      pageCount += 1;
+      if (!pagePayload.has_more) break;
+      if (typeof pagePayload.next_cursor !== &quot;string&quot; || !pagePayload.next_cursor) {
+        throw new Error(&quot;Notion 페이지네이션 응답에 next_cursor가 없습니다.&quot;);
+      }
+      cursor = pagePayload.next_cursor;
+    }
+
+    return {
+      snapshotDate: staticTodayInKorea(),
+      timezone: &quot;Asia/Seoul&quot;,
+      sourceUrl: &quot;&quot;,
+      results,
+      has_more: false,
+      data_source_ids: [dataSourceId],
+      lastSuccessAt: new Date().toISOString(),
+    };
+  }
+
+  function setConnectionMessage(message, stateName) {
+    if (!connectionMessage) return;
+    connectionMessage.textContent = message;
+    connectionMessage.dataset.state = stateName || &quot;idle&quot;;
+  }
+
+  function setOfflineBanner(message) {
+    if (!offlineBanner) return;
+    if (message) {
+      offlineBanner.textContent = message;
+      offlineBanner.hidden = false;
+    } else {
+      offlineBanner.textContent = &quot;&quot;;
+      offlineBanner.hidden = true;
+    }
+  }
+
+  function applySnapshot(nextSnapshot) {
+    let selectedStatus = statusSelect.value;
+    let selectedProject = projectSelect.value;
+    snapshot = nextSnapshot;
+    model = createOfficeModel(snapshot);
+    if (!hasLiveModel) {
+      const restored = model.restorePendingState(pendingHostState, {
+        selectedEmployee: state.selectedEmployee,
+        status: selectedStatus,
+        project: selectedProject,
+      }, userChangedState);
+      state.selectedEmployee = restored.selectedEmployee;
+      selectedStatus = restored.status;
+      selectedProject = restored.project;
+      pendingHostState = null;
+      hasLiveModel = true;
+    }
+    dataNode.textContent = JSON.stringify(snapshot);
+    setSelectOptions(statusSelect, [ALL_STATUS, ...model.statuses], selectedStatus);
+    setSelectOptions(projectSelect, [ALL_PROJECTS, ...model.projects, UNSPECIFIED_PROJECT], selectedProject);
+    snapshotNode.textContent = snapshot.snapshotDate ? &quot;Notion 반영 · &quot; + snapshot.snapshotDate + &quot; KST&quot; : &quot;Notion 실시간 조회&quot;;
+    if (snapshot.sourceUrl) {
+      sourceNode.hidden = false;
+      setSafeHref(sourceNode, snapshot.sourceUrl);
+    } else {
+      sourceNode.hidden = true;
+      sourceNode.removeAttribute(&quot;href&quot;);
+    }
+    if (mainView) mainView.hidden = false;
+    render();
+  }
+
+  function clearViewDom() {
+    snapshot = createEmptySnapshotObject();
+    model = createOfficeModel(snapshot);
+    hasLiveModel = false;
+    dataNode.textContent = JSON.stringify(snapshot);
+    employeeNode.replaceChildren();
+    selectedTasksNode.replaceChildren();
+    communalTasksNode.replaceChildren();
+    countsNode.replaceChildren();
+    summaryNode.textContent = &quot;&quot;;
+    selectedTitle.textContent = &quot;&quot;;
+    selectedNote.textContent = &quot;&quot;;
+    selectedEmpty.hidden = true;
+    selectedEmpty.textContent = &quot;&quot;;
+    communalCount.textContent = &quot;&quot;;
+    communalEmpty.hidden = true;
+    communalEmpty.textContent = &quot;&quot;;
+    snapshotNode.textContent = &quot;연결되지 않음 (업무 데이터 없음)&quot;;
+    sourceNode.hidden = true;
+    sourceNode.removeAttribute(&quot;href&quot;);
+    if (mainView) mainView.hidden = true;
+    setOfflineBanner(&quot;&quot;);
+  }
+
+  function stopStaticPolling() {
+    if (pollTimerId !== null) {
+      window.clearInterval(pollTimerId);
+      pollTimerId = null;
+    }
+  }
+
+  function startStaticPolling() {
+    if (pollTimerId !== null) return;
+    pollTimerId = window.setInterval(refreshData, 30_000);
+  }
+
+  async function refreshData() {
+    if (isRefreshing || (IS_STATIC_MODE &amp;&amp; !activeConnection)) return;
+    isRefreshing = true;
+    refreshButton.disabled = true;
+    const requestEpoch = sessionEpoch;
+    setSyncStatus(&quot;Notion 데이터 확인 중…&quot;, &quot;loading&quot;);
+    let responseData = null;
+    try {
+      if (IS_STATIC_MODE) {
+        activeFetchController?.abort();
+        activeFetchController = new AbortController();
+        const freshSnapshot = await fetchNotionSnapshotStatic(activeConnection, activeFetchController.signal);
+        if (requestEpoch !== sessionEpoch) return;
+        await opfsStore.saveSnapshot(freshSnapshot).catch(() =&gt; {});
+        if (requestEpoch !== sessionEpoch) return;
+        applySnapshot(freshSnapshot);
+        setOfflineBanner(&quot;&quot;);
+        setSyncStatus(formatSuccessTime(freshSnapshot.lastSuccessAt) + &quot; · 30초 간격 자동 갱신&quot;, &quot;success&quot;);
+        return;
+      }
+
+      const response = await fetch(&quot;/api/tasks&quot;, {
+        headers: { Accept: &quot;application/json&quot; },
+        cache: &quot;no-store&quot;,
+      });
+      responseData = await response.json().catch(() =&gt; null);
+      if (!response.ok) {
+        const error = new Error(responseData?.error || &quot;Notion 데이터를 갱신하지 못했습니다.&quot;);
+        error.responseData = responseData;
+        throw error;
+      }
+      if (!responseData || !Array.isArray(responseData.results) || typeof responseData.snapshotDate !== &quot;string&quot;) {
+        throw new Error(&quot;서버가 유효한 Notion 스냅샷을 반환하지 않았습니다.&quot;);
+      }
+
+      applySnapshot(responseData);
+      setSyncStatus(formatSuccessTime(snapshot.lastSuccessAt) + &quot; · 30초 간격 자동 갱신&quot;, &quot;success&quot;);
+    } catch (error) {
+      if (requestEpoch !== sessionEpoch || error?.code === &quot;NOTION_ABORTED&quot;) return;
+      const detail = error.responseData || responseData;
+      const fallbackTime = IS_STATIC_MODE ? snapshot.lastSuccessAt : detail?.lastSuccessAt;
+      const message = error.message || &quot;서버에 연결할 수 없습니다. 연결 상태를 확인하세요.&quot;;
+      if (IS_STATIC_MODE &amp;&amp; navigator?.onLine === false &amp;&amp; snapshot.results.length &gt; 0) {
+        setOfflineBanner(&quot;오프라인 상태입니다. 기기 OPFS에 저장된 마지막 조회 데이터를 표시합니다.&quot;);
+      }
+      setSyncStatus(message + (fallbackTime ? &quot; · &quot; + formatSuccessTime(fallbackTime) : &quot;&quot;), &quot;error&quot;);
+    } finally {
+      isRefreshing = false;
+      if (requestEpoch === sessionEpoch) {
+        refreshButton.disabled = IS_STATIC_MODE &amp;&amp; !activeConnection;
+      }
+    }
+  }
+
+  async function logoutSession() {
+    sessionEpoch += 1;
+    isRefreshing = false;
+    activeFetchController?.abort();
+    activeFetchController = null;
+    stopStaticPolling();
+    activeConnection = null;
+    if (logoutButton) logoutButton.hidden = true;
+    refreshButton.disabled = true;
+    if (connectSubmitButton) connectSubmitButton.disabled = false;
+
+    await opfsStore.clearAll().catch(() =&gt; {});
+    if (typeof window.__wipsClearSwSession === &quot;function&quot;) {
+      await window.__wipsClearSwSession().catch(() =&gt; {});
+    }
+    try {
+      if (typeof CustomEvent === &quot;function&quot;) {
+        window.dispatchEvent(new CustomEvent(&quot;wips:logout&quot;));
+      }
+    } catch {}
+    try {
+      if (window.parent &amp;&amp; window.parent !== window) {
+        window.parent.postMessage({ type: &quot;wips:logout&quot; }, window.location.origin);
+      }
+    } catch {}
+
+    clearViewDom();
+    if (tokenInput) tokenInput.value = &quot;&quot;;
+    if (dataSourceIdInput) dataSourceIdInput.value = &quot;&quot;;
+    if (proxyUrlInput) proxyUrlInput.value = &quot;&quot;;
+    if (connectionPanel) connectionPanel.hidden = false;
+    if (connectCancelButton) connectCancelButton.hidden = true;
+    const msg = &quot;로그아웃되었습니다. 이 기기에서 토큰·연결 정보와 업무 데이터를 삭제했습니다.&quot;;
+    setConnectionMessage(msg, &quot;info&quot;);
+    setSyncStatus(msg, &quot;idle&quot;);
+  }
+
+  function saveState() {
+    try {
+      if (!window.openai || typeof window.openai.setWidgetState !== &quot;function&quot;) return;
+      const pending = window.openai.setWidgetState({
+        modelContent: { selectedEmployee: state.selectedEmployee },
+        privateContent: {
+          selectedEmployee: state.selectedEmployee,
+          status: statusSelect.value,
+          project: projectSelect.value,
+        },
+      });
+      if (pending &amp;&amp; typeof pending.catch === &quot;function&quot;) pending.catch(() =&gt; {});
+    } catch {}
+  }
+
+  statusSelect.addEventListener(&quot;change&quot;, () =&gt; {
+    userChangedState = true;
+    state.status = statusSelect.value;
+    render();
+    saveState();
+  });
+  projectSelect.addEventListener(&quot;change&quot;, () =&gt; {
+    userChangedState = true;
+    state.project = projectSelect.value;
+    render();
+    saveState();
+  });
+  window.addEventListener?.(&quot;openai:set_globals&quot;, (event) =&gt; {
+    const widgetState = event.detail &amp;&amp; event.detail.globals &amp;&amp; event.detail.globals.widgetState;
+    if (!hasLiveModel) {
+      pendingHostState = widgetState;
+      if (userChangedState) return;
+    }
+    const incoming = model.stateFromHost(widgetState);
+    if (!incoming) return;
+    if (
+      incoming.selectedEmployee === state.selectedEmployee &amp;&amp;
+      incoming.status === statusSelect.value &amp;&amp;
+      incoming.project === projectSelect.value
+    ) return;
+    state.selectedEmployee = incoming.selectedEmployee;
+    statusSelect.value = incoming.status;
+    projectSelect.value = incoming.project;
+    render();
+  });
+
+  async function initStaticMode() {
+    const startEpoch = sessionEpoch;
+    clearViewDom();
+    if (connectToggleButton) connectToggleButton.hidden = false;
+    if (logoutButton) logoutButton.hidden = true;
+    refreshButton.disabled = true;
+    if (connectionPanel) connectionPanel.hidden = false;
+    if (connectCancelButton) connectCancelButton.hidden = true;
+
+    if (!opfsStore.isSupported()) {
+      setConnectionMessage(
+        &quot;이 브라우저는 OPFS 격리 저장소를 지원하지 않습니다. 연결 정보는 현재 탭 세션 메모리에만 유지되며 새로고침 시 삭제됩니다.&quot;,
+        &quot;info&quot;,
+      );
+      setSyncStatus(&quot;Notion 연결 설정이 필요합니다 (OPFS 미지원 환경).&quot;, &quot;idle&quot;);
+      return;
+    }
+
+    let savedConnection = null;
+    let savedSnapshot = null;
+    try {
+      savedConnection = await opfsStore.loadConnection();
+      savedSnapshot = await opfsStore.loadSnapshot();
+    } catch {
+      savedConnection = null;
+      savedSnapshot = null;
+    }
+    if (startEpoch !== sessionEpoch) return;
+
+    if (!savedConnection) {
+      await opfsStore.clearAll().catch(() =&gt; {});
+      setSyncStatus(&quot;Notion 연결 설정이 필요합니다.&quot;, &quot;idle&quot;);
+      return;
+    }
+
+    activeConnection = savedConnection;
+    if (dataSourceIdInput) dataSourceIdInput.value = savedConnection.dataSourceId;
+    if (proxyUrlInput) proxyUrlInput.value = savedConnection.corsProxyUrl;
+    if (logoutButton) logoutButton.hidden = false;
+    refreshButton.disabled = false;
+    if (connectionPanel) connectionPanel.hidden = true;
+
+    if (savedSnapshot &amp;&amp; !isEmptySnapshotData(savedSnapshot)) {
+      applySnapshot(savedSnapshot);
+      if (navigator?.onLine === false) {
+        setOfflineBanner(&quot;오프라인 상태입니다. 기기 OPFS에 저장된 마지막 조회 데이터를 표시합니다.&quot;);
+        setSyncStatus(&quot;오프라인 · &quot; + formatSuccessTime(savedSnapshot.lastSuccessAt), &quot;error&quot;);
+        startStaticPolling();
+        return;
+      }
+    }
+
+    await refreshData();
+    if (startEpoch === sessionEpoch &amp;&amp; activeConnection) {
+      startStaticPolling();
+    }
+  }
+
+  refreshButton.addEventListener(&quot;click&quot;, refreshData);
+  connectToggleButton?.addEventListener(&quot;click&quot;, () =&gt; {
+    if (!connectionPanel) return;
+    connectionPanel.hidden = !connectionPanel.hidden;
+    if (connectCancelButton) connectCancelButton.hidden = !activeConnection;
+    if (!connectionPanel.hidden &amp;&amp; activeConnection) {
+      if (dataSourceIdInput) dataSourceIdInput.value = activeConnection.dataSourceId;
+      if (proxyUrlInput) proxyUrlInput.value = activeConnection.corsProxyUrl;
+    }
+  });
+  connectCancelButton?.addEventListener(&quot;click&quot;, () =&gt; {
+    if (connectionPanel &amp;&amp; activeConnection) {
+      connectionPanel.hidden = true;
+    }
+  });
+  logoutButton?.addEventListener(&quot;click&quot;, () =&gt; {
+    void logoutSession();
+  });
+  connectionForm?.addEventListener(&quot;submit&quot;, async (event) =&gt; {
+    event.preventDefault();
+    const validation = validateStaticConnection({
+      token: tokenInput?.value || &quot;&quot;,
+      dataSourceId: dataSourceIdInput?.value || &quot;&quot;,
+      corsProxyUrl: proxyUrlInput?.value || &quot;&quot;,
+    });
+    if (!validation.ok) {
+      setConnectionMessage(validation.error, &quot;error&quot;);
+      return;
+    }
+
+    const submitEpoch = sessionEpoch;
+    if (connectSubmitButton) connectSubmitButton.disabled = true;
+    setConnectionMessage(&quot;Notion 연결 확인 및 데이터 조회 중…&quot;, &quot;loading&quot;);
+    setSyncStatus(&quot;Notion 연결 확인 중…&quot;, &quot;loading&quot;);
+    try {
+      activeFetchController?.abort();
+      activeFetchController = new AbortController();
+      const freshSnapshot = await fetchNotionSnapshotStatic(validation.value, activeFetchController.signal);
+      if (submitEpoch !== sessionEpoch) return;
+
+      if (opfsStore.isSupported()) {
+        await opfsStore.saveConnection(validation.value);
+        await opfsStore.saveSnapshot(freshSnapshot);
+      }
+      if (submitEpoch !== sessionEpoch) return;
+
+      activeConnection = validation.value;
+      if (tokenInput) tokenInput.value = &quot;&quot;;
+      if (connectionPanel) connectionPanel.hidden = true;
+      if (logoutButton) logoutButton.hidden = false;
+      refreshButton.disabled = false;
+      applySnapshot(freshSnapshot);
+      setOfflineBanner(&quot;&quot;);
+      setConnectionMessage(&quot;연결이 저장되었습니다. OPFS에 격리 보관됩니다.&quot;, &quot;info&quot;);
+      setSyncStatus(formatSuccessTime(freshSnapshot.lastSuccessAt) + &quot; · 30초 간격 자동 갱신&quot;, &quot;success&quot;);
+      startStaticPolling();
+    } catch (error) {
+      if (submitEpoch !== sessionEpoch || error?.code === &quot;NOTION_ABORTED&quot;) return;
+      const msg = error?.message || &quot;Notion 연결에 실패했습니다.&quot;;
+      setConnectionMessage(msg, &quot;error&quot;);
+      setSyncStatus(msg, &quot;error&quot;);
+    } finally {
+      if (connectSubmitButton &amp;&amp; submitEpoch === sessionEpoch) {
+        connectSubmitButton.disabled = false;
+      }
+    }
+  });
+
+  if (IS_STATIC_MODE) {
+    window.addEventListener?.(&quot;offline&quot;, () =&gt; {
+      if (activeConnection &amp;&amp; snapshot.results.length &gt; 0) {
+        setOfflineBanner(&quot;오프라인 상태입니다. 기기 OPFS에 저장된 마지막 조회 데이터를 표시합니다.&quot;);
+      }
+    });
+    window.addEventListener?.(&quot;online&quot;, () =&gt; {
+      if (activeConnection) {
+        setOfflineBanner(&quot;&quot;);
+        void refreshData();
+      }
+    });
+    void initStaticMode();
+  } else {
+    const snapshotLabel = &quot;스냅샷 · &quot; + snapshot.snapshotDate + &quot; KST&quot;;
+    snapshotNode.textContent = snapshotLabel;
+    setSafeHref(sourceNode, snapshot.sourceUrl);
+    render();
+    setSyncStatus(&quot;서버 동기화 확인 중 · 마지막 성공: &quot; + snapshot.snapshotDate + &quot; 스냅샷&quot;, &quot;loading&quot;);
+    refreshData();
+    window.setInterval(refreshData, 30_000);
+  }
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+
+<script>(() => {
+  const frame = document.getElementById("codex-visualization");
+  if (!(frame instanceof HTMLIFrameElement)) {
+    return;
+  }
+  const isShare = document.documentElement.classList.contains(
+    "visualization-share-root",
+  );
+  let viewportHeight = globalThis.innerHeight;
+  let sizeFingerprint = null;
+  let sizeWriteTimeout;
+  let lastSize = null;
+  let pendingSize = null;
+  const storageKey = `codex:visualization-widget-state-v2:${JSON.stringify([
+    globalThis.location.pathname,
+    globalThis.location.search,
+  ])}`;
+  const sizeStorageKey = `${storageKey}:share-size-v1`;
+  const parseState = (serializedState) => {
+    if (
+      typeof serializedState !== "string" ||
+      new TextEncoder().encode(serializedState).length > 16 * 1024
+    ) {
+      throw new TypeError(
+        "Widget state must be a JSON object of at most 16 KiB",
+      );
+    }
+    /** @type {unknown} */
+    const state = JSON.parse(serializedState);
+    if (
+      state == null ||
+      typeof state !== "object" ||
+      Array.isArray(state) ||
+      ("imageIds" in state &&
+        (!Array.isArray(state.imageIds) || state.imageIds.length > 0))
+    ) {
+      throw new TypeError("Widget state must be a JSON object");
+    }
+    const storedState = { modelContent: null, privateContent: null, ...state };
+    const canonicalState = JSON.stringify(
+      storedState,
+      (_key, /** @type {unknown} */ value) => {
+        if (typeof value === "number" && !Number.isFinite(value)) {
+          throw new TypeError("Widget state must contain finite numbers");
+        }
+        return value;
+      },
+    );
+    if (new TextEncoder().encode(canonicalState).length > 16 * 1024) {
+      throw new TypeError(
+        "Widget state must be a JSON object of at most 16 KiB",
+      );
+    }
+    return storedState;
+  };
+  let storage = null;
+  let state = null;
+  try {
+    const localStorage = globalThis.localStorage;
+    const probeKey = `${storageKey}:probe`;
+    localStorage.setItem(probeKey, "1");
+    localStorage.removeItem(probeKey);
+    storage = localStorage;
+    const savedState = storage.getItem(storageKey);
+    if (savedState != null) {
+      try {
+        state = parseState(savedState);
+      } catch {
+        // Invalid saved state does not disable future writes.
+      }
+    }
+  } catch {
+    storage = null;
+  }
+  const persistSize = () => {
+    globalThis.clearTimeout(sizeWriteTimeout);
+    if (pendingSize == null) {
+      return;
+    }
+    try {
+      storage?.setItem(sizeStorageKey, pendingSize);
+    } catch {
+      // A denied or full cache must not affect the visualization.
+    }
+    pendingSize = null;
+  };
+  if (isShare) {
+    globalThis.addEventListener("pagehide", persistSize);
+  }
+  const initialGlobals = {
+    widgetState: state,
+    statePersistence: storage == null ? "none" : "local",
+  };
+
+  const channel = new MessageChannel();
+  channel.port1.addEventListener("message", (event) => {
+    const data = event.data;
+    if (typeof data !== "object" || data == null) {
+      return;
+    }
+    if (data.type === "widget-state-write") {
+      if (!Number.isSafeInteger(data.id) || data.id <= 0) {
+        return;
+      }
+      let ok = false;
+      try {
+        if (storage != null) {
+          const state = parseState(data.state);
+          storage.setItem(storageKey, JSON.stringify(state));
+          ok = true;
+        }
+      } catch {
+        // Storage denial, quota limits, and invalid state return a failed receipt.
+      }
+      channel.port1.postMessage({
+        type: "widget-state-result",
+        id: data.id,
+        ok,
+      });
+      return;
+    }
+    if (data.type === "height") {
+      const height = data.height;
+      if (
+        typeof height !== "number" ||
+        !Number.isFinite(height) ||
+        height < 0
+      ) {
+        return;
+      }
+      if (height <= 10_000) {
+        const width = isShare && storage != null ? frame.clientWidth : null;
+        frame.style.height = Math.ceil(height) + "px";
+        if (isShare && storage != null) {
+          const size = JSON.stringify({
+            fingerprint: sizeFingerprint,
+            width,
+            viewportHeight: globalThis.innerHeight,
+            dark: globalThis.matchMedia("(prefers-color-scheme: dark)").matches,
+            scale: globalThis.devicePixelRatio,
+            height: Math.ceil(height),
+          });
+          if (size !== lastSize) {
+            lastSize = size;
+            pendingSize = size;
+            globalThis.clearTimeout(sizeWriteTimeout);
+            sizeWriteTimeout = globalThis.setTimeout(persistSize, 100);
+          }
+        }
+      }
+      if (isShare) {
+        // Keep unusually tall content accessible without accepting an unbounded height.
+        if (height > 10_000 && Number.parseFloat(frame.style.height) === 0) {
+          frame.style.removeProperty("height");
+        }
+        frame.scrolling = height > 10_000 ? "auto" : "no";
+        document.documentElement.classList.add("visualization-share-ready");
+      }
+      return;
+    }
+    if (data.type === "scroll-to") {
+      const top = data.top;
+      if (
+        typeof top === "number" &&
+        Number.isFinite(top) &&
+        top >= 0 &&
+        globalThis.navigator.userActivation?.isActive === true
+      ) {
+        globalThis.scrollTo({
+          top: Math.ceil(
+            globalThis.scrollY + frame.getBoundingClientRect().top + top,
+          ),
+        });
+      }
+      return;
+    }
+    if (data.type === "open-external") {
+      const rawHref = data.href;
+      if (typeof rawHref !== "string") {
+        return;
+      }
+      let href;
+      try {
+        const url = new URL(rawHref, document.baseURI);
+        if (url.protocol !== "https:") {
+          return;
+        }
+        href = url.href;
+      } catch {
+        return;
+      }
+      if (globalThis.navigator.userActivation?.isActive === true) {
+        const anchor = document.createElement("a");
+        anchor.href = href;
+        anchor.rel = "noopener noreferrer";
+        anchor.target = "_blank";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      }
+      return;
+    }
+    if (data.type === "follow-up") {
+      const prompt = data.prompt;
+      if (
+        typeof prompt !== "string" ||
+        globalThis.navigator.userActivation?.isActive !== true
+      ) {
+        return;
+      }
+      const title = data.title;
+      globalThis.prompt(typeof title === "string" ? title : prompt, prompt);
+    }
+  });
+  channel.port1.start();
+  const srcdoc = frame.dataset.srcdoc;
+  if (srcdoc == null) {
+    return;
+  }
+  globalThis.addEventListener("resize", () => {
+    const height = Number.parseFloat(frame.style.height);
+    if (!isShare && (!Number.isFinite(height) || height <= viewportHeight)) {
+      frame.style.removeProperty("height");
+    }
+    viewportHeight = globalThis.innerHeight;
+    channel.port1.postMessage({ type: "measure" });
+  });
+  frame.addEventListener(
+    "load",
+    () => {
+      frame.contentWindow?.postMessage(
+        { type: "codex-visualization-initialize" },
+        "*",
+        [channel.port2],
+      );
+    },
+    { once: true },
+  );
+  // Match the trusted bootstrap element, not the same text in an authored title.
+  const frameHtml = srcdoc.replace(
+    '<script type="application/json" id="codex-visualization-widget-state">__CODEX_VISUALIZATION_WIDGET_STATE__<\/script>',
+    () =>
+      '<script type="application/json" id="codex-visualization-widget-state">' +
+      JSON.stringify(initialGlobals).replaceAll("<", "\\u003c") +
+      "<\/script>",
+  );
+  if (isShare && storage != null) {
+    // Fingerprint the rendered document, including restored widget state, without
+    // storing its content. This is a layout cache, not a security identity.
+    let hash = 5381;
+    for (let index = 0; index < frameHtml.length; index += 1) {
+      hash = (hash * 33 + frameHtml.charCodeAt(index)) % 4_294_967_296;
+    }
+    sizeFingerprint = hash.toString(36);
+    try {
+      const size = JSON.parse(storage.getItem(sizeStorageKey) ?? "null");
+      if (
+        size?.fingerprint === sizeFingerprint &&
+        size.width === frame.clientWidth &&
+        size.viewportHeight === globalThis.innerHeight &&
+        size.dark ===
+          globalThis.matchMedia("(prefers-color-scheme: dark)").matches &&
+        size.scale === globalThis.devicePixelRatio &&
+        typeof size.height === "number" &&
+        Number.isFinite(size.height) &&
+        size.height >= 0 &&
+        size.height <= 10_000
+      ) {
+        frame.style.height = size.height + "px";
+      }
+    } catch {
+      // Ignore missing or invalid cache entries and measure the live frame.
+    }
+  }
+  frame.srcdoc = frameHtml;
+  delete frame.dataset.srcdoc;
+})();
+</script>
+<script type="module" src="./pwa-register.js"></script>
+</body>
+</html>
