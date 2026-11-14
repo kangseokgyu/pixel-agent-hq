@@ -261,7 +261,6 @@ test("offline office app renders OPFS cached snapshot when logged in and renders
       JSON.stringify({
         token: "secret_offline_token",
         dataSourceId: "11111111-2222-3333-4444-555555555555",
-        corsProxyUrl: "https://relay.example.workers.dev",
       }),
     ],
     [

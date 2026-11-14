@@ -255,6 +255,18 @@ export function verifyDist({
         errors.push(`Banned external CDN host (${cdnHost}) found in dist/${unit.label}`);
       }
     }
+    for (const urlMatch of unit.text.matchAll(/\bhttps?:\/\/[^\s"'`<>);]+/g)) {
+      const externalUrl = urlMatch[0];
+      const isAllowedNotionApi =
+        externalUrl === "https://api.notion.com" ||
+        externalUrl === "https://api.notion.com/v1" ||
+        externalUrl.startsWith("https://api.notion.com/v1/");
+      const isAllowedSvgNs = externalUrl === "http://www.w3.org/2000/svg";
+      const isAllowedSwFallback = unit.label === "sw.js" && externalUrl === "http://localhost/";
+      if (!isAllowedNotionApi && !isAllowedSvgNs && !isAllowedSwFallback) {
+        errors.push(`Disallowed external URL (${externalUrl}) found in dist/${unit.label}`);
+      }
+    }
     if (DANGEROUS_SINK_PATTERN.test(unit.text)) {
       errors.push(`Forbidden dynamic HTML/eval sink found in dist/${unit.label}`);
     }

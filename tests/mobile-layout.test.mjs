@@ -87,7 +87,6 @@ test("swaps seats via select control, persists in localStorage, and handles bloc
     make("form", "wips-office-connection-form");
     make("input", "wips-office-token");
     make("input", "wips-office-datasource-id");
-    make("input", "wips-office-proxy-url");
     make("button", "wips-office-connect-submit");
     make("button", "wips-office-connect-cancel", { hidden: true });
     make("p", "wips-office-connection-message");

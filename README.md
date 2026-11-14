@@ -42,18 +42,9 @@ node scripts/verify-dist.mjs   # Zero-Data / Zero-Secret / CSP / allowlist 보�
 - Data Source UUID 형식(`<YOUR_DATA_SOURCE_UUID>`, 예: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`)을 확인해 로컬 `.env` 또는 정적 PWA 연결 폼에 입력합니다.
 - **공용·타인 PC/공용 브라우저에서는 절대 토큰을 입력하거나 연결하지 마세요.**
 
-### 2. Stateless CORS 프록시 설정 (`scripts/cors-proxy-worker.mjs`)
+### 2. 개인 OPFS 저장소 및 `로그아웃` 즉시 파기
 
-브라우저는 Notion API(`api.notion.com`)에 직접 CORS 요청을 보낼 수 없으므로, 정적 PWA 모드에서는 토큰과 데이터를 저장·로깅하지 않는 stateless CORS 중계 워커(예: Cloudflare Workers)가 필요합니다.
-
-1. `scripts/cors-proxy-worker.mjs`를 Cloudflare Workers 등으로 배포합니다.
-2. 환경변수 `ALLOWED_ORIGINS`에 GitHub Pages origin을 지정합니다(경로 제외한 origin만 입력, 예: `https://<owner>.github.io`).
-3. 워커는 `Origin` 검증 및 `POST /v1/data_sources/{uuid}/query` 읽기 조회만 전달하며, 토큰(`Authorization`)이나 본문을 기록·저장하지 않습니다.
-4. PWA 연결 폼의 `CORS Proxy URL`에는 배포된 워커 URL 뒤에 `/v1`을 붙여 입력합니다(예: `https://<your-worker>.workers.dev/v1`).
-
-### 3. 개인 OPFS 저장소 및 `로그아웃` 즉시 파기
-
-- 정적 PWA 모드에서 입력한 Notion 토큰, `dataSourceId`, `corsProxyUrl`(`connection.json`)과 마지막 조회 스냅샷(`snapshot-cache.json`)은 **현재 개인 브라우저의 비공개 OPFS(`wips-office-private-v1`)에만 저장**됩니다.
+- 정적 PWA 모드에서 입력한 Notion 토큰, `dataSourceId`(`connection.json`)와 마지막 조회 스냅샷(`snapshot-cache.json`)은 **현재 개인 브라우저의 비공개 OPFS(`wips-office-private-v1`)에만 저장**되며, `https://api.notion.com/v1` 조회 전용 엔드포인트로 직접 요청합니다(중계 서버 없음).
 - `localStorage`에는 UI 레이아웃·자리 배치 키(`wips-office-seating-v1`, `codex:visualization-widget-*`)만 저장되며, 토큰이나 일감 스냅샷은 절대 저장되지 않습니다.
 - Service Worker(`sw.js`)는 정적 앱 셸(`./`, `./index.html`, `./manifest.webmanifest`, `./pwa-register.js`, `./icons/*`)만 캐시하며 `POST`, `Authorization` 헤더 요청, `/v1/data_sources/`, `/api/`, `wips-data.json`은 절대 캐시하지 않습니다.
 - **`로그아웃` 버튼**을 누르면 진행 중인 fetch 요청과 폴링 타이머를 즉시 중단하고, OPFS의 `connection.json` / `snapshot-cache.json`을 `removeEntry`로 파기하며, Service Worker 세션 캐시 정리 후 메모리와 화면 DOM을 빈 상태로 초기화합니다.
@@ -84,7 +75,7 @@ Notion 조회가 실패하면 현재 화면의 데이터를 유지하고 오류�
 
 ## 문제 해결 (Troubleshooting)
 
-- **CORS 오류 / `Origin not allowed` (`403`)**: `scripts/cors-proxy-worker.mjs` 환경변수 `ALLOWED_ORIGINS`에 경로 없이 origin(`https://<owner>.github.io`)을 정확히 등록했는지, 그리고 연결 폼 Proxy URL 끝에 `/v1`이 포함되어 있는지(`https://<your-worker>.workers.dev/v1`) 확인하세요.
+- **네트워크 / CSP 연결 실패**: 정적 PWA는 브라우저에서 `https://api.notion.com/v1`로 직접 요청합니다. 사내 네트워크·프록시·브라우저 확장 프로그램이 `api.notion.com` 통신을 차단하지 않는지 확인하세요.
 - **Notion `401` / `403` / `404`**: Notion Integration의 `Read content` 권한과 대상 데이터베이스 페이지 공유 연결 상태, 그리고 Data Source UUID 형식을 확인하세요.
 - **OPFS를 사용할 수 없음**: HTTPS 또는 `localhost`/`127.0.0.1`의 일반 브라우저 창에서 접속해야 OPFS가 동작합니다. 일부 인앱 브라우저나 프라이빗 브라우징 모드에서는 OPFS 저장이 제한될 수 있습니다.
 
@@ -94,7 +85,7 @@ Notion 조회가 실패하면 현재 화면의 데이터를 유지하고 오류�
 - `index.html`, `wips-office.html`: 사무실 UI 및 iframe 실행본
 - `manifest.webmanifest`, `pwa-register.js`, `sw.js`, `icons/`: 서브패스 상대 경로 PWA 메타데이터, Service Worker 앱 셸 캐시, 아이콘
 - `lib/`: `notion-client.mjs` (읽기 전용 조회), `opfs-store.mjs` (OPFS 저장/파기), `snapshot-schema.mjs` (빈 스냅샷 및 입력 검증)
-- `scripts/`: `sync-office.mjs` (CSP/DOM 동기화), `build-pages.mjs` (`dist/` 패키징), `verify-dist.mjs` (보안·Zero-Data 검증), `cors-proxy-worker.mjs` (stateless CORS 릴레이)
+- `scripts/`: `sync-office.mjs` (CSP/DOM 동기화), `build-pages.mjs` (`dist/` 패키징), `verify-dist.mjs` (보안·Zero-Data 검증)
 - `.github/workflows/deploy-pages.yml`: GitHub Pages 빌드·보안 감사·배포 워크플로우
 - `fixtures/`: `empty-snapshot.json`, `sample-snapshot.json`
 - `wips-data.json`: 로컬 서버 실행 시 사용하는 캐시 스냅샷 (`dist/`에는 포함되지 않음)

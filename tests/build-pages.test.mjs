@@ -151,6 +151,15 @@ test("verify-dist.mjs passes clean dist/ and fails on all security/leak regressi
           writeFileSync(join(dir, "index.html"), html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, ""));
         },
       },
+      {
+        name: "disallowed external URL",
+        mutate(dir) {
+          writeFileSync(
+            join(dir, "pwa-register.js"),
+            `${readFileSync(join(dir, "pwa-register.js"), "utf8")}\nconst relay = "https://relay.example.com/v1";\n`,
+          );
+        },
+      },
     ];
 
     if (existsSync(join(ROOT, "wips-data.json"))) {

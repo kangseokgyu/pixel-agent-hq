@@ -196,7 +196,6 @@ function createDomEnvironment(html, { opfs, fetchImpl, onLine = true } = {}) {
   make("form", "wips-office-connection-form");
   make("input", "wips-office-token");
   make("input", "wips-office-datasource-id");
-  make("input", "wips-office-proxy-url");
   make("button", "wips-office-connect-submit");
   make("button", "wips-office-connect-cancel", { hidden: true });
   make("p", "wips-office-connection-message");
@@ -333,7 +332,7 @@ test("unconnected static mode renders zero tasks or DB IDs and displays security
   assert.equal(env.byId.get("wips-office-communal-tasks").children.length, 0);
 });
 
-test("connects via OPFS, queries read-only Notion relay, keeps data on transient error, and destroys everything on logout", async () => {
+test("connects via OPFS, queries read-only Notion API directly, keeps data on transient error, and destroys everything on logout", async () => {
   const staticHtml = injectEmptySnapshot(officeHtml, emptySnapshot);
   const opfs = createMockOpfsStore();
   const fetchCalls = [];
@@ -368,13 +367,12 @@ test("connects via OPFS, queries read-only Notion relay, keeps data on transient
 
   env.byId.get("wips-office-token").value = "demo_readonly_token_123";
   env.byId.get("wips-office-datasource-id").value = "11111111-2222-4333-8444-555555555555";
-  env.byId.get("wips-office-proxy-url").value = "https://relay.example.com/v1";
 
   await env.byId.get("wips-office-connection-form").dispatchEvent({ type: "submit" });
   await flushMicrotasks();
 
   assert.equal(fetchCalls.length, 1);
-  assert.equal(fetchCalls[0].url, "https://relay.example.com/v1/data_sources/11111111-2222-4333-8444-555555555555/query");
+  assert.equal(fetchCalls[0].url, "https://api.notion.com/v1/data_sources/11111111-2222-4333-8444-555555555555/query");
   assert.equal(fetchCalls[0].options.method, "POST");
   assert.equal(fetchCalls[0].options.redirect, "error");
   assert.equal(fetchCalls[0].options.credentials, "omit");

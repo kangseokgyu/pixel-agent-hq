@@ -14,7 +14,7 @@
 2. **원자적(Atomic) 작업 단위**: 각 작업은 하나의 검토 가능한 커밋/PR 단위로 완결한다. 무관한 리팩터링, 다른 작업의 파일 수정, 다음 단계 선행 구현을 섞지 않는다.
 3. **선행 완료의 정의**: 선행 작업 완료는 "코드/문서 작성 + 자체 검증 통과 + 후속 작업이 분기할 수 있는 확정 커밋 생성"을 뜻한다.
 4. **검증 기록 분리**: 작업별 실행 명령, 종료 코드, 결과, 증거 경로는 `docs/verification/Txx/`에 기록하며 비밀정보(`.env`, `NOTION_TOKEN`, 실제 `DATA_SOURCE_ID`)는 절대 포함하지 않는다.
-5. **무데이터 & 무식별자(Zero-Data & Zero-Identifier) 원칙**: 정적 배포물(`dist/`)에는 `wips-data.json`뿐만 아니라 실제 `DATA_SOURCE_ID`(`45edae11-...`)와 `SOURCE_URL`도 절대 포함하지 않으며, 배포용 `index.html` 내부 `data-srcdoc`에도 빈 초기 스냅샷(`results: []`)만 포함한다.
+5. **무데이터 & 무식별자(Zero-Data & Zero-Identifier) 원칙**: 정적 배포물(`dist/`)에는 `wips-data.json`뿐만 아니라 `server.mjs`에 정의된 실제 `DATA_SOURCE_ID`와 `SOURCE_URL`도 절대 포함하지 않으며, 배포용 `index.html` 내부 `data-srcdoc`에도 빈 초기 스냅샷(`results: []`)만 포함한다.
 6. **생성 파일 단일 소유 및 XSS 방어**: `index.html`의 `data-srcdoc`는 `wips-office.html`을 임베드하는 생성 결과물이므로 병렬 작업 중 수동 편집하지 않는다. 모든 UI 코드는 `innerHTML`/`outerHTML`/`insertAdjacentHTML`/`eval` 사용을 금지하고 `createElement`와 `textContent`만 사용한다.
 
 ---
@@ -25,11 +25,11 @@
 
 ```mermaid
 flowchart TD
-    T00["T00: 기준점·Git·테스트 환경 확정"] --> T01["T01: 배포 대상·CORS 중계·CSP 정책 결정"]
+    T00["T00: 기준점·Git·테스트 환경 확정"] --> T01["T01: 배포 대상·CSP 보안 정책 결정"]
     T00 --> T02["T02: 빈 초기 스냅샷·OPFS 저장소·로그아웃 계약"]
 
     T02 --> T03["T03: UI 원본-iframe 동기화·CSP 하드닝"]
-    T02 --> T04["T04: 조회 전용 Notion 클라이언트·CORS 중계기"]
+    T02 --> T04["T04: 조회 전용 Notion 직접 호출 클라이언트 모듈"]
 
     T03 --> T05["T05: OPFS 연결 UI·실시간 조회·로그아웃 버튼"]
     T04 --> T05
@@ -56,10 +56,10 @@ flowchart TD
 | 작업 | 한 줄 요약 | 직접 선행 작업 | 후속 차단 작업 | 병렬 실행 가능 그룹 |
 | --- | --- | --- | --- | --- |
 | **T00** | Git 저장소·기준 커밋·테스트 기준선 확정 | 없음 | T01, T02 | 단독 (Wave 0) |
-| **T01** | GitHub Pages 경로·무상태 CORS 중계·CSP 허용 정책 결정 | T00 | T10 | Wave 1 (`T01 ∥ T02`) |
+| **T01** | GitHub Pages 경로·CSP 허용 정책(`https://api.notion.com`) 결정 | T00 | T10 | Wave 1 (`T01 ∥ T02`) |
 | **T02** | 빈 초기 스냅샷·OPFS 파일(`connection`/`snapshot`)·로그아웃 계약 | T00 | T03, T04 | Wave 1 (`T01 ∥ T02`) |
 | **T03** | `wips-office.html` → `index.html` 동기화(무데이터·외부 CDN CSP 제거) | T02 | T05 | Wave 2 (`T03 ∥ T04`) |
-| **T04** | 조회 전용(`query`) Notion 클라이언트 공용 모듈 및 CORS 중계기 | T02 | T05 | Wave 2 (`T03 ∥ T04`) |
+| **T04** | 조회 전용(`query`) Notion API 직접 호출 공용 모듈 | T02 | T05 | Wave 2 (`T03 ∥ T04`) |
 | **T05** | OPFS 연결 등록(토큰+ID)·실시간 조회·**로그아웃(`removeEntry`)** | T03, T04 | T06, T07 | Wave 3 (단독) |
 | **T06** | 작은 화면 레이아웃·터치 자리배치·저장 복원 | T05 | T09 | Wave 4 (`T06 ∥ T07→T08`) |
 | **T07** | `manifest.webmanifest`·아이콘·하위 경로 SW 등록 | T05 | T08 | Wave 4 (`T06 ∥ T07→T08`) |
@@ -67,14 +67,14 @@ flowchart TD
 | **T09** | Allowlist `dist/` 패키징·`verify-dist.mjs` 자동 보안 감사 | T06, T08 | T10 | Wave 5 (통합 패키징) |
 | **T10** | GitHub Actions 무데이터 정적 앱 셸 배포 워크플로 구성 | T01, T09 | T11, T12 | Wave 6 (단독) |
 | **T11** | 하위 경로 브라우저·OPFS·로그아웃·CSP·모바일 수용 검증 | T10 | T13 | Wave 7 (`T11 ∥ T12`) |
-| **T12** | `README.md` 읽기전용 토큰·단일 DB·로그아웃·CORS 가이드 | T10 | T13 | Wave 7 (`T11 ∥ T12`) |
+| **T12** | `README.md` 읽기전용 토큰·단일 DB·로그아웃·운영 가이드 | T10 | T13 | Wave 7 (`T11 ∥ T12`) |
 | **T13** | 실제 GitHub Pages 게시·HTTPS·실기기 확인 | T11, T12 | 없음 | Wave 8 (최종 배포) |
 
 ### 2.3 실행 순서 설명
 
 - **Wave 0 (`T00`)**: 현재 디렉터리에 `.git`이 없으므로 가장 먼저 Git 저장소를 초기화하고 기준 커밋과 기존 테스트(`node --test`) 기준선을 기록한다.
-- **Wave 1 (`T01 ∥ T02`)**: 운영/보안 정책 결정(`T01`: 배포 저장소 경로, 무상태 CORS 중계 주소, 최소 권한 CSP 허용 목록)과 데이터/OPFS/로그아웃 계약(`T02`: 빈 초기 스냅샷, OPFS 파일 구조, 로그아웃 시 삭제 대상 계약)을 병렬로 진행한다.
-- **Wave 2 (`T03 ∥ T04`)**: `T02` 계약 확정 후, 무데이터 주입 및 외부 CDN CSP 제거를 포함하는 동기화 스크립트(`T03`)와 조회 전용(`POST /v1/data_sources/{id}/query`) Notion 클라이언트·CORS 중계기(`T04`)를 별도 `git worktree`에서 병렬 개발한다.
+- **Wave 1 (`T01 ∥ T02`)**: 운영/보안 정책 결정(`T01`: 배포 저장소 경로, 최소 권한 CSP 허용 목록)과 데이터/OPFS/로그아웃 계약(`T02`: 빈 초기 스냅샷, OPFS 파일 구조, 로그아웃 시 삭제 대상 계약)을 병렬로 진행한다.
+- **Wave 2 (`T03 ∥ T04`)**: `T02` 계약 확정 후, 무데이터 주입 및 외부 CDN CSP 제거를 포함하는 동기화 스크립트(`T03`)와 `bean-pocket`처럼 `https://api.notion.com/v1`로 직접 조회(`POST /v1/data_sources/{id}/query`)하는 공용 Notion 클라이언트(`T04`)를 별도 `git worktree`에서 병렬 개발한다.
 - **Wave 3 (`T05`)**: `T03`과 `T04`를 통합한 뒤, 정적 환경에서의 **OPFS 연결 설정(읽기 전용 토큰 + 데이터 소스 ID + 권한 안내), 실시간 조회, 오류 유지, 그리고 로그아웃 버튼(진행 중 요청 취소 + OPFS `removeEntry` + 화면 즉시 초기화)**을 구현한다.
 - **Wave 4 (`T06 ∥ T07 → T08`)**: `T05` 완료 후, 모바일 터치/레이아웃 보완(`T06`, `wips-office.html` 소유)과 PWA 셸/메타데이터(`T07`, `manifest`/아이콘/등록 모듈/외부 `index.html` 셸 소유)를 병렬 worktree로 진행한다. `T08`(Service Worker 앱 셸 캐시 및 로그아웃 시 데이터 캐시 연동 파기)은 `T07` 완료 후 이어서 진행한다.
 - **Wave 5 (`T09`)**: `T06`과 `T08`이 통합된 상태에서 `wips-data.json`·실제 `DATA_SOURCE_ID`·외부 CDN CSP·토큰·`innerHTML` 등이 전혀 없는지 검사하는 `verify-dist.mjs` 및 `dist/` 패키징을 구현·검증한다.
@@ -105,22 +105,21 @@ flowchart TD
 
 ---
 
-### T01 — 배포 대상·무상태 CORS 중계·CSP 보안 정책 결정
+### T01 — 배포 대상 및 CSP 보안 정책 결정
 
-- **목표**: 정적 PWA가 게시될 GitHub Pages 경로, 본인 소유 무상태 CORS 중계 규격, 그리고 외부 CDN을 배제한 CSP 허용 정책을 확정한다.
+- **목표**: 정적 PWA가 게시될 GitHub Pages 경로와 외부 CDN을 배제하고 `https://api.notion.com` 직접 통신만 허용하는 CSP 보안 정책을 확정한다.
 - **선행 의존성**: T00
 - **소유 파일**: `docs/pwa-release-decisions.md`
 - **구체적 결과물**:
   - `docs/pwa-release-decisions.md`:
     - 대상 GitHub 저장소 이름 및 Pages 하위 경로(`/repo-name/`)
-    - 브라우저 → Notion API 호출 시 사용할 본인 소유 무상태 CORS 중계 엔드포인트 규격(허용 Origin 고정, `POST /v1/data_sources/:id/query`만 허용, 토큰/응답 미저장·미로깅)
-    - CSP 최소 권한 정책(`cdnjs`, `jsdelivr`, `esm.sh`, `unpkg`, `oaistatic` 등 기존 `index.html`의 외부 CDN 도메인 전면 제거, `connect-src` 허용 목록 확정)
+    - 브라우저 → `https://api.notion.com/v1` 직접 호출 정책(중계 서버 없음, `credentials: 'omit'`, `redirect: 'error'`, `cache: 'no-store'`)
+    - CSP 최소 권한 정책(`cdnjs`, `jsdelivr`, `esm.sh`, `unpkg`, `oaistatic` 등 기존 `index.html`의 외부 CDN 도메인 전면 제거, `connect-src 'self' https://api.notion.com` 확정)
     - Notion Integration 발급 지침(**Read content 전용**, WIPS 단일 DB 연결, 공용 PC 사용 금지)
 - **검증 기준**:
-  - 배포 경로, CORS 중계 규격, CSP 정책, 토큰 권한 제한 지침이 명시되어 `T03`, `T04`, `T09`, `T10`, `T12`에서 그대로 참조할 수 있다.
+  - 배포 경로, 직접 호출 규격, CSP 정책, 토큰 권한 제한 지침이 명시되어 `T03`, `T04`, `T09`, `T10`, `T12`에서 그대로 참조할 수 있다.
 - **하면 안 되는 것**:
-  - 제3자 무료 공개 CORS 프록시를 허용 목록에 넣기
-  - 중계기에 토큰이나 업무 데이터를 캐시·로깅하도록 설계하기
+  - 제3자 무료 공개 프록시나 불필요한 중계 서버를 허용 목록에 넣기
   - 기존 `index.html`에 남아 있던 외부 CDN 도메인들을 CSP에 그대로 남기기
 
 ---
@@ -135,7 +134,7 @@ flowchart TD
   - 스키마/계약 문서(`contracts/snapshot-contract.md`) 및 검증 모듈(`lib/snapshot-schema.mjs`):
     - 로컬 서버 모드(`/api/tasks`) vs 정적 PWA 모드(OPFS 연결 기반 실시간 조회) 판별 계약
   - OPFS 격리 저장소 모듈(`lib/opfs-store.mjs`):
-    - 브라우저 전용 비공개 디렉터리(`wips-office-private-v1`) 내에 `connection.json`(토큰, `dataSourceId`, `corsProxyUrl`, 제어 문자·UUID 검증)과 `snapshot-cache.json`(마지막 성공 스냅샷)을 읽고·쓰고·원자적으로 삭제(`removeEntry`)하는 순수 추상화
+    - 브라우저 전용 비공개 디렉터리(`wips-office-private-v1`) 내에 `connection.json`(토큰, `dataSourceId`, 제어 문자·UUID 검증)과 `snapshot-cache.json`(마지막 성공 스냅샷)을 읽고·쓰고·원자적으로 삭제(`removeEntry`)하는 순수 추상화
     - **로그아웃 파기 계약**: `clearAll()` 호출 시 `connection.json`과 `snapshot-cache.json`을 모두 `removeEntry`로 삭제하고 이후 읽기 시 `null`을 반환함을 보장 (`localStorage`에 토큰이나 업무 스냅샷을 저장하지 않음)
 - **검증 기준**:
   - 정상 스냅샷, 빈 초기 스냅샷, 잘못된 스냅샷을 검증 함수가 정확히 구분한다.
@@ -155,7 +154,7 @@ flowchart TD
 - **구체적 결과물**:
   - 결정적 동기화 스크립트(`scripts/sync-office.mjs`):
     - 정적 배포용 무데이터 모드(`--empty` / `fixtures/empty-snapshot.json`) 시 `wips-office-data`를 빈 스냅샷으로 치환하고 실제 `DATA_SOURCE_ID`·`SOURCE_URL`이 `index.html`에 남지 않도록 빌드
-    - `index.html`과 `data-srcdoc`의 `<meta http-equiv="Content-Security-Policy">`에서 외부 CDN 도메인(`cdnjs.cloudflare.com`, `cdn.jsdelivr.net`, `esm.sh`, `unpkg.com`, `fonts.googleapis.com`, `fonts.bunny.net`, `fonts.gstatic.com`, `persistent.oaistatic.com`)을 모두 제거하고 최소 권한 CSP를 주입하는 옵션/규칙 지원
+    - `index.html`과 `data-srcdoc`의 `<meta http-equiv="Content-Security-Policy">`에서 외부 CDN 도메인(`cdnjs.cloudflare.com`, `cdn.jsdelivr.net`, `esm.sh`, `unpkg.com`, `fonts.googleapis.com`, `fonts.bunny.net`, `fonts.gstatic.com`, `persistent.oaistatic.com`)을 모두 제거하고 `connect-src 'self' https://api.notion.com` 최소 권한 CSP를 주입하는 옵션/규칙 지원
   - 동기화 일관성·무데이터·CSP 하드닝 회귀 테스트(`tests/sync-office.test.mjs`)
 - **검증 기준**:
   - 동일 입력에 대해 바이트 단위로 동일한 `index.html`이 생성된다.
@@ -167,29 +166,26 @@ flowchart TD
 
 ---
 
-### T04 — 조회 전용(Read-Only) Notion 클라이언트 공용 모듈 및 무상태 CORS 중계기
+### T04 — 조회 전용(Read-Only) Notion API 직접 호출 공용 모듈
 
-- **목표**: `server.mjs`의 검증된 Notion 조회·페이지네이션·매핑·429·타임아웃 로직을 브라우저에서도 재사용할 수 있게 분리하되 **오직 조회(`POST /v1/data_sources/{id}/query`)만 허용**하고, 본인 소유의 초경량 무상태 CORS 중계 스크립트를 제공한다.
+- **목표**: `server.mjs`의 검증된 Notion 조회·페이지네이션·매핑·429·타임아웃 로직을 브라우저에서도 재사용할 수 있게 분리하되 `bean-pocket`과 동일하게 중계 서버 없이 `https://api.notion.com/v1`으로 **직접 조회(`POST /v1/data_sources/{id}/query`)만 허용**한다.
 - **선행 의존성**: T02
-- **소유 파일**: `lib/notion-client.mjs`, `scripts/cors-proxy-worker.mjs`, `server.mjs`(공용 모듈 import 리팩터링), `tests/notion-client.test.mjs`
+- **소유 파일**: `lib/notion-client.mjs`, `server.mjs`(공용 모듈 import 리팩터링), `tests/notion-client.test.mjs`
 - **구체적 결과물**:
   - 조회 전용 공용 모듈(`lib/notion-client.mjs`):
     - `fetchNotionSnapshot`, `mapNotionPage`, `parseRetryAfter`, `NotionApiError` 제공
-    - 토큰 제어 문자 검증, `dataSourceId` UUID 검증, `redirect: 'error'`, `credentials: 'omit'`, `cache: 'no-store'` 적용 (`bean-pocket`의 엄격한 네트워크 가드 채택)
+    - 기본 엔드포인트를 `https://api.notion.com/v1`으로 고정(테스트 시에만 `apiRoot` 또는 `fetchImpl` 주입)
+    - 토큰 제어 문자 검증, `dataSourceId` UUID 검증, `redirect: 'error'`, `credentials: 'omit'`, `cache: 'no-store'` 적용 (`bean-pocket`의 `notion-client.mjs` 네트워크 가드 채택)
     - 페이지 생성(`POST /pages`), 수정(`PATCH /pages`), 삭제 메서드를 일절 제공하지 않음(조회 전용 강제)
-  - 무상태 CORS 중계 스크립트(`scripts/cors-proxy-worker.mjs`):
-    - 허용된 Origin(GitHub Pages 출처)만 `Access-Control-Allow-Origin` 허용
-    - `OPTIONS` 프리플라이트 및 `POST /v1/data_sources/{uuid}/query` 경로만 Notion API로 전달하고 나머지 경로(`/v1/pages`, `/v1/users` 등)는 `403`/`404` 거부
-    - 요청자의 `Authorization` 토큰이나 응답 데이터를 저장·캐시·로그 출력하지 않음
-  - 다중 페이지, 429 `Retry-After`, 타임아웃, `incomplete` 응답, 쓰기 경로 차단 테스트(`tests/notion-client.test.mjs`)
+  - 다중 페이지, 429 `Retry-After`, 타임아웃, `incomplete` 응답, 리다이렉트·자격증명 차단 옵션 검증 테스트(`tests/notion-client.test.mjs`)
 - **검증 기준**:
   - 기존 `server.test.mjs`가 모두 통과하며 로컬 `/api/tasks` 동작이 유지된다.
-  - 커스텀 `apiRoot`(CORS 중계 주소)와 기기 입력 토큰·`dataSourceId`로 mock Notion 조회가 정상 동작하며, 중계기가 `/v1/pages` 등 비조회 경로 요청을 차단한다.
+  - 기기 입력 토큰·`dataSourceId`와 주입된 `fetchImpl`로 `https://api.notion.com/v1/data_sources/{id}/query` 직접 호출 스냅샷 조회·매핑이 정상 동작한다.
   - 토큰이나 응답 본문이 로그에 출력되지 않는다.
 - **하면 안 되는 것**:
   - 서버용과 브라우저용 Notion 매핑/페이지네이션 코드를 중복 작성하기
   - Notion 쓰기(생성/수정/삭제) API 호출 코드를 클라이언트에 추가하기
-  - 중계기에 토큰이나 응답을 로깅·캐시하기
+  - 별도의 프록시/중계 서버 URL을 런타임 코드에 넣기
 
 ---
 
@@ -201,7 +197,7 @@ flowchart TD
 - **구체적 결과물**:
   - **모드 자동 구분**: 로컬 서버 모드(`/api/tasks` 사용) vs 정적 PWA 모드(OPFS 연결 기반 실시간 Notion 조회)
   - **OPFS 연결 설정 UI (정적 모드)**:
-    - 저장된 연결이 없을 때 업무 데이터 대신 연결 설정 패널 표시: Notion 토큰(`type="password"`, `autocomplete="off"`), 데이터 소스 ID(UUID 형식 안내), CORS 중계 URL 입력
+    - 저장된 연결이 없을 때 업무 데이터 대신 연결 설정 패널 표시: Notion 토큰(`type="password"`, `autocomplete="off"`), 데이터 소스 ID(UUID 형식 안내)만 입력받음 (중계 URL 입력 없음)
     - UI 내 보안 체크리스트 명시: **"① Notion Integration에서 `Read content` 권한만 허용, ② WIPS DB 페이지 하나에만 연결, ③ 공용 PC에서 입력 금지"**
     - 연결 조회 성공 시 OPFS `wips-office-private-v1/connection.json`과 `snapshot-cache.json`에 저장하고, 재접속 시 자동 복원·조회
   - **실시간 새로고침 및 상태 표시**:
@@ -218,7 +214,7 @@ flowchart TD
       5. 초기 연결 설정 화면으로 전환 및 `"로그아웃되었습니다. 이 기기에서 토큰·연결 정보와 업무 데이터를 삭제했습니다."` 안내 표시
 - **검증 기준**:
   - 미연결 상태에서 화면에 어떤 업무 제목·담당자·DB ID도 표시되지 않는다.
-  - 유효한 연결(mock 중계 서버) 입력 시 실시간 조회 결과가 렌더링되고 OPFS에 보관되며, 새로고침 시 최신 데이터로 갱신된다.
+  - 유효한 연결(mock `fetchImpl` 또는 mock Notion 서버) 입력 시 실시간 조회 결과가 렌더링되고 OPFS에 보관되며, 새로고침 시 최신 데이터로 갱신된다.
   - **로그아웃 검증**: 로그아웃 버튼 클릭 즉시 OPFS의 연결 파일과 스냅샷 캐시가 `removeEntry`로 삭제되고, 화면의 모든 일감 카드가 제거되며, 페이지를 새로고침해도 이전 업무 데이터가 절대 다시 나타나지 않는다.
   - 로컬 서버 모드(`node server.mjs`)에서는 기존처럼 연결 입력 없이 `/api/tasks`로 동작한다.
 - **하면 안 되는 것**:
@@ -301,15 +297,15 @@ flowchart TD
   - 산출물 보안 감사 스크립트(`scripts/verify-dist.mjs`):
     - `dist/` 내 심볼릭 링크 및 allowlist 외 파일(`wips-data.json`, `.env`, `server.mjs`, `*.test.mjs`) 차단
     - `dist/`의 모든 텍스트 파일(`index.html` 및 `data-srcdoc` 내부 포함) 전수 검사:
-      1. 루트 `wips-data.json`의 실제 일감 제목 및 실제 `DATA_SOURCE_ID`(`00000000-0000-4000-8000-000000000000`), `SOURCE_URL` 문자열 잔류 차단
+      1. 루트 `wips-data.json`의 실제 일감 제목 및 `server.mjs`에 정의된 실제 `DATA_SOURCE_ID`, `SOURCE_URL` 문자열 잔류 차단
       2. 토큰 패턴(`ntn_`, `secret_`, 하드코딩된 credential) 차단
-      3. 외부 CDN 도메인(`cdnjs.cloudflare.com`, `cdn.jsdelivr.net`, `esm.sh`, `unpkg.com`, `oaistatic.com` 등) 차단
+      3. `https://api.notion.com/v1`(및 허용된 안전한 Notion 페이지 링크 검증 로직) 외의 모든 외부 URL 및 외부 CDN 도메인(`cdnjs.cloudflare.com`, `cdn.jsdelivr.net`, `esm.sh`, `unpkg.com`, `oaistatic.com` 등) 차단
       4. DOM XSS·위험 저장소 패턴(`innerHTML`, `outerHTML`, `insertAdjacentHTML`, `eval(`, `new Function`, 토큰용 `localStorage` 등) 차단
-      5. `index.html` 및 `data-srcdoc`에 필수 `Content-Security-Policy` 메타 태그 존재 및 루트 절대 경로(`/...`) 부재 검증
+      5. `index.html` 및 `data-srcdoc`에 필수 `Content-Security-Policy` 메타 태그(`connect-src 'self' https://api.notion.com`) 존재 및 루트 절대 경로(`/...`) 부재 검증
       6. `manifest.webmanifest`, PNG 아이콘 크기, `sw.js` 빌드 버전/scope 정합성 검증
 - **검증 기준**:
   - `node scripts/build-pages.mjs && node scripts/verify-dist.mjs`가 종료 코드 0으로 통과한다.
-  - 테스트에서 `dist/`에 `wips-data.json`, 실제 일감 제목, 실제 `DATA_SOURCE_ID`, 가짜 토큰, 외부 CDN CSP, `innerHTML`, 심볼릭 링크를 각각 주입했을 때 모두 0이 아닌 종료 코드로 차단함을 확인한다.
+  - 테스트에서 `dist/`에 `wips-data.json`, 실제 일감 제목, 실제 `DATA_SOURCE_ID`, 가짜 토큰, 허용되지 않은 외부 URL/외부 CDN CSP, `innerHTML`, 심볼릭 링크를 각각 주입했을 때 모두 0이 아닌 종료 코드로 차단함을 확인한다.
 - **하면 안 되는 것**:
   - `wips-data.json`이나 실제 `DATA_SOURCE_ID`/`SOURCE_URL`을 `dist/`에 포함하기
   - `data-srcdoc` 내부 문자열 검사를 건너뛰기
@@ -360,13 +356,13 @@ flowchart TD
 
 ### T12 — 운영·읽기 전용 토큰·로그아웃 가이드 문서 완성
 
-- **목표**: 사용자가 안전하게 읽기 전용 토큰을 발급·등록하고, 본인 소유 CORS 중계를 연결하며, 모바일 홈 화면 설치 및 로그아웃으로 데이터를 파기하는 전체 절차를 문서화한다.
+- **목표**: 사용자가 안전하게 읽기 전용 토큰을 발급·등록하고, 모바일 홈 화면 설치 및 로그아웃으로 데이터를 파기하는 전체 절차를 문서화한다.
 - **선행 의존성**: T10
 - **소유 파일**: `README.md`
 - **구체적 결과물**:
   - `README.md` 개정:
     - 로컬 서버 실행(`node server.mjs`) vs 정적 PWA 실행 비교
-    - **보안 가이드**: Notion Integration 생성 시 **Read content(콘텐츠 읽기)만 체크**하고 **WIPS DB 하나에만 연결**하는 방법, **공용 PC 사용 금지** 안내, 본인 소유 무상태 CORS 중계 배포 방법(`scripts/cors-proxy-worker.mjs`)
+    - **보안 가이드**: Notion Integration 생성 시 **Read content(콘텐츠 읽기)만 체크**하고 **WIPS DB 하나에만 연결**하는 방법, **공용 PC 사용 금지** 안내, 브라우저 ↔ `https://api.notion.com/v1` 직접 통신 원칙
     - OPFS 격리 보관 원리 및 최초 연결(토큰 + 데이터 소스 ID) 방법
     - **로그아웃 버튼 안내**: 로그아웃 시 기기 OPFS·캐시·화면에서 즉시 삭제되는 항목 설명
     - 모바일(Android Chrome / iPhone Safari) 홈 화면 추가 절차 및 장애 확인 방법
@@ -374,7 +370,7 @@ flowchart TD
   - 문서의 모든 명령, UI 버튼 이름(`로그아웃`, `지금 갱신`, `자리 배치`), 설정 경로가 실제 구현과 일치한다.
 - **하면 안 되는 것**:
   - 실제 토큰 값이나 실제 `DATA_SOURCE_ID`·`SOURCE_URL`을 공개 문서 예시에 적기
-  - 공용 PC에서도 안전하다고 안내하거나 제3자 공개 CORS 프록시 사용을 권장하기
+  - 공용 PC에서도 안전하다고 안내하거나 제3자 프록시 서버 사용을 권장하기
 
 ---
 
@@ -428,7 +424,7 @@ git worktree add ../WIPS-Office-t07 -b pwa/t07-pwa-shell pwa/t05-opfs-auth-logou
 | `docs/pwa-release-decisions.md` | T01 | 다른 작업과 겹치지 않음 |
 | `contracts/`, `fixtures/`, `lib/snapshot-schema.mjs`, `lib/opfs-store.mjs` | T02 | T02 완료 후 임의 변경 금지 |
 | `scripts/sync-office.mjs` | T03 | `wips-office.html` 비즈니스 로직 수정 금지 |
-| `lib/notion-client.mjs`, `scripts/cors-proxy-worker.mjs`, `server.mjs` | T04 | 조회 전용 제한 및 기존 `server.test.mjs` 유지 |
+| `lib/notion-client.mjs`, `server.mjs` | T04 | 조회 전용 제한, `https://api.notion.com/v1` 직접 호출 및 기존 `server.test.mjs` 유지 |
 | `wips-office.html` (OPFS 연결 UI·실시간 조회·**로그아웃 버튼**) | T05 | T03, T04 통합 후 단독 진행 |
 | `wips-office.html` (모바일 스타일·터치 조작) | T06 | T05 완료 후 수정 (`index.html` 외부 셸 수정 금지) |
 | `manifest.webmanifest`, `icons/`, `pwa-register.js`, `index.html`(외부 셸) | T07 | `index.html`의 `data-srcdoc` 내부는 수동 편집 금지 |
@@ -438,7 +434,7 @@ git worktree add ../WIPS-Office-t07 -b pwa/t07-pwa-shell pwa/t05-opfs-auth-logou
 | `README.md` | T12 | T11과 완전 병렬 가능 |
 
 ### 4.4 테스트·환경 격리 규칙
-1. **서버 포트 분리**: 병렬 worktree에서 로컬 HTTP/중계 테스트를 동시에 실행할 때는 `port: 0`(동적 포트) 또는 worktree별 고유 포트를 사용한다.
+1. **서버 포트 분리**: 병렬 worktree에서 로컬 HTTP 테스트를 동시에 실행할 때는 `port: 0`(동적 포트) 또는 worktree별 고유 포트를 사용한다.
 2. **브라우저 프로필/Origin 분리**: `T05`/`T07`/`T08`의 OPFS(`wips-office-private-v1`)와 Service Worker 캐시가 다른 worktree와 섞이지 않도록 별도 Origin(포트)과 독립 브라우저 프로필을 사용한다.
 3. **`.env` 및 실제 데이터 격리**: `.env`를 worktree로 복사하지 않으며, 정적 배포 테스트는 항상 `fixtures/empty-snapshot.json`과 mock Notion 서버를 사용한다.
 

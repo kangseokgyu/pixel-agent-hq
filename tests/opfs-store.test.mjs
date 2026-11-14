@@ -95,7 +95,6 @@ test("saves, reads back, and clears connection and snapshot cache via OPFS remov
   const connection = {
     token: "demo_token_abc",
     dataSourceId: "11111111-2222-4333-8444-555555555555",
-    corsProxyUrl: "https://relay.example.com/v1",
   };
   await store.saveConnection(connection);
   await store.saveSnapshot({ ...sampleSnapshot, lastSuccessAt: "2026-11-14T03:00:00.000Z" });
@@ -118,7 +117,6 @@ test("fails save when OPFS readback does not match written payload", async () =>
     store.saveConnection({
       token: "demo_token_abc",
       dataSourceId: "11111111-2222-4333-8444-555555555555",
-      corsProxyUrl: "https://relay.example.com/v1",
     }),
     /readback|verify/i,
   );

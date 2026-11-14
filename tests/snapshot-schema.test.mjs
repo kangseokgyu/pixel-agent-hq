@@ -38,30 +38,21 @@ test("detects local server mode vs static PWA mode from initial snapshot or expl
   assert.equal(detectRuntimeMode({ initialSnapshot: sampleFixture, runtimeMode: "static" }), "static");
 });
 
-test("validates connection config strictly and blocks control chars, bad UUIDs, and unsafe URLs", () => {
+test("validates connection config strictly and blocks control chars and bad UUIDs", () => {
   const valid = validateConnectionConfig({
     token: "demo_token_abc123",
     dataSourceId: "11111111-2222-4333-8444-555555555555",
-    corsProxyUrl: "https://relay.example.com/v1/",
   });
   assert.equal(valid.ok, true);
-  assert.equal(valid.value.corsProxyUrl, "https://relay.example.com/v1");
-
-  const localHttp = validateConnectionConfig({
-    token: "demo_token_abc123",
-    dataSourceId: "11111111-2222-4333-8444-555555555555",
-    corsProxyUrl: "http://127.0.0.1:8787/v1",
-  });
-  assert.equal(localHttp.ok, true);
+  assert.equal(valid.value.token, "demo_token_abc123");
+  assert.equal(valid.value.dataSourceId, "11111111-2222-4333-8444-555555555555");
 
   for (const invalid of [
-    { token: "", dataSourceId: "11111111-2222-4333-8444-555555555555", corsProxyUrl: "https://relay.example.com/v1" },
-    { token: "bad\ntoken", dataSourceId: "11111111-2222-4333-8444-555555555555", corsProxyUrl: "https://relay.example.com/v1" },
-    { token: "bad token", dataSourceId: "11111111-2222-4333-8444-555555555555", corsProxyUrl: "https://relay.example.com/v1" },
-    { token: "demo_token", dataSourceId: "../pages", corsProxyUrl: "https://relay.example.com/v1" },
-    { token: "demo_token", dataSourceId: "11111111-2222-4333-8444-555555555555", corsProxyUrl: "http://example.com/v1" },
-    { token: "demo_token", dataSourceId: "11111111-2222-4333-8444-555555555555", corsProxyUrl: "https://user:pass@relay.example.com/v1" },
-    { token: "demo_token", dataSourceId: "11111111-2222-4333-8444-555555555555", corsProxyUrl: "https://relay.example.com/v1?token=leak" },
+    { token: "", dataSourceId: "11111111-2222-4333-8444-555555555555" },
+    { token: "bad\ntoken", dataSourceId: "11111111-2222-4333-8444-555555555555" },
+    { token: "bad token", dataSourceId: "11111111-2222-4333-8444-555555555555" },
+    { token: "demo_token", dataSourceId: "../pages" },
+    { token: "demo_token", dataSourceId: "not-a-uuid" },
   ]) {
     assert.equal(validateConnectionConfig(invalid).ok, false);
   }

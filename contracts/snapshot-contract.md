@@ -25,12 +25,11 @@
 
 - 전용 비공개 디렉터리 이름: `wips-office-private-v1`
 - 저장 파일:
-  1. `connection.json`: `{ token, dataSourceId, corsProxyUrl }`
+  1. `connection.json`: `{ token, dataSourceId }`
      - `token`: 공백 및 제어 문자(`[\u0000-\u001F\u007F]`)가 없는 비어 있지 않은 문자열
      - `dataSourceId`: 표준 UUID(`8-4-4-4-12`) 형식
-     - `corsProxyUrl`: `https:` URL 또는 로컬 루프백(`http://127.0.0.1`, `http://localhost`, `http://[::1]`), URL 내 자격증명·쿼리스트링·해시 금지
   2. `snapshot-cache.json`: 마지막 성공 스냅샷(`validateSnapshot` 통과 객체)
-- **저장소 금지 사항**: Notion 토큰, `dataSourceId`, `corsProxyUrl`, 업무 스냅샷은 `localStorage`, `sessionStorage`, `indexedDB`에 절대 저장하지 않는다.
+- **저장소 금지 사항**: Notion 토큰, `dataSourceId`, 업무 스냅샷은 `localStorage`, `sessionStorage`, `indexedDB`에 절대 저장하지 않는다.
 - **읽기백(Readback) 검증**: `saveConnection` 및 `saveSnapshot`은 쓰기 완료 후 `getFile().text()`로 다시 읽어 저장 내용 일치 여부를 검증한다.
 
 ---

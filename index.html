@@ -6,7 +6,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#c96442">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; worker-src 'self'; manifest-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.notion.com; worker-src 'self'; manifest-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
@@ -21,7 +21,7 @@
 &lt;meta charset=&quot;utf-8&quot;&gt;
 &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
 &lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
-&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.notion.com; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'&quot;&gt;
 &lt;title&gt;Pixel Agent HQ&lt;/title&gt;
 &lt;style&gt;:root {
   color-scheme: light dark;
@@ -2721,10 +2721,6 @@ html&gt;body{padding:0}&lt;/style&gt;
         &lt;span class=&quot;form-label&quot;&gt;데이터 소스 ID (UUID)&lt;/span&gt;
         &lt;input class=&quot;form-input&quot; id=&quot;wips-office-datasource-id&quot; type=&quot;text&quot; autocomplete=&quot;off&quot; spellcheck=&quot;false&quot; required placeholder=&quot;xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx&quot;&gt;
       &lt;/label&gt;
-      &lt;label class=&quot;connection-field&quot;&gt;
-        &lt;span class=&quot;form-label&quot;&gt;무상태 CORS 중계 URL&lt;/span&gt;
-        &lt;input class=&quot;form-input&quot; id=&quot;wips-office-proxy-url&quot; type=&quot;url&quot; autocomplete=&quot;off&quot; spellcheck=&quot;false&quot; required placeholder=&quot;https://your-cors-relay.workers.dev/v1&quot;&gt;
-      &lt;/label&gt;
       &lt;div class=&quot;connection-actions&quot;&gt;
         &lt;button class=&quot;sync-button&quot; id=&quot;wips-office-connect-submit&quot; type=&quot;submit&quot;&gt;연결하고 조회&lt;/button&gt;
         &lt;button class=&quot;sync-button&quot; id=&quot;wips-office-connect-cancel&quot; type=&quot;button&quot; hidden&gt;닫기&lt;/button&gt;
@@ -3339,7 +3335,6 @@ html&gt;body{padding:0}&lt;/style&gt;
   const connectionForm = document.getElementById(&quot;wips-office-connection-form&quot;);
   const tokenInput = document.getElementById(&quot;wips-office-token&quot;);
   const dataSourceIdInput = document.getElementById(&quot;wips-office-datasource-id&quot;);
-  const proxyUrlInput = document.getElementById(&quot;wips-office-proxy-url&quot;);
   const connectSubmitButton = document.getElementById(&quot;wips-office-connect-submit&quot;);
   const connectCancelButton = document.getElementById(&quot;wips-office-connect-cancel&quot;);
   const connectionMessage = document.getElementById(&quot;wips-office-connection-message&quot;);
@@ -3348,6 +3343,7 @@ html&gt;body{padding:0}&lt;/style&gt;
   const OPFS_DIR_NAME = &quot;wips-office-private-v1&quot;;
   const OPFS_CONNECTION_FILE = &quot;connection.json&quot;;
   const OPFS_SNAPSHOT_FILE = &quot;snapshot-cache.json&quot;;
+  const STATIC_NOTION_API_ROOT = &quot;https://api.notion.com/v1&quot;;
   const STATIC_NOTION_VERSION = &quot;2026-03-11&quot;;
   const STATIC_MAX_RETRY_AFTER_MS = 10_000;
   const STATIC_MAX_RETRIES = 2;
@@ -3355,8 +3351,6 @@ html&gt;body{padding:0}&lt;/style&gt;
   const STATIC_REQUEST_TIMEOUT_MS = 10_000;
   const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const TOKEN_INVALID_PATTERN = /[\s\u0000-\u001F\u007F]/;
-  const CONTROL_PATTERN = /[\u0000-\u001F\u007F]/;
-  const LOCAL_HTTP_HOSTS = new Set([&quot;127.0.0.1&quot;, &quot;localhost&quot;, &quot;[::1]&quot;]);
 
   function createEmptySnapshotObject() {
     return {
@@ -3399,31 +3393,11 @@ html&gt;body{padding:0}&lt;/style&gt;
     if (!UUID_PATTERN.test(rawId)) {
       return { ok: false, error: &quot;데이터 소스 ID는 표준 UUID(8-4-4-4-12) 형식이어야 합니다.&quot; };
     }
-    const rawProxy = typeof input?.corsProxyUrl === &quot;string&quot; ? input.corsProxyUrl.trim() : &quot;&quot;;
-    if (!rawProxy || CONTROL_PATTERN.test(rawProxy)) {
-      return { ok: false, error: &quot;CORS 중계 URL을 올바르게 입력하세요.&quot; };
-    }
-    let normalizedProxy = &quot;&quot;;
-    try {
-      const parsed = new URL(rawProxy);
-      const isHttps = parsed.protocol === &quot;https:&quot;;
-      const isLocal = parsed.protocol === &quot;http:&quot; &amp;&amp; LOCAL_HTTP_HOSTS.has(parsed.hostname);
-      if (!isHttps &amp;&amp; !isLocal) {
-        return { ok: false, error: &quot;CORS 중계 URL은 https:// (또는 로컬 테스트용 http://127.0.0.1)만 허용됩니다.&quot; };
-      }
-      if (parsed.username || parsed.password || parsed.search || parsed.hash) {
-        return { ok: false, error: &quot;CORS 중계 URL에 자격증명이나 쿼리스트링을 포함할 수 없습니다.&quot; };
-      }
-      normalizedProxy = parsed.href.replace(/\/$/, &quot;&quot;);
-    } catch {
-      return { ok: false, error: &quot;CORS 중계 URL 형식이 올바르지 않습니다.&quot; };
-    }
     return {
       ok: true,
       value: {
         token: rawToken,
         dataSourceId: rawId.toLowerCase(),
-        corsProxyUrl: normalizedProxy,
       },
     };
   }
@@ -3568,8 +3542,8 @@ html&gt;body{padding:0}&lt;/style&gt;
   async function fetchNotionSnapshotStatic(connection, signal) {
     const valid = validateStaticConnection(connection);
     if (!valid.ok) throw new Error(valid.error);
-    const { token, dataSourceId, corsProxyUrl } = valid.value;
-    const endpoint = corsProxyUrl + &quot;/data_sources/&quot; + encodeURIComponent(dataSourceId) + &quot;/query&quot;;
+    const { token, dataSourceId } = valid.value;
+    const endpoint = STATIC_NOTION_API_ROOT + &quot;/data_sources/&quot; + encodeURIComponent(dataSourceId) + &quot;/query&quot;;
     const results = [];
     let cursor;
     let pageCount = 0;
@@ -3628,7 +3602,7 @@ html&gt;body{padding:0}&lt;/style&gt;
           if (timedOut || error?.name === &quot;AbortError&quot;) {
             throw new Error(&quot;Notion 조회 요청 시간이 초과되었습니다.&quot;);
           }
-          throw new Error(&quot;CORS 중계 서버 또는 네트워크에 연결할 수 없습니다.&quot;);
+          throw new Error(&quot;Notion API 또는 네트워크에 연결할 수 없습니다.&quot;);
         }
 
         if (response.status === 429) {
@@ -3871,7 +3845,6 @@ html&gt;body{padding:0}&lt;/style&gt;
     clearViewDom();
     if (tokenInput) tokenInput.value = &quot;&quot;;
     if (dataSourceIdInput) dataSourceIdInput.value = &quot;&quot;;
-    if (proxyUrlInput) proxyUrlInput.value = &quot;&quot;;
     if (connectionPanel) connectionPanel.hidden = false;
     if (connectCancelButton) connectCancelButton.hidden = true;
     const msg = &quot;로그아웃되었습니다. 이 기기에서 토큰·연결 정보와 업무 데이터를 삭제했습니다.&quot;;
@@ -3962,7 +3935,6 @@ html&gt;body{padding:0}&lt;/style&gt;
 
     activeConnection = savedConnection;
     if (dataSourceIdInput) dataSourceIdInput.value = savedConnection.dataSourceId;
-    if (proxyUrlInput) proxyUrlInput.value = savedConnection.corsProxyUrl;
     if (logoutButton) logoutButton.hidden = false;
     refreshButton.disabled = false;
     if (connectionPanel) connectionPanel.hidden = true;
@@ -3990,7 +3962,6 @@ html&gt;body{padding:0}&lt;/style&gt;
     if (connectCancelButton) connectCancelButton.hidden = !activeConnection;
     if (!connectionPanel.hidden &amp;&amp; activeConnection) {
       if (dataSourceIdInput) dataSourceIdInput.value = activeConnection.dataSourceId;
-      if (proxyUrlInput) proxyUrlInput.value = activeConnection.corsProxyUrl;
     }
   });
   connectCancelButton?.addEventListener(&quot;click&quot;, () =&gt; {
@@ -4006,7 +3977,6 @@ html&gt;body{padding:0}&lt;/style&gt;
     const validation = validateStaticConnection({
       token: tokenInput?.value || &quot;&quot;,
       dataSourceId: dataSourceIdInput?.value || &quot;&quot;,
-      corsProxyUrl: proxyUrlInput?.value || &quot;&quot;,
     });
     if (!validation.ok) {
       setConnectionMessage(validation.error, &quot;error&quot;);

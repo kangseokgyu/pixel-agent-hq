@@ -17,20 +17,16 @@
 
 ---
 
-## 2. 본인 소유 무상태 CORS 중계(Stateless CORS Relay) 규격
+## 2. 읽기 전용 Notion API 직접 호출 규격 (중계 서버 없음)
 
-브라우저의 직접 `https://api.notion.com/v1` 호출은 Notion API의 CORS 정책에 의해 차단되므로, 본인 소유의 초경량 무상태 중계기(`scripts/cors-proxy-worker.mjs`)를 통해 브라우저 요청을 중계한다.
+`bean-pocket`과 동일하게 별도의 프록시/중계 서버 없이 브라우저에서 `https://api.notion.com/v1`으로 직접 요청을 전송한다.
 
-- **허용 메서드 및 경로 (Strict Allowlist)**:
-  - `OPTIONS` 프리플라이트
-  - `POST /v1/data_sources/{uuid}/query` (`{uuid}`는 표준 UUID 형식만 허용)
-  - 그 외 모든 경로(`/v1/pages`, `/v1/users`, `/v1/blocks`, `/v1/search` 등) 및 쓰기 메서드(`PUT`, `PATCH`, `DELETE`)는 즉시 `403 Forbidden` 또는 `405 Method Not Allowed`로 거부한다.
-- **Origin 고정 검증**:
-  - 요청 `Origin` 헤더가 허용된 출처 목록(`ALLOWED_ORIGINS`, 예: `https://<owner>.github.io`)과 일치할 때만 `Access-Control-Allow-Origin` 및 `Vary: Origin` 헤더를 반환한다.
-  - 제3자 무료 공개 CORS 프록시는 절대 허용·사용하지 않는다.
-- **무상태·무로깅·무캐시 원칙**:
-  - 요청자의 `Authorization` 헤더, 요청 본문, Notion 응답 본문을 디스크·KV·캐시·로그(`console.log` 포함)에 저장하거나 기록하지 않는다.
-  - 응답에는 `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`를 강제한다.
+- **허용 메서드 및 경로 (Read-Only)**:
+  - `POST https://api.notion.com/v1/data_sources/{uuid}/query` (`{uuid}`는 표준 UUID 형식만 허용)
+  - 페이지 생성·수정·삭제(쓰기) API는 클라이언트에 포함하지 않는다.
+- **네트워크 격리 옵션 및 금지 사항**:
+  - 모든 `fetch` 호출에 `credentials: 'omit'`, `redirect: 'error'`, `cache: 'no-store'`를 적용한다.
+  - 제3자 프록시나 별도의 CORS 중계 서버를 경유해 토큰을 전송하지 않는다.
 
 ---
 
@@ -40,12 +36,12 @@
 
 ### 3.1 외부 셸 `index.html` CSP
 ```text
-default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; worker-src 'self'; manifest-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'
+default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.notion.com; worker-src 'self'; manifest-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'
 ```
 
 ### 3.2 내부 `data-srcdoc` 문서 CSP
 ```text
-default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'
+default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.notion.com; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'
 ```
 
 - **DOM XSS 방어 규칙**: 모든 UI 및 동적 DOM 갱신은 `document.createElement`, `textContent`, `replaceChildren`만 사용하며 `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `eval`, `new Function`을 금지한다.

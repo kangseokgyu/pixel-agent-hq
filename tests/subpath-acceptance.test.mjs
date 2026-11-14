@@ -281,7 +281,6 @@ test("built dist/index.html srcdoc runs zero-data boot, OPFS live query, transie
     // 2. Connect via OPFS & live query
     session1.byId.get("wips-office-token").value = "ntn_synthetic_acceptance_token";
     session1.byId.get("wips-office-datasource-id").value = "11111111-2222-3333-4444-555555555555";
-    session1.byId.get("wips-office-proxy-url").value = "https://relay.example.workers.dev/v1";
     for (const fn of session1.byId.get("wips-office-connection-form").listeners.get("submit") || []) {
       await fn({ preventDefault() {} });
     }
@@ -292,7 +291,7 @@ test("built dist/index.html srcdoc runs zero-data boot, OPFS live query, transie
     assert.ok(opfsFiles.has("connection.json"));
     assert.ok(opfsFiles.has("snapshot-cache.json"));
     assert.equal(fetchCalls[0].method, "POST");
-    assert.match(fetchCalls[0].url, /\/v1\/data_sources\/11111111-2222-3333-4444-555555555555\/query$/);
+    assert.equal(fetchCalls[0].url, "https://api.notion.com/v1/data_sources/11111111-2222-3333-4444-555555555555/query");
 
     // 3. Transient 502 error preserves rendered employees/tasks
     mode = "502";
