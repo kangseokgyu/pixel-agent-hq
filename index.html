@@ -2159,19 +2159,22 @@ html&gt;body{padding:0}&lt;/style&gt;
 &lt;/script&gt;
 &lt;style&gt;
 #wips-office-root {
-  --office-wall: #d2c8b9;
-  --office-floor: #eee7dc;
-  --office-desk: #c89b68;
-  --office-desk-front: #ae7e4d;
-  --office-chair: #4b565b;
+  --office-wall: #182232;
+  --office-wall-trim: #2b3b52;
+  --office-floor: #263447;
+  --office-desk: #6b533b;
+  --office-desk-front: #4d3a28;
+  --office-chair: #2b394a;
   --office-skin: #efc9aa;
   --office-skin-line: #b97b58;
-  --office-hair: #382d29;
-  --office-hair-highlight: #80634f;
-  --office-screen: #31586b;
-  --office-bubble: #fffdf8;
-  --office-ink: #292c2e;
-  --office-muted: #60666a;
+  --office-hair: #231c18;
+  --office-hair-highlight: #5a4638;
+  --office-screen: #11362a;
+  --office-bubble: #0f172a;
+  --office-ink: #e2f1ff;
+  --office-muted: #9fb6d1;
+  --office-cyan: #38bdf8;
+  --office-neon: #4ade80;
   color: var(--foreground);
   width: 100%;
   min-width: 0;
@@ -2247,27 +2250,30 @@ html&gt;body{padding:0}&lt;/style&gt;
   font: inherit; cursor: pointer; box-shadow: none;
 }
 #wips-office-root .employee-button:hover {
-  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.25);
 }
 #wips-office-root .employee-button[aria-pressed=&quot;true&quot;] {
-  border-color: color-mix(in srgb, var(--blue) 45%, transparent);
-  background: color-mix(in srgb, var(--blue) 6%, transparent);
+  border-color: rgba(56, 189, 248, 0.65);
+  background: rgba(14, 58, 82, 0.36);
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.16);
 }
 #wips-office-root .employee-button:focus-visible {
-  outline: 2px solid var(--blue); outline-offset: 4px;
+  outline: 2px solid var(--office-cyan); outline-offset: 4px;
 }
 #wips-office-root .employee-button[draggable=&quot;true&quot;] { cursor: grab; }
 #wips-office-root .employee-button[draggable=&quot;true&quot;]:active { cursor: grabbing; }
 #wips-office-root .employee-button.is-dragging { opacity: 0.45; }
 #wips-office-root .employee-button[aria-pressed=&quot;true&quot;] .employee-name {
-  color: var(--office-ink);
-  background: #e2edf3;
-  border-color: #91b1c3;
+  color: #e0f7ff;
+  background: #0c334a;
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.32);
 }
 #wips-office-root .employee-button[aria-pressed=&quot;true&quot;] .employee-name::before {
-  content: &quot;✓&quot;; margin-inline-end: 5px; color: #416c83;
+  content: &quot;✓&quot;; margin-inline-end: 5px; color: #4ade80;
 }
-#wips-office-root .person-art { --shirt: #647f72; }
+#wips-office-root .person-art { --shirt: #1b222c; --rug-color: rgba(56, 189, 248, 0.22); --rug-border: rgba(56, 189, 248, 0.5); }
 #wips-office-root .viz-controls {
   margin-block: calc(var(--font-size-base) * 0.9);
 }
@@ -2305,29 +2311,359 @@ html&gt;body{padding:0}&lt;/style&gt;
 #wips-office-root .office-room {
   position: relative;
   min-width: 0;
-  padding: 26px 16px 22px;
+  padding: 20px 16px 24px;
   border: 8px solid var(--office-wall);
   border-bottom-width: 12px;
+  border-radius: 6px;
   background-color: var(--office-floor);
   background-image:
-    linear-gradient(rgba(99, 77, 55, 0.09) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(99, 77, 55, 0.09) 1px, transparent 1px);
-  background-size: 32px 32px;
+    radial-gradient(circle at 50% 12%, rgba(56, 189, 248, 0.14), transparent 54%),
+    radial-gradient(circle at 86% 26%, rgba(74, 222, 128, 0.08), transparent 40%),
+    linear-gradient(rgba(148, 184, 224, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 184, 224, 0.07) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 24px 24px, 24px 24px;
+  box-shadow: inset 0 0 0 2px var(--office-wall-trim), 0 12px 28px rgba(7, 12, 22, 0.35);
 }
-#wips-office-root .room-dressing { position: absolute; inset: 0; pointer-events: none; }
+#wips-office-root .room-dressing { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
 #wips-office-root .window-frame {
-  position: absolute; top: -8px; left: 12%; width: 25%; height: 8px;
-  background: #a8c8d8;
-  border-inline: 3px solid #74848c;
+  position: absolute; top: -8px; left: 8%; width: 22%; height: 8px;
+  background: linear-gradient(90deg, #0b192e 0 48%, #475569 48% 52%, #0b192e 52% 100%);
+  border-inline: 3px solid #475569;
+  box-shadow: 0 3px 8px rgba(56, 189, 248, 0.25);
 }
 #wips-office-root .window-frame::after {
-  content: &quot;&quot;; position: absolute; top: 0; left: 50%; width: 3px; height: 8px;
-  background: #74848c;
+  content: &quot;&quot;; position: absolute; top: 0; left: -10px; width: 4px; height: 28px;
+  border-radius: 2px;
+  background: #4ade80;
+  box-shadow: 0 0 8px #4ade80, 0 0 16px rgba(74, 222, 128, 0.6);
 }
 #wips-office-root .wall-clock {
-  position: absolute; top: -8px; right: 12%; width: 25%; height: 8px;
-  background: #a8c8d8;
-  border-inline: 3px solid #74848c;
+  position: absolute; top: -8px; right: 8%; width: 18%; height: 8px;
+  background: repeating-linear-gradient(90deg, #1e293b 0 12px, #ef4444 12px 16px, #1e293b 16px 26px, #38bdf8 26px 30px);
+  border-inline: 3px solid #475569;
+}
+#wips-office-root .hq-backdrop {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(240px, 1.85fr) minmax(150px, 1fr);
+  gap: 12px;
+  align-items: end;
+  margin-block-end: 24px;
+  padding-block-end: 14px;
+  border-bottom: 2px solid rgba(56, 189, 248, 0.18);
+  pointer-events: none;
+  user-select: none;
+  min-width: 0;
+}
+#wips-office-root .hq-backdrop::after {
+  content: &quot;&quot;;
+  position: absolute;
+  left: 6%;
+  right: 8%;
+  bottom: -4px;
+  height: 4px;
+  background: linear-gradient(90deg, #ef4444 0 28%, #22c55e 28% 58%, #38bdf8 58% 82%, #ef4444 82% 100%);
+  opacity: 0.7;
+  border-radius: 999px;
+}
+#wips-office-root .hq-zone {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(100, 130, 170, 0.28);
+  border-radius: 6px;
+  background: rgba(13, 21, 34, 0.56);
+}
+#wips-office-root .hq-lounge {
+  align-content: end;
+  background: linear-gradient(180deg, rgba(16, 26, 42, 0.78), rgba(22, 34, 52, 0.65));
+}
+#wips-office-root .lounge-window {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#wips-office-root .lounge-blinds {
+  flex: 1;
+  height: 28px;
+  border: 2px solid #475569;
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(180deg, rgba(148, 163, 184, 0.25) 0 2px, transparent 2px 6px),
+    linear-gradient(135deg, #0b1628, #162a47);
+  box-shadow: inset 0 0 8px rgba(56, 189, 248, 0.18);
+}
+#wips-office-root .lounge-terminal {
+  width: 34px;
+  height: 20px;
+  border: 2px solid #334155;
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 3px, rgba(74, 222, 128, 0.45) 3px 4px),
+    #071812;
+}
+#wips-office-root .lounge-items {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#wips-office-root .coffee-station {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  padding: 4px 6px 0;
+  border-bottom: 10px solid #6b442a;
+  border-radius: 2px;
+}
+#wips-office-root .coffee-maker {
+  width: 18px;
+  height: 20px;
+  border: 2px solid #0f172a;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(180deg, #334155 0 7px, #111827 7px 12px, #b45309 12px 20px);
+  box-shadow: inset 0 2px 0 #64748b;
+}
+#wips-office-root .water-cooler {
+  position: relative;
+  width: 14px;
+  height: 28px;
+  background: linear-gradient(180deg, #38bdf8 0 11px, #cbd5e1 11px 28px);
+  border: 2px solid #0f172a;
+  border-radius: 4px 4px 1px 1px;
+}
+#wips-office-root .hq-sofa {
+  position: relative;
+  width: 54px;
+  height: 24px;
+  border: 2px solid #0f172a;
+  border-radius: 4px 4px 2px 2px;
+  background: linear-gradient(180deg, #c2652a 0 10px, #e38644 10px 18px, #854016 18px 24px);
+  box-shadow: inset 0 0 0 1px rgba(255, 237, 213, 0.2);
+}
+#wips-office-root .hq-sofa--mint {
+  width: 58px;
+  height: 22px;
+  background: linear-gradient(180deg, #25645e 0 9px, #358a82 9px 16px, #163d3a 16px 22px);
+}
+#wips-office-root .hq-plant {
+  position: relative;
+  width: 18px;
+  height: 28px;
+}
+#wips-office-root .hq-plant::before {
+  content: &quot;&quot;;
+  position: absolute;
+  left: 3px;
+  bottom: 0;
+  width: 12px;
+  height: 11px;
+  border: 2px solid #0f172a;
+  border-radius: 1px 1px 3px 3px;
+  background: #a05a3c;
+}
+#wips-office-root .hq-plant::after {
+  content: &quot;&quot;;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50% 50% 20% 20%;
+  background:
+    radial-gradient(circle at 30% 40%, #4ade80 0 3px, transparent 4px),
+    radial-gradient(circle at 70% 35%, #4ade80 0 3px, transparent 4px),
+    radial-gradient(circle at 50% 60%, #22c55e 0 6px, transparent 7px);
+}
+#wips-office-root .pixel-cat {
+  position: relative;
+  display: inline-block;
+  width: 16px;
+  height: 13px;
+  border: 2px solid #0f172a;
+  border-radius: 3px 3px 2px 2px;
+  background: #8a99ad;
+  box-shadow: inset 0 -3px 0 #66758a;
+}
+#wips-office-root .pixel-cat::before {
+  content: &quot;&quot;;
+  position: absolute;
+  top: -5px;
+  left: 1px;
+  width: 3px;
+  height: 4px;
+  background: #8a99ad;
+  border-left: 1px solid #0f172a;
+  border-top: 1px solid #0f172a;
+  box-shadow: 7px 0 0 #8a99ad, 8px 0 0 #0f172a;
+}
+#wips-office-root .pixel-cat::after {
+  content: &quot;&quot;;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 2px;
+  height: 2px;
+  background: #fde047;
+  box-shadow: 5px 0 0 #fde047;
+}
+#wips-office-root .hq-sofa .pixel-cat {
+  position: absolute;
+  left: 16px;
+  top: -4px;
+}
+#wips-office-root .pixel-badge {
+  position: absolute;
+  top: -15px;
+  right: 4px;
+  padding: 0 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.3;
+  border: 1px solid #0f172a;
+  border-radius: 3px;
+  background: #f8fafc;
+  color: #dc2626;
+  box-shadow: 0 2px 0 #0f172a;
+}
+#wips-office-root .pixel-badge--dots {
+  color: #1e293b;
+  letter-spacing: 0.04em;
+}
+#wips-office-root .hq-command {
+  display: grid;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(9, 14, 24, 0.72);
+  border-color: rgba(56, 189, 248, 0.35);
+}
+#wips-office-root .hq-billboard {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 3px solid #334a66;
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 3px),
+    #070d16;
+  box-shadow: inset 0 0 16px rgba(56, 189, 248, 0.14), 0 0 14px rgba(15, 23, 42, 0.7);
+  text-align: center;
+}
+#wips-office-root .billboard-sub {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #93c5fd;
+  text-shadow: 0 0 8px rgba(56, 189, 248, 0.65);
+}
+#wips-office-root .billboard-title {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #4ade80;
+  text-shadow: 0 0 10px rgba(74, 222, 128, 0.65);
+}
+#wips-office-root .hq-octocat {
+  width: 24px;
+  height: 24px;
+  color: #67e8f9;
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.75));
+}
+#wips-office-root .hq-briefing-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+#wips-office-root .mini-server {
+  width: 20px;
+  height: 30px;
+  border: 2px solid #0f172a;
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(180deg, #1e293b 0 5px, #0f172a 5px 7px),
+    #1e293b;
+  box-shadow: inset 4px 4px 0 #4ade80, inset -4px 4px 0 #38bdf8;
+}
+#wips-office-root .hq-world-map {
+  position: relative;
+  flex: 1;
+  min-width: 110px;
+  max-width: 180px;
+  padding: 4px;
+  border: 2px solid #64748b;
+  border-radius: 3px;
+  background: #0a2540;
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.3), inset 0 0 8px rgba(56, 189, 248, 0.25);
+}
+#wips-office-root .hq-world-map svg {
+  display: block;
+  width: 100%;
+  height: 46px;
+}
+#wips-office-root .hq-server-bay {
+  align-content: end;
+  justify-items: stretch;
+}
+#wips-office-root .server-bank {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+#wips-office-root .server-rack {
+  position: relative;
+  height: 48px;
+  border: 2px solid #0b111c;
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(180deg, #161f2e 0 6px, #0b111c 6px 8px);
+  box-shadow: inset 0 2px 0 #334155;
+}
+#wips-office-root .server-rack::before {
+  content: &quot;&quot;;
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  top: 4px;
+  height: 36px;
+  background:
+    radial-gradient(circle at 20% 15%, #ef4444 0 1.5px, transparent 2px),
+    radial-gradient(circle at 50% 15%, #4ade80 0 1.5px, transparent 2px),
+    radial-gradient(circle at 80% 40%, #38bdf8 0 1.5px, transparent 2px),
+    radial-gradient(circle at 30% 65%, #4ade80 0 1.5px, transparent 2px),
+    radial-gradient(circle at 70% 85%, #ef4444 0 1.5px, transparent 2px);
+  animation: office-led-blink 2.4s steps(2, start) infinite;
+}
+#wips-office-root .server-rack:nth-child(2)::before { animation-delay: -0.6s; }
+#wips-office-root .server-rack:nth-child(3)::before { animation-delay: -1.2s; }
+#wips-office-root .server-rack:nth-child(4)::before { animation-delay: -1.8s; }
+#wips-office-root .bitcat-zone {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid rgba(132, 204, 22, 0.45);
+  border-radius: 4px;
+  background: rgba(77, 93, 43, 0.52);
+}
+#wips-office-root .bitcat-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ecfccb;
+  letter-spacing: 0.04em;
 }
 #wips-office-root .seating-toolbar {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-block: 12px;
@@ -2335,40 +2671,100 @@ html&gt;body{padding:0}&lt;/style&gt;
 #wips-office-root .seating-toolbar [hidden] { display: none; }
 #wips-office-root .seating-toolbar p { color: var(--muted-foreground); }
 #wips-office-root .seat-control { display: grid; gap: 4px; width: 100%; min-width: 0; color: var(--office-ink); }
-#wips-office-root .seat-control select { width: 100%; min-width: 0; }
+#wips-office-root .seat-control select {
+  width: 100%; min-width: 0;
+  background: #0f172a; color: #e2f1ff; border: 1px solid #38bdf8; border-radius: 6px; padding: 4px 8px;
+}
 #wips-office-root .office-grid {
-  position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 38px 22px; align-items: end; min-width: 0;
+  position: relative; z-index: 2; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 34px 20px; align-items: end; min-width: 0;
 }
 #wips-office-root .workstation {
   display: grid; align-content: end; justify-items: center;
-  gap: 12px; min-width: 0;
+  gap: 10px; min-width: 0;
 }
 #wips-office-root .workstation.is-drop-target {
-  outline: 2px dashed var(--blue); outline-offset: 6px;
+  outline: 2px dashed var(--office-cyan); outline-offset: 6px;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--blue) 8%, transparent);
+  background: rgba(56, 189, 248, 0.14);
 }
 #wips-office-root .speech-bubble {
-  position: relative; display: grid; gap: 3px; align-content: start;
-  width: 100%; min-width: 0; padding: 8px;
-  border: 1px solid #d6cfc3; border-radius: 8px;
+  position: relative; display: grid; gap: 4px; align-content: start;
+  width: 100%; min-width: 0; padding: 8px 9px;
+  border: 1px solid #334a66; border-radius: 6px;
   background: var(--office-bubble); color: var(--office-ink); overflow-wrap: anywhere;
+  box-shadow: 0 4px 12px rgba(4, 9, 20, 0.45), inset 0 1px 0 rgba(125, 211, 252, 0.12);
 }
 #wips-office-root .speech-bubble::after {
   content: &quot;&quot;; position: absolute; left: calc(50% - 5px); bottom: -6px;
   width: 10px; height: 10px; transform: rotate(45deg);
-  background: var(--office-bubble); border-right: 1px solid #d6cfc3; border-bottom: 1px solid #d6cfc3;
+  background: var(--office-bubble); border-right: 1px solid #334a66; border-bottom: 1px solid #334a66;
 }
-#wips-office-root .speech-status { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
-#wips-office-root .speech-title { font-weight: 500; overflow-wrap: anywhere; }
-#wips-office-root .speech-other { color: var(--office-muted); }
-#wips-office-root .person-art { position: relative; display: block; width: 150px; height: 154px; --motion-delay: 0s; }
-#wips-office-root .person-art[data-employee=&quot;sb&quot;] { --shirt: #577e91; }
-#wips-office-root .person-art[data-employee=&quot;이요원&quot;] { --shirt: #85945f; }
-#wips-office-root .person-art[data-employee=&quot;여이전트&quot;] { --shirt: #766c8e; }
-#wips-office-root .person-art[data-employee=&quot;석규&quot;] { --shirt: #be7956; }
-#wips-office-root .person-art[data-employee=&quot;UI&quot;] { --shirt: #587d88; }
+#wips-office-root .hud-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.04em; color: #93c5fd;
+}
+#wips-office-root .hud-tag { color: #7dd3fc; }
+#wips-office-root .hud-state {
+  padding: 1px 5px; border-radius: 3px;
+  background: rgba(30, 41, 59, 0.9); border: 1px solid #334155; color: #94a3b8;
+}
+#wips-office-root .workstation[data-activity=&quot;working&quot;] .hud-state {
+  background: rgba(20, 83, 45, 0.55); border-color: #4ade80; color: #86efac;
+}
+#wips-office-root .hud-alert {
+  display: inline-grid; place-items: center; min-width: 16px; padding: 0 3px;
+  border-radius: 3px; background: #1e293b; color: #e2e8f0; border: 1px solid #475569;
+}
+#wips-office-root .workstation[data-status=&quot;검증&quot;] .hud-alert,
+#wips-office-root .workstation[data-status=&quot;대기&quot;] .hud-alert,
+#wips-office-root .workstation[data-status=&quot;장시간 테스트 중&quot;] .hud-alert {
+  background: #450a0a; border-color: #ef4444; color: #fca5a5;
+}
+#wips-office-root .hud-meter {
+  height: 5px; width: 100%; border-radius: 2px; overflow: hidden;
+  background: #1e293b; border: 1px solid #334155;
+}
+#wips-office-root .hud-meter-fill {
+  display: block; height: 100%; width: 12%; background: #64748b;
+  transition: width 0.25s ease;
+}
+#wips-office-root .workstation[data-status=&quot;진행&quot;] .hud-meter-fill {
+  width: 78%; background: linear-gradient(90deg, #22c55e, #4ade80);
+  box-shadow: 0 0 8px rgba(74, 222, 128, 0.55);
+}
+#wips-office-root .workstation[data-status=&quot;검증&quot;] .hud-meter-fill {
+  width: 90%; background: linear-gradient(90deg, #9333ea, #38bdf8);
+}
+#wips-office-root .workstation[data-status=&quot;장시간 테스트 중&quot;] .hud-meter-fill {
+  width: 66%; background: linear-gradient(90deg, #eab308, #f97316);
+}
+#wips-office-root .workstation[data-status=&quot;대기&quot;] .hud-meter-fill {
+  width: 38%; background: linear-gradient(90deg, #dc2626, #f97316);
+}
+#wips-office-root .workstation[data-status=&quot;예정&quot;] .hud-meter-fill {
+  width: 24%; background: #64748b;
+}
+#wips-office-root .speech-status { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 12px; color: #cbd5e1; }
+#wips-office-root .speech-title { font-weight: 600; font-size: 13px; overflow-wrap: anywhere; color: #f8fafc; }
+#wips-office-root .speech-other { color: var(--office-muted); font-size: 12px; }
+#wips-office-root .person-art { position: relative; display: block; width: 150px; height: 158px; --motion-delay: 0s; }
+#wips-office-root .person-art[data-employee=&quot;sb&quot;] {
+  --shirt: #18202c; --tie: #e2e8f0; --rug-color: rgba(185, 45, 62, 0.48); --rug-border: rgba(248, 113, 113, 0.55);
+}
+#wips-office-root .person-art[data-employee=&quot;이요원&quot;] {
+  --shirt: #1c2432; --tie: #38bdf8; --rug-color: rgba(37, 99, 235, 0.44); --rug-border: rgba(96, 165, 250, 0.55);
+}
+#wips-office-root .person-art[data-employee=&quot;여이전트&quot;] {
+  --shirt: #221d2e; --tie: #c084fc; --rug-color: rgba(168, 56, 128, 0.44); --rug-border: rgba(232, 121, 249, 0.52);
+}
+#wips-office-root .person-art[data-employee=&quot;석규&quot;] {
+  --shirt: #1e3b46; --tie: #22d3ee; --rug-color: rgba(28, 130, 78, 0.48); --rug-border: rgba(74, 222, 128, 0.55);
+}
+#wips-office-root .person-art[data-employee=&quot;UI&quot;] {
+  --shirt: #243842; --tie: #67e8f9; --rug-color: rgba(145, 132, 42, 0.46); --rug-border: rgba(250, 204, 21, 0.52);
+}
 #wips-office-root .person-art[data-motion-phase=&quot;0&quot;] { --motion-delay: 0s; }
 #wips-office-root .person-art[data-motion-phase=&quot;1&quot;] { --motion-delay: -0.12s; }
 #wips-office-root .person-art[data-motion-phase=&quot;2&quot;] { --motion-delay: -0.24s; }
@@ -2386,8 +2782,18 @@ html&gt;body{padding:0}&lt;/style&gt;
   0%, 100% { transform: rotate(18deg); }
   50% { transform: rotate(10deg); }
 }
+@keyframes office-screen-pulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.22); }
+}
+@keyframes office-led-blink {
+  0%, 100% { opacity: 0.95; }
+  50% { opacity: 0.55; }
+}
 #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-head,
-#wips-office-root .workstation[data-activity=&quot;working&quot;] .person-hair {
+#wips-office-root .workstation[data-activity=&quot;working&quot;] .person-hair,
+#wips-office-root .workstation[data-activity=&quot;working&quot;] .agent-glasses,
+#wips-office-root .workstation[data-activity=&quot;working&quot;] .agent-headset {
   animation: office-focus-bob 1.7s ease-in-out infinite;
   animation-delay: var(--motion-delay);
 }
@@ -2401,93 +2807,217 @@ html&gt;body{padding:0}&lt;/style&gt;
   animation-delay: calc(var(--motion-delay) - 0.18s);
   transform-origin: 50% 0;
 }
+#wips-office-root .workstation[data-activity=&quot;working&quot;] .monitor-screen,
+#wips-office-root .workstation[data-activity=&quot;working&quot;] .monitor-dual {
+  animation: office-screen-pulse 2.2s ease-in-out infinite;
+  animation-delay: var(--motion-delay);
+}
 @media (prefers-reduced-motion: reduce) {
   #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-head,
   #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-hair,
+  #wips-office-root .workstation[data-activity=&quot;working&quot;] .agent-glasses,
+  #wips-office-root .workstation[data-activity=&quot;working&quot;] .agent-headset,
   #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-body::before,
-  #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-body::after {
+  #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-body::after,
+  #wips-office-root .workstation[data-activity=&quot;working&quot;] .monitor-screen,
+  #wips-office-root .workstation[data-activity=&quot;working&quot;] .monitor-dual,
+  #wips-office-root .server-rack::before {
     animation: none;
   }
 }
+#wips-office-root .desk-rug {
+  position: absolute; z-index: 0; left: 2px; top: 4px; width: 146px; height: 128px;
+  border-radius: 6px;
+  background: var(--rug-color);
+  border: 2px solid var(--rug-border);
+  box-shadow: inset 0 0 0 3px rgba(15, 23, 42, 0.25);
+}
+#wips-office-root .desk-cable {
+  position: absolute; z-index: 1; left: 4px; top: 68px; width: 28px; height: 22px;
+  border-left: 2px solid #ef4444;
+  border-bottom: 2px solid #22c55e;
+  border-radius: 0 0 0 12px;
+  opacity: 0.85;
+}
 #wips-office-root .desk-top {
-  position: absolute; z-index: 2; left: 9px; top: 8px; width: 132px; height: 66px;
-  background: var(--office-desk); border: 2px solid #a97849;
-  border-radius: 5px; box-shadow: 0 4px rgba(63, 50, 37, 0.16);
+  position: absolute; z-index: 2; left: 9px; top: 10px; width: 132px; height: 64px;
+  background: var(--office-desk); border: 2px solid #8a6c4e;
+  border-radius: 4px; box-shadow: 0 5px 0 #3f2f21, 0 8px 12px rgba(0, 0, 0, 0.42);
 }
 #wips-office-root .desk-front {
-  position: absolute; z-index: 3; left: 119px; top: 22px; width: 13px; height: 19px;
-  background: var(--office-desk-front);
-  border: 1px solid #916741; transform: rotate(7deg);
+  position: absolute; z-index: 3; left: 112px; top: 46px; width: 18px; height: 16px;
+  background: #1e293b; border: 1px solid #475569; border-radius: 3px;
+}
+#wips-office-root .pc-tower {
+  position: absolute; z-index: 4; left: 14px; top: 40px; width: 14px; height: 28px;
+  background: #111827; border: 2px solid #334155; border-radius: 2px;
+  box-shadow: inset 0 4px 0 #1f2937;
+}
+#wips-office-root .pc-tower::after {
+  content: &quot;&quot;; position: absolute; left: 3px; top: 6px; width: 4px; height: 4px;
+  border-radius: 50%; background: #4ade80; box-shadow: 0 6px 0 #ef4444;
 }
 #wips-office-root .monitor-screen {
-  position: absolute; z-index: 4; left: 45px; top: 19px; width: 58px; height: 9px;
-  border: 2px solid var(--office-chair); border-radius: 2px; background: var(--office-screen);
+  position: absolute; z-index: 4; left: 26px; top: 14px; width: 44px; height: 16px;
+  border: 2px solid #0f172a; border-radius: 2px; background: var(--office-screen);
+  box-shadow: inset 0 0 0 1px #1e5642, 0 0 8px rgba(74, 222, 128, 0.25);
+  transform: rotate(-4deg);
+}
+#wips-office-root .monitor-screen::after,
+#wips-office-root .monitor-dual::after {
+  content: &quot;&quot;; position: absolute; inset: 3px;
+  background: repeating-linear-gradient(180deg, #4ade80 0 2px, transparent 2px 4px);
+  opacity: 0.72;
+}
+#wips-office-root .monitor-dual {
+  position: absolute; z-index: 4; left: 78px; top: 14px; width: 44px; height: 16px;
+  border: 2px solid #0f172a; border-radius: 2px; background: #0f2f38;
+  box-shadow: inset 0 0 0 1px #1f5c6e, 0 0 8px rgba(56, 189, 248, 0.25);
+  transform: rotate(4deg);
+}
+#wips-office-root .monitor-dual::after {
+  background: repeating-linear-gradient(180deg, #38bdf8 0 2px, transparent 2px 4px);
 }
 #wips-office-root .monitor-stand {
-  position: absolute; z-index: 3; left: 65px; top: 29px; width: 18px; height: 8px;
-  border-radius: 2px; background: var(--office-chair);
+  position: absolute; z-index: 3; left: 64px; top: 31px; width: 22px; height: 6px;
+  border-radius: 2px; background: #1e293b; border: 1px solid #475569;
 }
 #wips-office-root .keyboard {
-  position: absolute; z-index: 4; left: 48px; top: 47px; width: 47px; height: 13px;
-  border: 2px solid var(--office-chair); border-radius: 2px;
-  background: repeating-linear-gradient(90deg, var(--office-chair) 0 1px, #f5efe4 1px 5px);
+  position: absolute; z-index: 4; left: 45px; top: 44px; width: 48px; height: 12px;
+  border: 2px solid #0f172a; border-radius: 2px;
+  background: repeating-linear-gradient(90deg, #1e293b 0 2px, #64748b 2px 5px);
 }
 #wips-office-root .desk-leg {
-  position: absolute; z-index: 4; left: 105px; top: 48px; width: 7px; height: 11px;
-  border-radius: 45%; background: var(--office-chair);
+  position: absolute; z-index: 4; left: 117px; top: 50px; width: 7px; height: 9px;
+  border-radius: 40%; background: #94a3b8; border: 1px solid #0f172a;
 }
 #wips-office-root .desk-leg-right {
-  left: 20px; top: 44px; width: 13px; height: 13px;
-  border: 3px solid var(--office-desk); background: var(--office-chair);
+  left: 33px; top: 47px; width: 8px; height: 8px;
+  border: 2px solid #0f172a; background: #38bdf8;
   border-radius: 50%;
 }
+#wips-office-root .desk-mug {
+  position: absolute; z-index: 4; left: 98px; top: 45px; width: 9px; height: 9px;
+  border: 2px solid #0f172a; border-radius: 2px; background: #e2e8f0;
+  box-shadow: inset 0 2px 0 #78350f;
+}
 #wips-office-root .chair-base {
-  position: absolute; z-index: 0; left: 51px; top: 84px; width: 48px; height: 40px;
-  border-radius: 12px; background: rgba(41, 44, 46, 0.12);
+  position: absolute; z-index: 0; left: 50px; top: 83px; width: 50px; height: 42px;
+  border-radius: 12px; background: rgba(7, 12, 22, 0.4);
 }
 #wips-office-root .chair-back {
-  position: absolute; z-index: 1; left: 54px; top: 91px; width: 42px; height: 31px;
-  border: 5px solid var(--office-chair); border-radius: 10px; background: #768084;
+  position: absolute; z-index: 1; left: 53px; top: 88px; width: 44px; height: 34px;
+  border: 4px solid #0f172a; border-radius: 10px; background: #334155;
+  box-shadow: inset 0 4px 0 #475569;
 }
 #wips-office-root .chair-stem { display: none; }
 #wips-office-root .person-body {
-  position: absolute; z-index: 5; left: 53px; top: 77px; width: 44px; height: 29px;
-  border-radius: 14px 14px 10px 10px; background: color-mix(in srgb, var(--shirt) 72%, #ffffff);
+  position: absolute; z-index: 5; left: 52px; top: 76px; width: 46px; height: 31px;
+  border: 2px solid #0f172a;
+  border-radius: 14px 14px 10px 10px; background: var(--shirt);
 }
 #wips-office-root .person-body::before,
 #wips-office-root .person-body::after {
   content: &quot;&quot;; position: absolute; top: -12px; width: 10px; height: 24px;
-  border-radius: 6px; background: var(--office-skin); transform-origin: 50% 0;
+  border-radius: 6px;
+  border: 1px solid #0f172a;
+  background: linear-gradient(180deg, var(--office-skin) 0 8px, var(--shirt) 8px 24px);
+  transform-origin: 50% 0;
 }
-#wips-office-root .person-body::before { left: -3px; transform: rotate(-18deg); }
-#wips-office-root .person-body::after { right: -3px; transform: rotate(18deg); }
+#wips-office-root .person-body::before { left: -4px; transform: rotate(-18deg); }
+#wips-office-root .person-body::after { right: -4px; transform: rotate(18deg); }
+#wips-office-root .agent-tie {
+  position: absolute; z-index: 5; left: 71px; top: 92px; width: 8px; height: 13px;
+  background: linear-gradient(180deg, #f8fafc 0 4px, var(--tie, #38bdf8) 4px 13px);
+  border-radius: 0 0 3px 3px;
+}
+#wips-office-root .person-art[data-agent-style=&quot;cyber&quot;] .agent-tie {
+  left: 69px; top: 92px; width: 12px; height: 11px;
+  background: transparent;
+  border-inline: 2px solid var(--tie, #22d3ee);
+  border-radius: 0;
+}
 #wips-office-root .person-head {
-  position: absolute; z-index: 6; left: 62px; top: 76px; width: 26px; height: 28px;
+  position: absolute; z-index: 6; left: 62px; top: 69px; width: 26px; height: 26px;
   border-radius: 50%; background: var(--office-skin);
+  border: 2px solid #0f172a;
 }
 #wips-office-root .person-hair {
-  position: absolute; z-index: 7; left: 61px; top: 80px; width: 28px; height: 26px;
-  border-radius: 45% 45% 50% 50%; background: var(--office-hair);
+  position: absolute; z-index: 7; left: 61px; top: 66px; width: 28px; height: 12px;
+  border-radius: 48% 48% 25% 25%; background: var(--office-hair);
+  border: 2px solid #0f172a; border-bottom: 0;
 }
 #wips-office-root .person-hair::after {
-  content: &quot;&quot;; position: absolute; left: 7px; top: 4px; width: 10px; height: 8px;
+  content: &quot;&quot;; position: absolute; left: 6px; top: 3px; width: 10px; height: 5px;
   border-top: 2px solid var(--office-hair-highlight); border-radius: 50%;
 }
-#wips-office-root .employee-name {
-  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
-  min-width: 54px; padding: 2px 10px; border: 1px solid transparent; border-radius: 999px;
-  font-weight: 500; text-align: center; color: var(--office-ink); white-space: nowrap;
+#wips-office-root .person-art[data-employee=&quot;여이전트&quot;] .person-hair {
+  z-index: 5; left: 58px; top: 65px; width: 34px; height: 29px;
+  background: #5a3826; border-radius: 46% 46% 35% 35%; border-bottom: 2px solid #0f172a;
 }
-#wips-office-root .employee-count { position: absolute; left: 10px; top: 109px; color: var(--office-muted); }
+#wips-office-root .person-art[data-employee=&quot;여이전트&quot;] .person-head {
+  box-shadow: inset 0 6px 0 #5a3826;
+}
+#wips-office-root .person-art[data-agent-style=&quot;cyber&quot;] .person-hair {
+  z-index: 5; left: 57px; top: 64px; width: 36px; height: 32px;
+  background: #234654; border-radius: 46% 46% 36% 36%; border-bottom: 2px solid #0f172a;
+  box-shadow: inset 0 0 0 2px #162e38;
+}
+#wips-office-root .person-art[data-agent-style=&quot;cyber&quot;] .person-head {
+  box-shadow: inset 0 5px 0 #1b3844;
+}
+#wips-office-root .agent-glasses {
+  position: absolute; z-index: 8; left: 65px; top: 81px; width: 20px; height: 5px;
+  background: #070b12; border: 1px solid #334155; border-radius: 2px;
+}
+#wips-office-root .person-art[data-agent-style=&quot;cyber&quot;] .agent-glasses {
+  left: 64px; top: 79px; width: 22px; height: 7px;
+  background: #22d3ee; border: 2px solid #083344; border-radius: 3px;
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.85);
+}
+#wips-office-root .agent-headset {
+  position: absolute; z-index: 9; left: 58px; top: 73px; width: 34px; height: 14px;
+  border-inline: 4px solid #4ade80;
+  border-top: 2px solid #64748b;
+  border-radius: 10px 10px 0 0;
+}
+#wips-office-root .person-art[data-agent-style=&quot;cyber&quot;] .agent-headset {
+  display: none;
+}
+#wips-office-root .employee-name {
+  position: absolute; z-index: 10; left: 50%; bottom: 0; transform: translateX(-50%);
+  min-width: 60px; padding: 2px 10px;
+  border: 1px solid #384f6e; border-radius: 999px;
+  background: rgba(11, 18, 32, 0.92);
+  font-weight: 600; font-size: 13px; text-align: center; color: var(--office-ink); white-space: nowrap;
+}
+#wips-office-root .employee-count {
+  position: absolute; z-index: 10; left: 6px; bottom: 28px;
+  padding: 1px 6px; border-radius: 999px;
+  background: rgba(11, 18, 32, 0.88); border: 1px solid #334155;
+  font-size: 11px; font-weight: 600; color: var(--office-muted);
+}
 #wips-office-root .room-floor {
   position: absolute; bottom: -12px; left: 43%; width: 14%; height: 12px;
   background: var(--office-floor); border-inline: 3px solid var(--office-wall);
 }
+@media (max-width: 780px) {
+  #wips-office-root .hq-backdrop {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #wips-office-root .hq-command {
+    grid-column: 1 / -1;
+    order: -1;
+  }
+}
 @media (max-width: 620px) {
   #wips-office-root .office-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 14px; }
   #wips-office-root .office-room { padding-inline: 10px; }
+  #wips-office-root .billboard-title { font-size: 14px; letter-spacing: 0.08em; }
+  #wips-office-root .billboard-sub { font-size: 10px; letter-spacing: 0.08em; }
 }
 @media (max-width: 420px) {
+  #wips-office-root .hq-backdrop { grid-template-columns: minmax(0, 1fr); }
   #wips-office-root .office-grid { grid-template-columns: minmax(0, 1fr); }
   #wips-office-root .speech-bubble { max-width: 260px; }
 }
@@ -2765,6 +3295,73 @@ html&gt;body{padding:0}&lt;/style&gt;
     &lt;div class=&quot;room-dressing&quot; aria-hidden=&quot;true&quot;&gt;
       &lt;div class=&quot;window-frame&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;wall-clock&quot;&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;hq-backdrop&quot; aria-hidden=&quot;true&quot;&gt;
+      &lt;div class=&quot;hq-zone hq-lounge&quot;&gt;
+        &lt;div class=&quot;lounge-window&quot;&gt;
+          &lt;div class=&quot;lounge-blinds&quot;&gt;&lt;/div&gt;
+          &lt;div class=&quot;lounge-terminal&quot;&gt;&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;lounge-items&quot;&gt;
+          &lt;div class=&quot;coffee-station&quot;&gt;
+            &lt;div class=&quot;coffee-maker&quot;&gt;&lt;/div&gt;
+            &lt;div class=&quot;water-cooler&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;hq-sofa&quot;&gt;
+            &lt;span class=&quot;pixel-cat&quot;&gt;&lt;/span&gt;
+            &lt;span class=&quot;pixel-badge&quot;&gt;!&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;hq-plant&quot;&gt;&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;hq-zone hq-command&quot;&gt;
+        &lt;div class=&quot;hq-billboard&quot;&gt;
+          &lt;span class=&quot;billboard-sub&quot;&gt;GITHUB.COM/KANGSEOKGYU&lt;/span&gt;
+          &lt;span class=&quot;billboard-title&quot;&gt;PIXEL-AGENT-HQ&lt;/span&gt;
+          &lt;svg class=&quot;hq-octocat&quot; viewBox=&quot;0 0 16 16&quot; aria-hidden=&quot;true&quot;&gt;
+            &lt;rect x=&quot;3&quot; y=&quot;2&quot; width=&quot;2&quot; height=&quot;2&quot; fill=&quot;currentColor&quot;/&gt;
+            &lt;rect x=&quot;11&quot; y=&quot;2&quot; width=&quot;2&quot; height=&quot;2&quot; fill=&quot;currentColor&quot;/&gt;
+            &lt;rect x=&quot;3&quot; y=&quot;4&quot; width=&quot;10&quot; height=&quot;5&quot; fill=&quot;currentColor&quot;/&gt;
+            &lt;rect x=&quot;2&quot; y=&quot;5&quot; width=&quot;12&quot; height=&quot;3&quot; fill=&quot;currentColor&quot;/&gt;
+            &lt;rect x=&quot;4&quot; y=&quot;9&quot; width=&quot;8&quot; height=&quot;2&quot; fill=&quot;currentColor&quot;/&gt;
+            &lt;rect x=&quot;5&quot; y=&quot;11&quot; width=&quot;6&quot; height=&quot;4&quot; fill=&quot;currentColor&quot;/&gt;
+            &lt;rect x=&quot;2&quot; y=&quot;11&quot; width=&quot;3&quot; height=&quot;2&quot; fill=&quot;currentColor&quot;/&gt;
+            &lt;rect x=&quot;4&quot; y=&quot;13&quot; width=&quot;2&quot; height=&quot;1&quot; fill=&quot;currentColor&quot;/&gt;
+            &lt;rect x=&quot;5&quot; y=&quot;6&quot; width=&quot;2&quot; height=&quot;2&quot; fill=&quot;#070d16&quot;/&gt;
+            &lt;rect x=&quot;9&quot; y=&quot;6&quot; width=&quot;2&quot; height=&quot;2&quot; fill=&quot;#070d16&quot;/&gt;
+          &lt;/svg&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;hq-briefing-row&quot;&gt;
+          &lt;div class=&quot;mini-server&quot;&gt;&lt;/div&gt;
+          &lt;div class=&quot;hq-sofa hq-sofa--mint&quot;&gt;&lt;/div&gt;
+          &lt;div class=&quot;hq-world-map&quot;&gt;
+            &lt;svg viewBox=&quot;0 0 64 32&quot; aria-hidden=&quot;true&quot;&gt;
+              &lt;rect width=&quot;64&quot; height=&quot;32&quot; fill=&quot;#0d355c&quot;/&gt;
+              &lt;path d=&quot;M0 8h64M0 16h64M0 24h64M16 0v32M32 0v32M48 0v32&quot; stroke=&quot;#1b4d7e&quot; stroke-width=&quot;0.6&quot;/&gt;
+              &lt;path d=&quot;M6 6h12v4h-4v3h-5v-3H6zM13 15h6v9h-4v-4h-2zM28 5h14v5h5v6h-9v-3h-6v4h-4zM29 14h8v10h-5v-5h-3zM48 19h8v6h-5v-2h-3z&quot; fill=&quot;#34d399&quot;/&gt;
+              &lt;path d=&quot;M12 10L34 11L46 13L52 21M34 11L32 19&quot; fill=&quot;none&quot; stroke=&quot;#f97316&quot; stroke-width=&quot;1.2&quot;/&gt;
+              &lt;circle cx=&quot;12&quot; cy=&quot;10&quot; r=&quot;1.5&quot; fill=&quot;#fde047&quot;/&gt;
+              &lt;circle cx=&quot;34&quot; cy=&quot;11&quot; r=&quot;1.5&quot; fill=&quot;#ef4444&quot;/&gt;
+              &lt;circle cx=&quot;46&quot; cy=&quot;13&quot; r=&quot;1.5&quot; fill=&quot;#fde047&quot;/&gt;
+              &lt;circle cx=&quot;52&quot; cy=&quot;21&quot; r=&quot;1.5&quot; fill=&quot;#ef4444&quot;/&gt;
+            &lt;/svg&gt;
+          &lt;/div&gt;
+          &lt;span class=&quot;pixel-cat&quot;&gt;&lt;/span&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;hq-zone hq-server-bay&quot;&gt;
+        &lt;div class=&quot;server-bank&quot;&gt;
+          &lt;div class=&quot;server-rack&quot;&gt;&lt;/div&gt;
+          &lt;div class=&quot;server-rack&quot;&gt;&lt;/div&gt;
+          &lt;div class=&quot;server-rack&quot;&gt;&lt;/div&gt;
+          &lt;div class=&quot;server-rack&quot;&gt;&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;bitcat-zone&quot;&gt;
+          &lt;span class=&quot;pixel-cat&quot;&gt;&lt;/span&gt;
+          &lt;span class=&quot;bitcat-label&quot;&gt;BITCAT!&lt;/span&gt;
+          &lt;span class=&quot;pixel-badge pixel-badge--dots&quot;&gt;...&lt;/span&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
     &lt;/div&gt;
     &lt;div class=&quot;office-grid&quot; id=&quot;wips-office-employees&quot;&gt;&lt;/div&gt;
     &lt;div class=&quot;room-floor&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;
@@ -3070,22 +3667,31 @@ html&gt;body{padding:0}&lt;/style&gt;
     const art = document.createElement(&quot;span&quot;);
     art.className = &quot;person-art&quot;;
     art.dataset.employee = owner;
+    art.dataset.agentStyle = owner === &quot;석규&quot; || owner === &quot;UI&quot; ? &quot;cyber&quot; : &quot;suit&quot;;
     let motionPhase = 0;
     for (const character of owner) motionPhase = (motionPhase * 31 + character.codePointAt(0)) % 5;
     art.dataset.motionPhase = String(motionPhase);
     art.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
     const shapeClasses = [
+      &quot;desk-rug&quot;,
+      &quot;desk-cable&quot;,
       &quot;chair-back&quot;,
       &quot;chair-stem&quot;,
       &quot;chair-base&quot;,
       &quot;person-body&quot;,
+      &quot;agent-tie&quot;,
       &quot;person-head&quot;,
       &quot;person-hair&quot;,
+      &quot;agent-glasses&quot;,
+      &quot;agent-headset&quot;,
       &quot;desk-top&quot;,
       &quot;desk-front&quot;,
+      &quot;pc-tower&quot;,
       &quot;monitor-screen&quot;,
+      &quot;monitor-dual&quot;,
       &quot;monitor-stand&quot;,
       &quot;keyboard&quot;,
+      &quot;desk-mug&quot;,
       &quot;desk-leg desk-leg-left&quot;,
       &quot;desk-leg desk-leg-right&quot;,
     ];
@@ -3103,12 +3709,27 @@ html&gt;body{padding:0}&lt;/style&gt;
     const view = model.viewForEmployee(owner, filters);
     const station = document.createElement(&quot;article&quot;);
     station.className = &quot;workstation&quot;;
-    station.dataset.activity = view.representative &amp;&amp; WORKING_STATUSES.has(view.representative.status)
-      ? &quot;working&quot;
-      : &quot;idle&quot;;
+    const isWorking = Boolean(view.representative &amp;&amp; WORKING_STATUSES.has(view.representative.status));
+    station.dataset.activity = isWorking ? &quot;working&quot; : &quot;idle&quot;;
+    station.dataset.status = view.representative ? view.representative.status : &quot;idle&quot;;
 
     const bubble = document.createElement(&quot;div&quot;);
     bubble.className = &quot;speech-bubble&quot;;
+    const hudHeader = document.createElement(&quot;div&quot;);
+    hudHeader.className = &quot;hud-header&quot;;
+    addText(hudHeader, &quot;span&quot;, &quot;hud-tag&quot;, &quot;[AGENT · &quot; + owner + &quot;]&quot;);
+    addText(hudHeader, &quot;span&quot;, &quot;hud-state&quot;, isWorking ? &quot;ACTIVE&quot; : (view.representative ? &quot;STANDBY&quot; : &quot;IDLE&quot;));
+    const alertLabel = view.representative &amp;&amp; (view.representative.status === &quot;검증&quot; || view.representative.status === &quot;대기&quot; || view.representative.status === &quot;장시간 테스트 중&quot;)
+      ? &quot;!&quot;
+      : (isWorking ? &quot;...&quot; : &quot;·&quot;);
+    addText(hudHeader, &quot;span&quot;, &quot;hud-alert&quot;, alertLabel);
+    bubble.append(hudHeader);
+    const hudMeter = document.createElement(&quot;div&quot;);
+    hudMeter.className = &quot;hud-meter&quot;;
+    const hudMeterFill = document.createElement(&quot;span&quot;);
+    hudMeterFill.className = &quot;hud-meter-fill&quot;;
+    hudMeter.append(hudMeterFill);
+    bubble.append(hudMeter);
     if (view.representative) {
       const statusLine = document.createElement(&quot;p&quot;);
       statusLine.className = &quot;speech-status&quot;;
