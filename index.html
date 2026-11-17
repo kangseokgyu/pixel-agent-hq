@@ -2566,13 +2566,255 @@ html&gt;body{padding:0}&lt;/style&gt;
   animation-delay: calc(var(--motion-delay) - 0.18s);
   transform-origin: 50% 0;
 }
+@keyframes office-billboard-ticker {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+#wips-office-root .hq-billboard {
+  position: absolute;
+  left: 30.1%;
+  top: 2.6%;
+  width: 39.8%;
+  height: 27.6%;
+  z-index: 6;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0.55cqw;
+  padding: 0.7cqw 0.85cqw;
+  border: 1.5px solid #2b4564;
+  border-radius: 5px;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(74, 222, 128, 0.045) 0px,
+      rgba(74, 222, 128, 0.045) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    radial-gradient(circle at 50% 0%, #10243a 0%, #070e18 88%);
+  box-shadow: inset 0 0 14px rgba(56, 189, 248, 0.16), 0 4px 12px rgba(2, 6, 23, 0.75);
+  color: #e2f1ff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow: hidden;
+  min-width: 0;
+}
+#wips-office-root .hq-billboard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6cqw;
+  padding-bottom: 0.4cqw;
+  border-bottom: 1px solid #1e334d;
+  font-size: clamp(8px, 0.92cqw, 12px);
+  line-height: 1.1;
+  min-width: 0;
+}
+#wips-office-root .hq-billboard-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45cqw;
+  color: #4ade80;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 8px rgba(74, 222, 128, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#wips-office-root .hq-billboard-dot {
+  width: 0.55cqw;
+  height: 0.55cqw;
+  min-width: 5px;
+  min-height: 5px;
+  border-radius: 999px;
+  background: #4ade80;
+  box-shadow: 0 0 6px #4ade80;
+  flex: none;
+}
+#wips-office-root .hq-billboard-meta {
+  color: #93c5fd;
+  white-space: nowrap;
+  flex: none;
+}
+#wips-office-root .hq-stepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.48cqw;
+  align-items: stretch;
+  min-height: 0;
+  overflow: hidden;
+}
+#wips-office-root .hq-step-card {
+  display: grid;
+  align-content: space-between;
+  gap: 0.25cqw;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.42cqw 0.5cqw;
+  border: 1px solid #1f3552;
+  border-radius: 4px;
+  background: rgba(11, 22, 38, 0.9);
+  color: #e2f1ff;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+#wips-office-root .hq-step-card:hover,
+#wips-office-root .hq-step-card:focus-visible {
+  border-color: #38bdf8;
+  background: rgba(20, 40, 66, 0.96);
+  outline: none;
+}
+#wips-office-root .hq-step-card[data-tone=&quot;green&quot;] { border-color: rgba(74, 222, 128, 0.55); }
+#wips-office-root .hq-step-card[data-tone=&quot;amber&quot;] { border-color: rgba(251, 191, 36, 0.55); }
+#wips-office-root .hq-step-card[data-tone=&quot;cyan&quot;] { border-color: rgba(56, 189, 248, 0.45); }
+#wips-office-root .hq-step-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25cqw;
+  font-size: clamp(7px, 0.72cqw, 10px);
+  color: #9fb6d1;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+#wips-office-root .hq-step-title {
+  font-size: clamp(8px, 0.9cqw, 11.5px);
+  font-weight: 700;
+  line-height: 1.2;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#wips-office-root .hq-step-bar {
+  height: 0.35cqw;
+  min-height: 3px;
+  width: 100%;
+  border-radius: 2px;
+  background: #17283d;
+  overflow: hidden;
+}
+#wips-office-root .hq-step-bar-fill {
+  display: block;
+  height: 100%;
+  background: #64748b;
+}
+#wips-office-root .hq-step-card[data-tone=&quot;green&quot;] .hq-step-bar-fill { background: #4ade80; }
+#wips-office-root .hq-step-card[data-tone=&quot;amber&quot;] .hq-step-bar-fill { background: #fbbf24; }
+#wips-office-root .hq-step-card[data-tone=&quot;cyan&quot;] .hq-step-bar-fill { background: #38bdf8; }
+#wips-office-root .hq-step-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.2cqw;
+  font-size: clamp(7px, 0.76cqw, 10px);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+#wips-office-root .hq-step-dday { font-weight: 700; color: #cbd5e1; }
+#wips-office-root .hq-step-card[data-tone=&quot;green&quot;] .hq-step-dday { color: #4ade80; }
+#wips-office-root .hq-step-card[data-tone=&quot;amber&quot;] .hq-step-dday { color: #fbbf24; }
+#wips-office-root .hq-step-card[data-tone=&quot;cyan&quot;] .hq-step-dday { color: #38bdf8; }
+#wips-office-root .hq-step-date {
+  color: #7dd3fc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#wips-office-root .hq-billboard-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(8px, 0.9cqw, 12px);
+  color: #9fb6d1;
+  border: 1px dashed #233c5c;
+  border-radius: 4px;
+  padding: 0.5cqw;
+}
+#wips-office-root .hq-ticker-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5cqw;
+  padding: 0.3cqw 0.45cqw;
+  border: 1px solid #1d3550;
+  border-radius: 4px;
+  background: #050b14;
+  min-width: 0;
+  overflow: hidden;
+}
+#wips-office-root .hq-ticker-badge {
+  flex: none;
+  padding: 0.1cqw 0.38cqw;
+  border: 1px solid rgba(74, 222, 128, 0.55);
+  border-radius: 3px;
+  background: rgba(74, 222, 128, 0.14);
+  color: #4ade80;
+  font-size: clamp(7px, 0.75cqw, 10px);
+  font-weight: 700;
+  line-height: 1.2;
+}
+#wips-office-root .hq-ticker-viewport {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+#wips-office-root .hq-ticker-track {
+  display: flex;
+  align-items: center;
+  gap: 0.9cqw;
+  width: max-content;
+  animation: office-billboard-ticker 24s linear infinite;
+}
+#wips-office-root .hq-ticker-bar:hover .hq-ticker-track,
+#wips-office-root .hq-ticker-bar:focus-within .hq-ticker-track {
+  animation-play-state: paused;
+}
+#wips-office-root .hq-ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35cqw;
+  padding: 0.08cqw 0.35cqw;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #e2f1ff;
+  font: inherit;
+  font-size: clamp(8px, 0.85cqw, 11px);
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#wips-office-root .hq-ticker-item:hover,
+#wips-office-root .hq-ticker-item:focus-visible {
+  background: #152840;
+  outline: none;
+}
+#wips-office-root .hq-ticker-owner { color: #38bdf8; font-weight: 700; }
+#wips-office-root .hq-ticker-date { color: #7dd3fc; }
+#wips-office-root .hq-ticker-sep { color: #334a66; user-select: none; }
+#wips-office-root .hq-ticker-empty {
+  font-size: clamp(8px, 0.85cqw, 11px);
+  color: #9fb6d1;
+  white-space: nowrap;
+}
+#wips-office-root .task-card.is-billboard-highlight {
+  outline: 2px solid #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+}
 @media (prefers-reduced-motion: reduce) {
   #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-art::before,
   #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-head,
   #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-hair,
   #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-body::before,
-  #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-body::after {
+  #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-body::after,
+  #wips-office-root .hq-ticker-track {
     animation: none;
+  }
+  #wips-office-root .hq-ticker-viewport {
+    overflow-x: auto;
   }
 }
 #wips-office-root .desk-top { background: var(--office-desk); }
@@ -2586,6 +2828,38 @@ html&gt;body{padding:0}&lt;/style&gt;
     background-position: top center;
     padding: calc(55.8% + 14px) 10px 18px;
   }
+  #wips-office-root .hq-billboard {
+    position: static;
+    left: auto;
+    top: auto;
+    width: 100%;
+    height: auto;
+    gap: 8px;
+    padding: 10px;
+    margin-bottom: 14px;
+  }
+  #wips-office-root .hq-billboard-head {
+    padding-bottom: 6px;
+    font-size: 11px;
+  }
+  #wips-office-root .hq-stepper {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  #wips-office-root .hq-step-card {
+    gap: 4px;
+    padding: 7px 8px;
+  }
+  #wips-office-root .hq-step-label { font-size: 10px; }
+  #wips-office-root .hq-step-title { font-size: 12px; }
+  #wips-office-root .hq-step-bar { height: 4px; }
+  #wips-office-root .hq-step-foot { font-size: 10px; }
+  #wips-office-root .hq-billboard-empty { font-size: 12px; padding: 10px; }
+  #wips-office-root .hq-ticker-bar { gap: 8px; padding: 6px 8px; }
+  #wips-office-root .hq-ticker-badge { font-size: 10px; padding: 2px 5px; }
+  #wips-office-root .hq-ticker-item,
+  #wips-office-root .hq-ticker-empty { font-size: 11px; }
+  #wips-office-root .hq-ticker-track { gap: 12px; }
   #wips-office-root .office-grid {
     position: relative;
     inset: auto;
@@ -2899,6 +3173,7 @@ html&gt;body{padding:0}&lt;/style&gt;
       &lt;div class=&quot;hq-scene-cat hq-scene-cat--sofa&quot;&gt;&lt;span class=&quot;pixel-badge&quot;&gt;!&lt;/span&gt;&lt;/div&gt;
       &lt;div class=&quot;hq-scene-cat hq-scene-cat--rug&quot;&gt;&lt;/div&gt;
     &lt;/div&gt;
+    &lt;section class=&quot;hq-billboard&quot; id=&quot;wips-office-billboard&quot; aria-label=&quot;프로젝트 공통 일정 전광판&quot;&gt;&lt;/section&gt;
     &lt;div class=&quot;office-grid&quot; id=&quot;wips-office-employees&quot;&gt;&lt;/div&gt;
     &lt;div class=&quot;room-floor&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;
   &lt;/section&gt;
@@ -2918,7 +3193,7 @@ html&gt;body{padding:0}&lt;/style&gt;
     &lt;div class=&quot;section-heading&quot;&gt;
       &lt;div&gt;
         &lt;h2 id=&quot;wips-office-communal-title&quot;&gt;공용 업무 게시판&lt;/h2&gt;
-        &lt;p class=&quot;section-note&quot;&gt;담당자가 지정되지 않은 일감&lt;/p&gt;
+        &lt;p class=&quot;section-note&quot;&gt;담당자가 공통이거나 지정되지 않은 일감&lt;/p&gt;
       &lt;/div&gt;
       &lt;p class=&quot;section-note&quot; id=&quot;wips-office-communal-count&quot;&gt;&lt;/p&gt;
     &lt;/div&gt;
@@ -2933,9 +3208,47 @@ html&gt;body{padding:0}&lt;/style&gt;
   const STATUS_ORDER = [&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;, &quot;대기&quot;, &quot;예정&quot;, &quot;완료&quot;];
   const STATUS_RANK = new Map(STATUS_ORDER.map((status, index) =&gt; [status, index]));
   const EMPLOYEES = [&quot;sb&quot;, &quot;이요원&quot;, &quot;여이전트&quot;, &quot;석규&quot;, &quot;UI&quot;];
+  const SHARED_OWNER = &quot;공통&quot;;
+  const ACTIVE_TICKER_STATUSES = new Set([&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;]);
   const ALL_STATUS = &quot;전체 상태&quot;;
   const ALL_PROJECTS = &quot;전체 프로젝트&quot;;
   const UNSPECIFIED_PROJECT = &quot;프로젝트 미지정&quot;;
+
+  function isSharedOwner(owner) {
+    return owner === null || owner === undefined || owner === &quot;&quot; || owner === SHARED_OWNER;
+  }
+
+  function todayKstIso() {
+    try {
+      return new Intl.DateTimeFormat(&quot;en-CA&quot;, { timeZone: &quot;Asia/Seoul&quot; }).format(new Date());
+    } catch {
+      return new Date().toISOString().slice(0, 10);
+    }
+  }
+
+  function parseIsoDayMs(value) {
+    if (typeof value !== &quot;string&quot;) return null;
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return null;
+    return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  }
+
+  function formatMmDd(value) {
+    if (typeof value !== &quot;string&quot;) return &quot;&quot;;
+    const match = value.match(/^\d{4}-(\d{2})-(\d{2})$/);
+    return match ? match[1] + &quot;/&quot; + match[2] : value;
+  }
+
+  function formatScheduleShort(task, includeTrailingTilde) {
+    if (task.startDate &amp;&amp; task.endDate) {
+      return formatMmDd(task.startDate) + &quot;~&quot; + formatMmDd(task.endDate);
+    }
+    if (task.startDate) {
+      return formatMmDd(task.startDate) + (includeTrailingTilde ? &quot;~&quot; : &quot;&quot;);
+    }
+    if (task.endDate) return &quot;~&quot; + formatMmDd(task.endDate);
+    return &quot;일정 미지정&quot;;
+  }
 
   function projectLabel(task) {
     return task.project === null || task.project === undefined ? UNSPECIFIED_PROJECT : task.project;
@@ -2983,7 +3296,7 @@ html&gt;body{padding:0}&lt;/style&gt;
     const tasks = Array.isArray(snapshot.results) ? snapshot.results.slice() : [];
     const statuses = STATUS_ORDER.concat([...new Set(tasks.map((task) =&gt; task.status).filter(Boolean))]
       .filter((status) =&gt; !STATUS_ORDER.includes(status)));
-    const employees = EMPLOYEES.concat([...new Set(tasks.map((task) =&gt; task.owner).filter(Boolean))]
+    const employees = EMPLOYEES.concat([...new Set(tasks.map((task) =&gt; task.owner).filter((owner) =&gt; owner &amp;&amp; !isSharedOwner(owner)))]
       .filter((owner) =&gt; !EMPLOYEES.includes(owner)));
     const projects = [&quot;2.3&quot;, &quot;2.2.1&quot;, &quot;기타&quot;].concat([...new Set(tasks.map((task) =&gt; task.project).filter(Boolean))]
       .filter((project) =&gt; ![&quot;2.3&quot;, &quot;2.2.1&quot;, &quot;기타&quot;].includes(project)));
@@ -3025,7 +3338,7 @@ html&gt;body{padding:0}&lt;/style&gt;
       return {
         total: shown.length,
         snapshotTotal: tasks.length,
-        unassigned: shown.filter((task) =&gt; task.owner === null || task.owner === undefined).length,
+        unassigned: shown.filter((task) =&gt; isSharedOwner(task.owner)).length,
         statuses: statusCounts,
       };
     }
@@ -3035,7 +3348,78 @@ html&gt;body{padding:0}&lt;/style&gt;
     }
 
     function unassignedTasks(filters) {
-      return filteredTasks(filters).filter((task) =&gt; (task.owner === null || task.owner === undefined) &amp;&amp; task.status !== &quot;완료&quot;);
+      return filteredTasks(filters).filter((task) =&gt; isSharedOwner(task.owner) &amp;&amp; task.status !== &quot;완료&quot;);
+    }
+
+    function billboardView(filters, referenceDateIso) {
+      const todayIso = referenceDateIso || todayKstIso();
+      const todayMs = parseIsoDayMs(todayIso);
+      const shared = unassignedTasks(filters);
+      const scheduleTasks = shared
+        .map((task, index) =&gt; ({
+          task,
+          index,
+          targetIso: task.startDate || task.endDate || null,
+          rank: STATUS_RANK.get(task.status) ?? STATUS_ORDER.length,
+        }))
+        .sort((left, right) =&gt; {
+          const leftActiveUndated = !left.targetIso &amp;&amp; ACTIVE_TICKER_STATUSES.has(left.task.status);
+          const rightActiveUndated = !right.targetIso &amp;&amp; ACTIVE_TICKER_STATUSES.has(right.task.status);
+          if (leftActiveUndated !== rightActiveUndated) return leftActiveUndated ? -1 : 1;
+          if (left.targetIso &amp;&amp; right.targetIso &amp;&amp; left.targetIso !== right.targetIso) {
+            return left.targetIso.localeCompare(right.targetIso);
+          }
+          if (Boolean(left.targetIso) !== Boolean(right.targetIso)) return left.targetIso ? -1 : 1;
+          return left.rank - right.rank || left.index - right.index;
+        })
+        .map(({ task, targetIso }, idx) =&gt; {
+          const targetMs = parseIsoDayMs(targetIso);
+          let dDayLabel = ACTIVE_TICKER_STATUSES.has(task.status) ? &quot;수시&quot; : &quot;미정&quot;;
+          let diffDays = null;
+          if (todayMs !== null &amp;&amp; targetMs !== null) {
+            diffDays = Math.round((targetMs - todayMs) / 86_400_000);
+            if (diffDays &gt; 0) dDayLabel = &quot;D-&quot; + diffDays;
+            else if (diffDays === 0) dDayLabel = &quot;D-DAY&quot;;
+            else dDayLabel = &quot;D+&quot; + Math.abs(diffDays);
+          }
+          let progress = 20;
+          if (task.status === &quot;진행&quot;) progress = 65;
+          else if (task.status === &quot;검증&quot;) progress = 85;
+          else if (task.status === &quot;장시간 테스트 중&quot;) progress = 70;
+          else if (task.status === &quot;대기&quot;) progress = 35;
+
+          let tone = &quot;slate&quot;;
+          if (task.status === &quot;진행&quot;) tone = &quot;green&quot;;
+          else if (task.status === &quot;검증&quot; || task.status === &quot;장시간 테스트 중&quot; || task.status === &quot;대기&quot;) tone = &quot;amber&quot;;
+          else if (diffDays !== null &amp;&amp; diffDays &lt;= 7) tone = &quot;cyan&quot;;
+
+          return {
+            stepLabel: &quot;STEP &quot; + String(idx + 1).padStart(2, &quot;0&quot;),
+            title: task.title,
+            status: task.status || &quot;미정&quot;,
+            dDayLabel,
+            shortDate: formatScheduleShort(task, false),
+            progress,
+            tone,
+            task,
+          };
+        });
+
+      const tickerTasks = filteredTasks(filters)
+        .filter((task) =&gt; !isSharedOwner(task.owner) &amp;&amp; ACTIVE_TICKER_STATUSES.has(task.status))
+        .map((task) =&gt; ({
+          owner: task.owner,
+          title: task.title,
+          status: task.status,
+          shortDate: formatScheduleShort(task, true),
+          task,
+        }));
+
+      return {
+        todayLabel: formatMmDd(todayIso),
+        scheduleTasks,
+        tickerTasks,
+      };
     }
 
     function representativeTask(owner, filters) {
@@ -3100,6 +3484,7 @@ html&gt;body{padding:0}&lt;/style&gt;
       normalizeSeating,
       swapSeats,
       describeTask,
+      billboardView,
     };
   }
 
@@ -3165,6 +3550,8 @@ html&gt;body{padding:0}&lt;/style&gt;
   const communalCount = document.getElementById(&quot;wips-office-communal-count&quot;);
   const communalEmpty = document.getElementById(&quot;wips-office-communal-empty&quot;);
   const communalTasksNode = document.getElementById(&quot;wips-office-communal-tasks&quot;);
+  const communalTitleNode = document.getElementById(&quot;wips-office-communal-title&quot;);
+  const billboardNode = document.getElementById(&quot;wips-office-billboard&quot;);
   const snapshotNode = document.getElementById(&quot;wips-office-snapshot&quot;);
   const sourceNode = document.getElementById(&quot;wips-office-source&quot;);
   let pendingHostState = window.openai &amp;&amp; window.openai.widgetState;
@@ -3380,6 +3767,7 @@ html&gt;body{padding:0}&lt;/style&gt;
     const details = model.describeTask(task);
     const card = document.createElement(&quot;article&quot;);
     card.className = &quot;card task-card&quot;;
+    card.dataset.taskTitle = details.title;
     addText(card, &quot;h3&quot;, &quot;&quot;, details.title);
     const tags = document.createElement(&quot;div&quot;);
     tags.className = &quot;task-tags&quot;;
@@ -3432,12 +3820,128 @@ html&gt;body{padding:0}&lt;/style&gt;
     });
   }
 
+  function createBillboardStep(item) {
+    const button = document.createElement(&quot;button&quot;);
+    button.type = &quot;button&quot;;
+    button.className = &quot;hq-step-card&quot;;
+    button.dataset.tone = item.tone;
+    button.title = item.title + &quot; (&quot; + item.shortDate + &quot;)&quot;;
+
+    const labelRow = document.createElement(&quot;div&quot;);
+    labelRow.className = &quot;hq-step-label&quot;;
+    addText(labelRow, &quot;span&quot;, &quot;&quot;, item.stepLabel);
+    addText(labelRow, &quot;span&quot;, &quot;&quot;, item.status);
+    button.append(labelRow);
+
+    addText(button, &quot;div&quot;, &quot;hq-step-title&quot;, item.title);
+
+    const bar = document.createElement(&quot;div&quot;);
+    bar.className = &quot;hq-step-bar&quot;;
+    const fill = document.createElement(&quot;span&quot;);
+    fill.className = &quot;hq-step-bar-fill&quot;;
+    if (fill.style) fill.style.width = item.progress + &quot;%&quot;;
+    bar.append(fill);
+    button.append(bar);
+
+    const foot = document.createElement(&quot;div&quot;);
+    foot.className = &quot;hq-step-foot&quot;;
+    addText(foot, &quot;span&quot;, &quot;hq-step-dday&quot;, item.dDayLabel);
+    addText(foot, &quot;span&quot;, &quot;hq-step-date&quot;, item.shortDate);
+    button.append(foot);
+
+    button.addEventListener(&quot;click&quot;, () =&gt; {
+      const cards = Array.from(communalTasksNode.querySelectorAll(&quot;.task-card&quot;));
+      cards.forEach((card) =&gt; card.classList.remove(&quot;is-billboard-highlight&quot;));
+      const match = cards.find((card) =&gt; card.dataset.taskTitle === item.title);
+      if (match) {
+        match.classList.add(&quot;is-billboard-highlight&quot;);
+        match.scrollIntoView?.({ behavior: &quot;smooth&quot;, block: &quot;center&quot; });
+      } else {
+        communalTitleNode?.scrollIntoView?.({ behavior: &quot;smooth&quot;, block: &quot;start&quot; });
+      }
+    });
+    return button;
+  }
+
+  function createTickerButton(item) {
+    const button = document.createElement(&quot;button&quot;);
+    button.type = &quot;button&quot;;
+    button.className = &quot;hq-ticker-item&quot;;
+    button.title = &quot;[&quot; + item.owner + &quot;] &quot; + item.title + &quot; (&quot; + item.shortDate + &quot;)&quot;;
+    addText(button, &quot;span&quot;, &quot;hq-ticker-owner&quot;, &quot;[&quot; + item.owner + &quot;]&quot;);
+    addText(button, &quot;span&quot;, &quot;&quot;, item.title);
+    addText(button, &quot;span&quot;, &quot;hq-ticker-date&quot;, &quot;(&quot; + item.shortDate + &quot;)&quot;);
+    button.addEventListener(&quot;click&quot;, () =&gt; {
+      userChangedState = true;
+      state.selectedEmployee = item.owner;
+      render();
+      model.focusEmployeeButton(Array.from(employeeNode.querySelectorAll(&quot;button&quot;)), item.owner);
+      saveState();
+    });
+    return button;
+  }
+
+  function renderBillboard(filters) {
+    if (!billboardNode) return;
+    const view = model.billboardView(filters);
+    const head = document.createElement(&quot;div&quot;);
+    head.className = &quot;hq-billboard-head&quot;;
+    const titleWrap = document.createElement(&quot;span&quot;);
+    titleWrap.className = &quot;hq-billboard-title&quot;;
+    const dot = document.createElement(&quot;span&quot;);
+    dot.className = &quot;hq-billboard-dot&quot;;
+    dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+    titleWrap.append(dot);
+    const projectSuffix = filters.project !== ALL_PROJECTS ? &quot; · &quot; + filters.project : &quot;&quot;;
+    addText(titleWrap, &quot;span&quot;, &quot;&quot;, &quot;SHARED SCHEDULE&quot; + projectSuffix);
+    head.append(titleWrap);
+    addText(
+      head,
+      &quot;span&quot;,
+      &quot;hq-billboard-meta&quot;,
+      &quot;TODAY &quot; + view.todayLabel + &quot; · 공통 &quot; + view.scheduleTasks.length + &quot; · 진행 &quot; + view.tickerTasks.length,
+    );
+
+    let upperNode;
+    if (view.scheduleTasks.length === 0) {
+      upperNode = document.createElement(&quot;div&quot;);
+      upperNode.className = &quot;hq-billboard-empty&quot;;
+      upperNode.textContent = &quot;표시할 공통 일정이 없습니다.&quot;;
+    } else {
+      upperNode = document.createElement(&quot;div&quot;);
+      upperNode.className = &quot;hq-stepper&quot;;
+      upperNode.append(...view.scheduleTasks.slice(0, 4).map(createBillboardStep));
+    }
+
+    const tickerBar = document.createElement(&quot;div&quot;);
+    tickerBar.className = &quot;hq-ticker-bar&quot;;
+    addText(tickerBar, &quot;span&quot;, &quot;hq-ticker-badge&quot;, &quot;LIVE&quot;);
+    const viewport = document.createElement(&quot;div&quot;);
+    viewport.className = &quot;hq-ticker-viewport&quot;;
+    if (view.tickerTasks.length === 0) {
+      addText(viewport, &quot;span&quot;, &quot;hq-ticker-empty&quot;, &quot;진행 중인 요원 일감이 없습니다.&quot;);
+    } else {
+      const track = document.createElement(&quot;div&quot;);
+      track.className = &quot;hq-ticker-track&quot;;
+      const sequence = view.tickerTasks.concat(view.tickerTasks);
+      sequence.forEach((item, index) =&gt; {
+        if (index &gt; 0) addText(track, &quot;span&quot;, &quot;hq-ticker-sep&quot;, &quot;·&quot;);
+        track.append(createTickerButton(item));
+      });
+      viewport.append(track);
+    }
+    tickerBar.append(viewport);
+
+    billboardNode.replaceChildren(head, upperNode, tickerBar);
+  }
+
   function render() {
     const filters = { status: statusSelect.value, project: projectSelect.value };
     const summary = model.summary(filters);
     const view = model.viewForEmployee(state.selectedEmployee, filters);
     summaryNode.textContent = &quot;현재 표시 &quot; + summary.total + &quot; / &quot; + summary.snapshotTotal + &quot;개 · 미배정 &quot; + summary.unassigned + &quot;개&quot;;
     renderStatusCounts(summary);
+    renderBillboard(filters);
     seatingOrder = model.normalizeSeating(seatingOrder);
     employeeNode.replaceChildren(...seatingOrder.map((owner) =&gt; createWorkstation(owner, filters)));
 
@@ -3880,6 +4384,7 @@ html&gt;body{padding:0}&lt;/style&gt;
     model = createOfficeModel(snapshot);
     hasLiveModel = false;
     dataNode.textContent = JSON.stringify(snapshot);
+    billboardNode?.replaceChildren();
     employeeNode.replaceChildren();
     selectedTasksNode.replaceChildren();
     communalTasksNode.replaceChildren();

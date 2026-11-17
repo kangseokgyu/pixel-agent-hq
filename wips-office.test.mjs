@@ -459,3 +459,39 @@ test("excludes completed tasks from employee and communal lists for every filter
   assert.equal(active.unassignedTasks({...allFilters, status: "완료"}).length, 0);
   assert.equal(active.viewForEmployee("sb", allFilters).topLevelCount, 1);
 });
+
+test("treats 공통 owner as shared schedule tasks and builds stepper + live ticker data", () => {
+  const custom = createOfficeModel({ results: [
+    { title: "QA 입고", owner: "공통", status: "예정", project: "2.3", startDate: "2026-12-02", endDate: null },
+    { title: "사전 검증", owner: null, status: "예정", project: "2.3", startDate: "2026-11-23", endDate: "2026-11-27" },
+    { title: "사전 검증 준비", owner: "공통", status: "진행", project: "2.3", startDate: "2026-11-20", endDate: null },
+    { title: "취약점 수정 리뷰", owner: null, status: "검증", project: "2.3", startDate: null, endDate: null },
+    { title: "후속모델 개발", owner: "sb", status: "진행", project: "2.3", startDate: "2026-11-13", endDate: null },
+    { title: "서버 취약점 대응", owner: "여이전트", status: "진행", project: "기타", startDate: "2026-11-11", endDate: "2026-11-12" },
+    { title: "대기 작업", owner: "이요원", status: "대기", project: "2.3", startDate: "2026-11-19", endDate: null },
+    { title: "완료 공통", owner: "공통", status: "완료", project: "2.3", startDate: "2026-11-10", endDate: null },
+  ] });
+
+  assert.equal(custom.employees.includes("공통"), false);
+  assert.equal(custom.summary(allFilters).unassigned, 5);
+  assert.equal(custom.unassignedTasks(allFilters).length, 4);
+
+  const view = custom.billboardView(allFilters, "2026-11-18");
+  assert.equal(view.todayLabel, "11/18");
+  assert.deepEqual(
+    view.scheduleTasks.map((item) => [item.stepLabel, item.title, item.dDayLabel, item.shortDate]),
+    [
+      ["STEP 01", "취약점 수정 리뷰", "수시", "일정 미지정"],
+      ["STEP 02", "사전 검증 준비", "D-2", "11/20"],
+      ["STEP 03", "사전 검증", "D-5", "11/23~11/27"],
+      ["STEP 04", "QA 입고", "D-14", "12/02"],
+    ],
+  );
+  assert.deepEqual(
+    view.tickerTasks.map((item) => [item.owner, item.title, item.shortDate]),
+    [
+      ["sb", "후속모델 개발", "11/13~"],
+      ["여이전트", "서버 취약점 대응", "11/11~11/12"],
+    ],
+  );
+});

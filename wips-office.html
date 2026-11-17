@@ -716,13 +716,255 @@
   animation-delay: calc(var(--motion-delay) - 0.18s);
   transform-origin: 50% 0;
 }
+@keyframes office-billboard-ticker {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+#wips-office-root .hq-billboard {
+  position: absolute;
+  left: 30.1%;
+  top: 2.6%;
+  width: 39.8%;
+  height: 27.6%;
+  z-index: 6;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0.55cqw;
+  padding: 0.7cqw 0.85cqw;
+  border: 1.5px solid #2b4564;
+  border-radius: 5px;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(74, 222, 128, 0.045) 0px,
+      rgba(74, 222, 128, 0.045) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    radial-gradient(circle at 50% 0%, #10243a 0%, #070e18 88%);
+  box-shadow: inset 0 0 14px rgba(56, 189, 248, 0.16), 0 4px 12px rgba(2, 6, 23, 0.75);
+  color: #e2f1ff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow: hidden;
+  min-width: 0;
+}
+#wips-office-root .hq-billboard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6cqw;
+  padding-bottom: 0.4cqw;
+  border-bottom: 1px solid #1e334d;
+  font-size: clamp(8px, 0.92cqw, 12px);
+  line-height: 1.1;
+  min-width: 0;
+}
+#wips-office-root .hq-billboard-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45cqw;
+  color: #4ade80;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 8px rgba(74, 222, 128, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#wips-office-root .hq-billboard-dot {
+  width: 0.55cqw;
+  height: 0.55cqw;
+  min-width: 5px;
+  min-height: 5px;
+  border-radius: 999px;
+  background: #4ade80;
+  box-shadow: 0 0 6px #4ade80;
+  flex: none;
+}
+#wips-office-root .hq-billboard-meta {
+  color: #93c5fd;
+  white-space: nowrap;
+  flex: none;
+}
+#wips-office-root .hq-stepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.48cqw;
+  align-items: stretch;
+  min-height: 0;
+  overflow: hidden;
+}
+#wips-office-root .hq-step-card {
+  display: grid;
+  align-content: space-between;
+  gap: 0.25cqw;
+  min-width: 0;
+  min-height: 0;
+  padding: 0.42cqw 0.5cqw;
+  border: 1px solid #1f3552;
+  border-radius: 4px;
+  background: rgba(11, 22, 38, 0.9);
+  color: #e2f1ff;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+#wips-office-root .hq-step-card:hover,
+#wips-office-root .hq-step-card:focus-visible {
+  border-color: #38bdf8;
+  background: rgba(20, 40, 66, 0.96);
+  outline: none;
+}
+#wips-office-root .hq-step-card[data-tone="green"] { border-color: rgba(74, 222, 128, 0.55); }
+#wips-office-root .hq-step-card[data-tone="amber"] { border-color: rgba(251, 191, 36, 0.55); }
+#wips-office-root .hq-step-card[data-tone="cyan"] { border-color: rgba(56, 189, 248, 0.45); }
+#wips-office-root .hq-step-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25cqw;
+  font-size: clamp(7px, 0.72cqw, 10px);
+  color: #9fb6d1;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+#wips-office-root .hq-step-title {
+  font-size: clamp(8px, 0.9cqw, 11.5px);
+  font-weight: 700;
+  line-height: 1.2;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#wips-office-root .hq-step-bar {
+  height: 0.35cqw;
+  min-height: 3px;
+  width: 100%;
+  border-radius: 2px;
+  background: #17283d;
+  overflow: hidden;
+}
+#wips-office-root .hq-step-bar-fill {
+  display: block;
+  height: 100%;
+  background: #64748b;
+}
+#wips-office-root .hq-step-card[data-tone="green"] .hq-step-bar-fill { background: #4ade80; }
+#wips-office-root .hq-step-card[data-tone="amber"] .hq-step-bar-fill { background: #fbbf24; }
+#wips-office-root .hq-step-card[data-tone="cyan"] .hq-step-bar-fill { background: #38bdf8; }
+#wips-office-root .hq-step-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.2cqw;
+  font-size: clamp(7px, 0.76cqw, 10px);
+  line-height: 1.1;
+  white-space: nowrap;
+}
+#wips-office-root .hq-step-dday { font-weight: 700; color: #cbd5e1; }
+#wips-office-root .hq-step-card[data-tone="green"] .hq-step-dday { color: #4ade80; }
+#wips-office-root .hq-step-card[data-tone="amber"] .hq-step-dday { color: #fbbf24; }
+#wips-office-root .hq-step-card[data-tone="cyan"] .hq-step-dday { color: #38bdf8; }
+#wips-office-root .hq-step-date {
+  color: #7dd3fc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#wips-office-root .hq-billboard-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(8px, 0.9cqw, 12px);
+  color: #9fb6d1;
+  border: 1px dashed #233c5c;
+  border-radius: 4px;
+  padding: 0.5cqw;
+}
+#wips-office-root .hq-ticker-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5cqw;
+  padding: 0.3cqw 0.45cqw;
+  border: 1px solid #1d3550;
+  border-radius: 4px;
+  background: #050b14;
+  min-width: 0;
+  overflow: hidden;
+}
+#wips-office-root .hq-ticker-badge {
+  flex: none;
+  padding: 0.1cqw 0.38cqw;
+  border: 1px solid rgba(74, 222, 128, 0.55);
+  border-radius: 3px;
+  background: rgba(74, 222, 128, 0.14);
+  color: #4ade80;
+  font-size: clamp(7px, 0.75cqw, 10px);
+  font-weight: 700;
+  line-height: 1.2;
+}
+#wips-office-root .hq-ticker-viewport {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+#wips-office-root .hq-ticker-track {
+  display: flex;
+  align-items: center;
+  gap: 0.9cqw;
+  width: max-content;
+  animation: office-billboard-ticker 24s linear infinite;
+}
+#wips-office-root .hq-ticker-bar:hover .hq-ticker-track,
+#wips-office-root .hq-ticker-bar:focus-within .hq-ticker-track {
+  animation-play-state: paused;
+}
+#wips-office-root .hq-ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35cqw;
+  padding: 0.08cqw 0.35cqw;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #e2f1ff;
+  font: inherit;
+  font-size: clamp(8px, 0.85cqw, 11px);
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#wips-office-root .hq-ticker-item:hover,
+#wips-office-root .hq-ticker-item:focus-visible {
+  background: #152840;
+  outline: none;
+}
+#wips-office-root .hq-ticker-owner { color: #38bdf8; font-weight: 700; }
+#wips-office-root .hq-ticker-date { color: #7dd3fc; }
+#wips-office-root .hq-ticker-sep { color: #334a66; user-select: none; }
+#wips-office-root .hq-ticker-empty {
+  font-size: clamp(8px, 0.85cqw, 11px);
+  color: #9fb6d1;
+  white-space: nowrap;
+}
+#wips-office-root .task-card.is-billboard-highlight {
+  outline: 2px solid #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+}
 @media (prefers-reduced-motion: reduce) {
   #wips-office-root .workstation[data-activity="working"] .person-art::before,
   #wips-office-root .workstation[data-activity="working"] .person-head,
   #wips-office-root .workstation[data-activity="working"] .person-hair,
   #wips-office-root .workstation[data-activity="working"] .person-body::before,
-  #wips-office-root .workstation[data-activity="working"] .person-body::after {
+  #wips-office-root .workstation[data-activity="working"] .person-body::after,
+  #wips-office-root .hq-ticker-track {
     animation: none;
+  }
+  #wips-office-root .hq-ticker-viewport {
+    overflow-x: auto;
   }
 }
 #wips-office-root .desk-top { background: var(--office-desk); }
@@ -736,6 +978,38 @@
     background-position: top center;
     padding: calc(55.8% + 14px) 10px 18px;
   }
+  #wips-office-root .hq-billboard {
+    position: static;
+    left: auto;
+    top: auto;
+    width: 100%;
+    height: auto;
+    gap: 8px;
+    padding: 10px;
+    margin-bottom: 14px;
+  }
+  #wips-office-root .hq-billboard-head {
+    padding-bottom: 6px;
+    font-size: 11px;
+  }
+  #wips-office-root .hq-stepper {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  #wips-office-root .hq-step-card {
+    gap: 4px;
+    padding: 7px 8px;
+  }
+  #wips-office-root .hq-step-label { font-size: 10px; }
+  #wips-office-root .hq-step-title { font-size: 12px; }
+  #wips-office-root .hq-step-bar { height: 4px; }
+  #wips-office-root .hq-step-foot { font-size: 10px; }
+  #wips-office-root .hq-billboard-empty { font-size: 12px; padding: 10px; }
+  #wips-office-root .hq-ticker-bar { gap: 8px; padding: 6px 8px; }
+  #wips-office-root .hq-ticker-badge { font-size: 10px; padding: 2px 5px; }
+  #wips-office-root .hq-ticker-item,
+  #wips-office-root .hq-ticker-empty { font-size: 11px; }
+  #wips-office-root .hq-ticker-track { gap: 12px; }
   #wips-office-root .office-grid {
     position: relative;
     inset: auto;
@@ -1049,6 +1323,7 @@
       <div class="hq-scene-cat hq-scene-cat--sofa"><span class="pixel-badge">!</span></div>
       <div class="hq-scene-cat hq-scene-cat--rug"></div>
     </div>
+    <section class="hq-billboard" id="wips-office-billboard" aria-label="프로젝트 공통 일정 전광판"></section>
     <div class="office-grid" id="wips-office-employees"></div>
     <div class="room-floor" aria-hidden="true"></div>
   </section>
@@ -1068,7 +1343,7 @@
     <div class="section-heading">
       <div>
         <h2 id="wips-office-communal-title">공용 업무 게시판</h2>
-        <p class="section-note">담당자가 지정되지 않은 일감</p>
+        <p class="section-note">담당자가 공통이거나 지정되지 않은 일감</p>
       </div>
       <p class="section-note" id="wips-office-communal-count"></p>
     </div>
@@ -1083,9 +1358,47 @@
   const STATUS_ORDER = ["진행", "검증", "장시간 테스트 중", "대기", "예정", "완료"];
   const STATUS_RANK = new Map(STATUS_ORDER.map((status, index) => [status, index]));
   const EMPLOYEES = ["sb", "이요원", "여이전트", "석규", "UI"];
+  const SHARED_OWNER = "공통";
+  const ACTIVE_TICKER_STATUSES = new Set(["진행", "검증", "장시간 테스트 중"]);
   const ALL_STATUS = "전체 상태";
   const ALL_PROJECTS = "전체 프로젝트";
   const UNSPECIFIED_PROJECT = "프로젝트 미지정";
+
+  function isSharedOwner(owner) {
+    return owner === null || owner === undefined || owner === "" || owner === SHARED_OWNER;
+  }
+
+  function todayKstIso() {
+    try {
+      return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
+    } catch {
+      return new Date().toISOString().slice(0, 10);
+    }
+  }
+
+  function parseIsoDayMs(value) {
+    if (typeof value !== "string") return null;
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return null;
+    return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  }
+
+  function formatMmDd(value) {
+    if (typeof value !== "string") return "";
+    const match = value.match(/^\d{4}-(\d{2})-(\d{2})$/);
+    return match ? match[1] + "/" + match[2] : value;
+  }
+
+  function formatScheduleShort(task, includeTrailingTilde) {
+    if (task.startDate && task.endDate) {
+      return formatMmDd(task.startDate) + "~" + formatMmDd(task.endDate);
+    }
+    if (task.startDate) {
+      return formatMmDd(task.startDate) + (includeTrailingTilde ? "~" : "");
+    }
+    if (task.endDate) return "~" + formatMmDd(task.endDate);
+    return "일정 미지정";
+  }
 
   function projectLabel(task) {
     return task.project === null || task.project === undefined ? UNSPECIFIED_PROJECT : task.project;
@@ -1133,7 +1446,7 @@
     const tasks = Array.isArray(snapshot.results) ? snapshot.results.slice() : [];
     const statuses = STATUS_ORDER.concat([...new Set(tasks.map((task) => task.status).filter(Boolean))]
       .filter((status) => !STATUS_ORDER.includes(status)));
-    const employees = EMPLOYEES.concat([...new Set(tasks.map((task) => task.owner).filter(Boolean))]
+    const employees = EMPLOYEES.concat([...new Set(tasks.map((task) => task.owner).filter((owner) => owner && !isSharedOwner(owner)))]
       .filter((owner) => !EMPLOYEES.includes(owner)));
     const projects = ["2.3", "2.2.1", "기타"].concat([...new Set(tasks.map((task) => task.project).filter(Boolean))]
       .filter((project) => !["2.3", "2.2.1", "기타"].includes(project)));
@@ -1175,7 +1488,7 @@
       return {
         total: shown.length,
         snapshotTotal: tasks.length,
-        unassigned: shown.filter((task) => task.owner === null || task.owner === undefined).length,
+        unassigned: shown.filter((task) => isSharedOwner(task.owner)).length,
         statuses: statusCounts,
       };
     }
@@ -1185,7 +1498,78 @@
     }
 
     function unassignedTasks(filters) {
-      return filteredTasks(filters).filter((task) => (task.owner === null || task.owner === undefined) && task.status !== "완료");
+      return filteredTasks(filters).filter((task) => isSharedOwner(task.owner) && task.status !== "완료");
+    }
+
+    function billboardView(filters, referenceDateIso) {
+      const todayIso = referenceDateIso || todayKstIso();
+      const todayMs = parseIsoDayMs(todayIso);
+      const shared = unassignedTasks(filters);
+      const scheduleTasks = shared
+        .map((task, index) => ({
+          task,
+          index,
+          targetIso: task.startDate || task.endDate || null,
+          rank: STATUS_RANK.get(task.status) ?? STATUS_ORDER.length,
+        }))
+        .sort((left, right) => {
+          const leftActiveUndated = !left.targetIso && ACTIVE_TICKER_STATUSES.has(left.task.status);
+          const rightActiveUndated = !right.targetIso && ACTIVE_TICKER_STATUSES.has(right.task.status);
+          if (leftActiveUndated !== rightActiveUndated) return leftActiveUndated ? -1 : 1;
+          if (left.targetIso && right.targetIso && left.targetIso !== right.targetIso) {
+            return left.targetIso.localeCompare(right.targetIso);
+          }
+          if (Boolean(left.targetIso) !== Boolean(right.targetIso)) return left.targetIso ? -1 : 1;
+          return left.rank - right.rank || left.index - right.index;
+        })
+        .map(({ task, targetIso }, idx) => {
+          const targetMs = parseIsoDayMs(targetIso);
+          let dDayLabel = ACTIVE_TICKER_STATUSES.has(task.status) ? "수시" : "미정";
+          let diffDays = null;
+          if (todayMs !== null && targetMs !== null) {
+            diffDays = Math.round((targetMs - todayMs) / 86_400_000);
+            if (diffDays > 0) dDayLabel = "D-" + diffDays;
+            else if (diffDays === 0) dDayLabel = "D-DAY";
+            else dDayLabel = "D+" + Math.abs(diffDays);
+          }
+          let progress = 20;
+          if (task.status === "진행") progress = 65;
+          else if (task.status === "검증") progress = 85;
+          else if (task.status === "장시간 테스트 중") progress = 70;
+          else if (task.status === "대기") progress = 35;
+
+          let tone = "slate";
+          if (task.status === "진행") tone = "green";
+          else if (task.status === "검증" || task.status === "장시간 테스트 중" || task.status === "대기") tone = "amber";
+          else if (diffDays !== null && diffDays <= 7) tone = "cyan";
+
+          return {
+            stepLabel: "STEP " + String(idx + 1).padStart(2, "0"),
+            title: task.title,
+            status: task.status || "미정",
+            dDayLabel,
+            shortDate: formatScheduleShort(task, false),
+            progress,
+            tone,
+            task,
+          };
+        });
+
+      const tickerTasks = filteredTasks(filters)
+        .filter((task) => !isSharedOwner(task.owner) && ACTIVE_TICKER_STATUSES.has(task.status))
+        .map((task) => ({
+          owner: task.owner,
+          title: task.title,
+          status: task.status,
+          shortDate: formatScheduleShort(task, true),
+          task,
+        }));
+
+      return {
+        todayLabel: formatMmDd(todayIso),
+        scheduleTasks,
+        tickerTasks,
+      };
     }
 
     function representativeTask(owner, filters) {
@@ -1250,6 +1634,7 @@
       normalizeSeating,
       swapSeats,
       describeTask,
+      billboardView,
     };
   }
 
@@ -1315,6 +1700,8 @@
   const communalCount = document.getElementById("wips-office-communal-count");
   const communalEmpty = document.getElementById("wips-office-communal-empty");
   const communalTasksNode = document.getElementById("wips-office-communal-tasks");
+  const communalTitleNode = document.getElementById("wips-office-communal-title");
+  const billboardNode = document.getElementById("wips-office-billboard");
   const snapshotNode = document.getElementById("wips-office-snapshot");
   const sourceNode = document.getElementById("wips-office-source");
   let pendingHostState = window.openai && window.openai.widgetState;
@@ -1530,6 +1917,7 @@
     const details = model.describeTask(task);
     const card = document.createElement("article");
     card.className = "card task-card";
+    card.dataset.taskTitle = details.title;
     addText(card, "h3", "", details.title);
     const tags = document.createElement("div");
     tags.className = "task-tags";
@@ -1582,12 +1970,128 @@
     });
   }
 
+  function createBillboardStep(item) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "hq-step-card";
+    button.dataset.tone = item.tone;
+    button.title = item.title + " (" + item.shortDate + ")";
+
+    const labelRow = document.createElement("div");
+    labelRow.className = "hq-step-label";
+    addText(labelRow, "span", "", item.stepLabel);
+    addText(labelRow, "span", "", item.status);
+    button.append(labelRow);
+
+    addText(button, "div", "hq-step-title", item.title);
+
+    const bar = document.createElement("div");
+    bar.className = "hq-step-bar";
+    const fill = document.createElement("span");
+    fill.className = "hq-step-bar-fill";
+    if (fill.style) fill.style.width = item.progress + "%";
+    bar.append(fill);
+    button.append(bar);
+
+    const foot = document.createElement("div");
+    foot.className = "hq-step-foot";
+    addText(foot, "span", "hq-step-dday", item.dDayLabel);
+    addText(foot, "span", "hq-step-date", item.shortDate);
+    button.append(foot);
+
+    button.addEventListener("click", () => {
+      const cards = Array.from(communalTasksNode.querySelectorAll(".task-card"));
+      cards.forEach((card) => card.classList.remove("is-billboard-highlight"));
+      const match = cards.find((card) => card.dataset.taskTitle === item.title);
+      if (match) {
+        match.classList.add("is-billboard-highlight");
+        match.scrollIntoView?.({ behavior: "smooth", block: "center" });
+      } else {
+        communalTitleNode?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      }
+    });
+    return button;
+  }
+
+  function createTickerButton(item) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "hq-ticker-item";
+    button.title = "[" + item.owner + "] " + item.title + " (" + item.shortDate + ")";
+    addText(button, "span", "hq-ticker-owner", "[" + item.owner + "]");
+    addText(button, "span", "", item.title);
+    addText(button, "span", "hq-ticker-date", "(" + item.shortDate + ")");
+    button.addEventListener("click", () => {
+      userChangedState = true;
+      state.selectedEmployee = item.owner;
+      render();
+      model.focusEmployeeButton(Array.from(employeeNode.querySelectorAll("button")), item.owner);
+      saveState();
+    });
+    return button;
+  }
+
+  function renderBillboard(filters) {
+    if (!billboardNode) return;
+    const view = model.billboardView(filters);
+    const head = document.createElement("div");
+    head.className = "hq-billboard-head";
+    const titleWrap = document.createElement("span");
+    titleWrap.className = "hq-billboard-title";
+    const dot = document.createElement("span");
+    dot.className = "hq-billboard-dot";
+    dot.setAttribute("aria-hidden", "true");
+    titleWrap.append(dot);
+    const projectSuffix = filters.project !== ALL_PROJECTS ? " · " + filters.project : "";
+    addText(titleWrap, "span", "", "SHARED SCHEDULE" + projectSuffix);
+    head.append(titleWrap);
+    addText(
+      head,
+      "span",
+      "hq-billboard-meta",
+      "TODAY " + view.todayLabel + " · 공통 " + view.scheduleTasks.length + " · 진행 " + view.tickerTasks.length,
+    );
+
+    let upperNode;
+    if (view.scheduleTasks.length === 0) {
+      upperNode = document.createElement("div");
+      upperNode.className = "hq-billboard-empty";
+      upperNode.textContent = "표시할 공통 일정이 없습니다.";
+    } else {
+      upperNode = document.createElement("div");
+      upperNode.className = "hq-stepper";
+      upperNode.append(...view.scheduleTasks.slice(0, 4).map(createBillboardStep));
+    }
+
+    const tickerBar = document.createElement("div");
+    tickerBar.className = "hq-ticker-bar";
+    addText(tickerBar, "span", "hq-ticker-badge", "LIVE");
+    const viewport = document.createElement("div");
+    viewport.className = "hq-ticker-viewport";
+    if (view.tickerTasks.length === 0) {
+      addText(viewport, "span", "hq-ticker-empty", "진행 중인 요원 일감이 없습니다.");
+    } else {
+      const track = document.createElement("div");
+      track.className = "hq-ticker-track";
+      const sequence = view.tickerTasks.concat(view.tickerTasks);
+      sequence.forEach((item, index) => {
+        if (index > 0) addText(track, "span", "hq-ticker-sep", "·");
+        track.append(createTickerButton(item));
+      });
+      viewport.append(track);
+    }
+    tickerBar.append(viewport);
+
+    billboardNode.replaceChildren(head, upperNode, tickerBar);
+  }
+
   function render() {
     const filters = { status: statusSelect.value, project: projectSelect.value };
     const summary = model.summary(filters);
     const view = model.viewForEmployee(state.selectedEmployee, filters);
     summaryNode.textContent = "현재 표시 " + summary.total + " / " + summary.snapshotTotal + "개 · 미배정 " + summary.unassigned + "개";
     renderStatusCounts(summary);
+    renderBillboard(filters);
     seatingOrder = model.normalizeSeating(seatingOrder);
     employeeNode.replaceChildren(...seatingOrder.map((owner) => createWorkstation(owner, filters)));
 
@@ -2030,6 +2534,7 @@
     model = createOfficeModel(snapshot);
     hasLiveModel = false;
     dataNode.textContent = JSON.stringify(snapshot);
+    billboardNode?.replaceChildren();
     employeeNode.replaceChildren();
     selectedTasksNode.replaceChildren();
     communalTasksNode.replaceChildren();
