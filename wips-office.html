@@ -368,8 +368,7 @@
 }
 #wips-office-root .snapshot-meta,
 #wips-office-root .section-note,
-#wips-office-root .count-line,
-#wips-office-root .task-facts dt {
+#wips-office-root .count-line {
   color: var(--muted-foreground);
 }
 #wips-office-root .snapshot-meta {
@@ -950,7 +949,8 @@
   color: #9fb6d1;
   white-space: nowrap;
 }
-#wips-office-root .task-card.is-billboard-highlight {
+#wips-office-root .task-card.is-billboard-highlight,
+#wips-office-root .kanban-card.is-billboard-highlight {
   outline: 2px solid #38bdf8;
   box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
 }
@@ -1061,47 +1061,10 @@
 }
 #wips-office-root .task-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: calc(var(--font-size-base) * 0.65);
+  align-items: start;
   min-width: 0;
-}
-#wips-office-root .task-card {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-#wips-office-root .task-card h3 {
-  margin-block-end: calc(var(--font-size-base) * 0.4);
-  overflow-wrap: anywhere;
-}
-#wips-office-root .task-status {
-  display: inline-flex; align-items: center; gap: 6px;
-}
-#wips-office-root .task-tags {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: calc(var(--font-size-base) * 0.3);
-  margin-block-end: calc(var(--font-size-base) * 0.5);
-}
-#wips-office-root .task-facts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: calc(var(--font-size-base) * 0.48) calc(var(--font-size-base) * 0.65);
-  margin: 0;
-}
-#wips-office-root .task-fact {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-#wips-office-root .task-fact--wide {
-  grid-column: 1 / -1;
-}
-#wips-office-root .task-facts dt {
-  margin-block-end: calc(var(--font-size-base) * 0.15);
-}
-#wips-office-root .task-facts dd {
-  margin: 0;
-  overflow-wrap: anywhere;
 }
 #wips-office-root .task-source {
   display: inline-block;
@@ -1109,7 +1072,7 @@
 }
 #wips-office-root .kanban-board {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: calc(var(--font-size-base) * 0.65);
   align-items: start;
   min-width: 0;
@@ -1243,7 +1206,8 @@
   color: var(--muted-foreground);
 }
 @media (max-width: 900px) {
-  #wips-office-root .kanban-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #wips-office-root .kanban-board,
+  #wips-office-root .task-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 620px) {
   #wips-office-root .office-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1255,8 +1219,6 @@
 @media (max-width: 380px) {
   #wips-office-root .office-grid { grid-template-columns: minmax(0, 1fr); }
   #wips-office-root .filter-field { min-width: 100%; }
-  #wips-office-root .task-facts { grid-template-columns: minmax(0, 1fr); }
-  #wips-office-root .task-fact--wide { grid-column: auto; }
 }
 #wips-office-root [hidden] { display: none !important; }
 #wips-office-root .sync-button--danger {
@@ -1498,7 +1460,6 @@
     { id: "planned", title: "예정 · 대기", dot: "대기", statuses: ["대기", "예정"] },
     { id: "progress", title: "진행", dot: "진행", statuses: ["진행"] },
     { id: "review", title: "검증 · 테스트", dot: "검증", statuses: ["검증", "장시간 테스트 중"] },
-    { id: "done", title: "완료", dot: "완료", statuses: ["완료"] },
   ];
   const EMPLOYEES = ["sb", "이요원", "여이전트", "석규", "UI"];
   const SHARED_OWNER = "공통";
@@ -1637,7 +1598,7 @@
     }
 
     function employeeTasks(owner, filters) {
-      return filteredTasks(filters).filter((task) => task.owner === owner);
+      return filteredTasks(filters).filter((task) => task.owner === owner && task.status !== "완료");
     }
 
     function unassignedTasks(filters) {
@@ -2069,53 +2030,8 @@
     return station;
   }
 
-  function addFact(list, label, value, isWide) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "task-fact" + (isWide ? " task-fact--wide" : "");
-    addText(wrapper, "dt", "", label);
-    addText(wrapper, "dd", "", value);
-    list.append(wrapper);
-  }
-
-  function createTaskCard(task) {
-    const details = model.describeTask(task);
-    const card = document.createElement("article");
-    card.className = "card task-card";
-    card.dataset.taskTitle = details.title;
-    addText(card, "h3", "", details.title);
-    const tags = document.createElement("div");
-    tags.className = "task-tags";
-    const status = document.createElement("span");
-    status.className = "viz-badge task-status";
-    const statusDot = document.createElement("span");
-    statusDot.className = "status-dot";
-    statusDot.dataset.status = details.status;
-    statusDot.setAttribute("aria-hidden", "true");
-    status.append(statusDot);
-    addText(status, "span", "", details.status);
-    tags.append(status);
-    addText(tags, "span", "", "프로젝트 · " + details.project);
-    card.append(tags);
-    const facts = document.createElement("dl");
-    facts.className = "task-facts";
-    addFact(facts, "우선순위", details.priority, false);
-    addFact(facts, "목표 일정", details.goalDate, false);
-    addFact(facts, "다음 확인일", details.nextCheck, false);
-    addFact(facts, "완료 조건", details.doneCondition, true);
-    addFact(facts, "다음 행동", details.nextAction, true);
-    card.append(facts);
-    if (details.sourceUrl) {
-      const link = document.createElement("a");
-      link.className = "task-source";
-      link.textContent = "Notion에서 보기";
-      setSafeHref(link, details.sourceUrl);
-      card.append(link);
-    }
-    return card;
-  }
-
   function renderTaskList(container, tasks) {
-    container.replaceChildren(...tasks.map(createTaskCard));
+    container.replaceChildren(...tasks.map((task) => createKanbanCard(task, true)));
   }
 
   function createKanbanCard(task, showExactStatus) {
@@ -2255,7 +2171,7 @@
     button.append(foot);
 
     button.addEventListener("click", () => {
-      const cards = Array.from(communalTasksNode.querySelectorAll(".task-card"));
+      const cards = Array.from(communalTasksNode.querySelectorAll(".kanban-card"));
       cards.forEach((card) => card.classList.remove("is-billboard-highlight"));
       const match = cards.find((card) => card.dataset.taskTitle === item.title);
       if (match) {

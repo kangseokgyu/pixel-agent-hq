@@ -2218,8 +2218,7 @@ html&gt;body{padding:0}&lt;/style&gt;
 }
 #wips-office-root .snapshot-meta,
 #wips-office-root .section-note,
-#wips-office-root .count-line,
-#wips-office-root .task-facts dt {
+#wips-office-root .count-line {
   color: var(--muted-foreground);
 }
 #wips-office-root .snapshot-meta {
@@ -2800,7 +2799,8 @@ html&gt;body{padding:0}&lt;/style&gt;
   color: #9fb6d1;
   white-space: nowrap;
 }
-#wips-office-root .task-card.is-billboard-highlight {
+#wips-office-root .task-card.is-billboard-highlight,
+#wips-office-root .kanban-card.is-billboard-highlight {
   outline: 2px solid #38bdf8;
   box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
 }
@@ -2911,47 +2911,10 @@ html&gt;body{padding:0}&lt;/style&gt;
 }
 #wips-office-root .task-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: calc(var(--font-size-base) * 0.65);
+  align-items: start;
   min-width: 0;
-}
-#wips-office-root .task-card {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-#wips-office-root .task-card h3 {
-  margin-block-end: calc(var(--font-size-base) * 0.4);
-  overflow-wrap: anywhere;
-}
-#wips-office-root .task-status {
-  display: inline-flex; align-items: center; gap: 6px;
-}
-#wips-office-root .task-tags {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: calc(var(--font-size-base) * 0.3);
-  margin-block-end: calc(var(--font-size-base) * 0.5);
-}
-#wips-office-root .task-facts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: calc(var(--font-size-base) * 0.48) calc(var(--font-size-base) * 0.65);
-  margin: 0;
-}
-#wips-office-root .task-fact {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-#wips-office-root .task-fact--wide {
-  grid-column: 1 / -1;
-}
-#wips-office-root .task-facts dt {
-  margin-block-end: calc(var(--font-size-base) * 0.15);
-}
-#wips-office-root .task-facts dd {
-  margin: 0;
-  overflow-wrap: anywhere;
 }
 #wips-office-root .task-source {
   display: inline-block;
@@ -2959,7 +2922,7 @@ html&gt;body{padding:0}&lt;/style&gt;
 }
 #wips-office-root .kanban-board {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: calc(var(--font-size-base) * 0.65);
   align-items: start;
   min-width: 0;
@@ -3093,7 +3056,8 @@ html&gt;body{padding:0}&lt;/style&gt;
   color: var(--muted-foreground);
 }
 @media (max-width: 900px) {
-  #wips-office-root .kanban-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #wips-office-root .kanban-board,
+  #wips-office-root .task-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 620px) {
   #wips-office-root .office-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -3105,8 +3069,6 @@ html&gt;body{padding:0}&lt;/style&gt;
 @media (max-width: 380px) {
   #wips-office-root .office-grid { grid-template-columns: minmax(0, 1fr); }
   #wips-office-root .filter-field { min-width: 100%; }
-  #wips-office-root .task-facts { grid-template-columns: minmax(0, 1fr); }
-  #wips-office-root .task-fact--wide { grid-column: auto; }
 }
 #wips-office-root [hidden] { display: none !important; }
 #wips-office-root .sync-button--danger {
@@ -3348,7 +3310,6 @@ html&gt;body{padding:0}&lt;/style&gt;
     { id: &quot;planned&quot;, title: &quot;예정 · 대기&quot;, dot: &quot;대기&quot;, statuses: [&quot;대기&quot;, &quot;예정&quot;] },
     { id: &quot;progress&quot;, title: &quot;진행&quot;, dot: &quot;진행&quot;, statuses: [&quot;진행&quot;] },
     { id: &quot;review&quot;, title: &quot;검증 · 테스트&quot;, dot: &quot;검증&quot;, statuses: [&quot;검증&quot;, &quot;장시간 테스트 중&quot;] },
-    { id: &quot;done&quot;, title: &quot;완료&quot;, dot: &quot;완료&quot;, statuses: [&quot;완료&quot;] },
   ];
   const EMPLOYEES = [&quot;sb&quot;, &quot;이요원&quot;, &quot;여이전트&quot;, &quot;석규&quot;, &quot;UI&quot;];
   const SHARED_OWNER = &quot;공통&quot;;
@@ -3487,7 +3448,7 @@ html&gt;body{padding:0}&lt;/style&gt;
     }
 
     function employeeTasks(owner, filters) {
-      return filteredTasks(filters).filter((task) =&gt; task.owner === owner);
+      return filteredTasks(filters).filter((task) =&gt; task.owner === owner &amp;&amp; task.status !== &quot;완료&quot;);
     }
 
     function unassignedTasks(filters) {
@@ -3919,53 +3880,8 @@ html&gt;body{padding:0}&lt;/style&gt;
     return station;
   }
 
-  function addFact(list, label, value, isWide) {
-    const wrapper = document.createElement(&quot;div&quot;);
-    wrapper.className = &quot;task-fact&quot; + (isWide ? &quot; task-fact--wide&quot; : &quot;&quot;);
-    addText(wrapper, &quot;dt&quot;, &quot;&quot;, label);
-    addText(wrapper, &quot;dd&quot;, &quot;&quot;, value);
-    list.append(wrapper);
-  }
-
-  function createTaskCard(task) {
-    const details = model.describeTask(task);
-    const card = document.createElement(&quot;article&quot;);
-    card.className = &quot;card task-card&quot;;
-    card.dataset.taskTitle = details.title;
-    addText(card, &quot;h3&quot;, &quot;&quot;, details.title);
-    const tags = document.createElement(&quot;div&quot;);
-    tags.className = &quot;task-tags&quot;;
-    const status = document.createElement(&quot;span&quot;);
-    status.className = &quot;viz-badge task-status&quot;;
-    const statusDot = document.createElement(&quot;span&quot;);
-    statusDot.className = &quot;status-dot&quot;;
-    statusDot.dataset.status = details.status;
-    statusDot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-    status.append(statusDot);
-    addText(status, &quot;span&quot;, &quot;&quot;, details.status);
-    tags.append(status);
-    addText(tags, &quot;span&quot;, &quot;&quot;, &quot;프로젝트 · &quot; + details.project);
-    card.append(tags);
-    const facts = document.createElement(&quot;dl&quot;);
-    facts.className = &quot;task-facts&quot;;
-    addFact(facts, &quot;우선순위&quot;, details.priority, false);
-    addFact(facts, &quot;목표 일정&quot;, details.goalDate, false);
-    addFact(facts, &quot;다음 확인일&quot;, details.nextCheck, false);
-    addFact(facts, &quot;완료 조건&quot;, details.doneCondition, true);
-    addFact(facts, &quot;다음 행동&quot;, details.nextAction, true);
-    card.append(facts);
-    if (details.sourceUrl) {
-      const link = document.createElement(&quot;a&quot;);
-      link.className = &quot;task-source&quot;;
-      link.textContent = &quot;Notion에서 보기&quot;;
-      setSafeHref(link, details.sourceUrl);
-      card.append(link);
-    }
-    return card;
-  }
-
   function renderTaskList(container, tasks) {
-    container.replaceChildren(...tasks.map(createTaskCard));
+    container.replaceChildren(...tasks.map((task) =&gt; createKanbanCard(task, true)));
   }
 
   function createKanbanCard(task, showExactStatus) {
@@ -4105,7 +4021,7 @@ html&gt;body{padding:0}&lt;/style&gt;
     button.append(foot);
 
     button.addEventListener(&quot;click&quot;, () =&gt; {
-      const cards = Array.from(communalTasksNode.querySelectorAll(&quot;.task-card&quot;));
+      const cards = Array.from(communalTasksNode.querySelectorAll(&quot;.kanban-card&quot;));
       cards.forEach((card) =&gt; card.classList.remove(&quot;is-billboard-highlight&quot;));
       const match = cards.find((card) =&gt; card.dataset.taskTitle === item.title);
       if (match) {

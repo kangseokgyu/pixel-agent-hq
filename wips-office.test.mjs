@@ -123,7 +123,7 @@ test("retains all 19 tasks and reports every raw status count", () => {
 test("keeps the selected employee and ranks the representative task by raw status", () => {
   const view = model.viewForEmployee("sb", allFilters);
   assert.equal(view.owner, "sb");
-  assert.equal(view.tasks.length, 7);
+  assert.equal(view.tasks.length, 6);
   assert.equal(view.representative.title, "샘플 업무 03");
   assert.equal(view.topLevelCount, 2);
   assert.equal(view.otherCount, 1);
@@ -251,7 +251,7 @@ test("counts and represents only root tasks while retaining employee details", (
   ] });
   const view = hierarchy.viewForEmployee("sb", allFilters);
   assert.equal(view.topLevelCount, 1);
-  assert.equal(view.tasks.length, 3);
+  assert.equal(view.tasks.length, 2);
   assert.equal(view.representative.title, "root");
   assert.equal(view.otherCount, 0);
   const filtered = hierarchy.viewForEmployee("sb", { status: "진행", project: "전체 프로젝트" });
@@ -407,7 +407,7 @@ test("does not select an employee for a click emitted after dragging", () => {
 });
 
 test("wires drag feedback in edit mode and keeps the select-based keyboard control", () => {
-  const workstation = fragment.match(/function createWorkstation\(owner, filters\) \{[\s\S]*?\n  \}\n\n  function addFact/)?.[0];
+  const workstation = fragment.match(/function createWorkstation\(owner, filters\) \{[\s\S]*?\n  \}\n\n  function renderTaskList/)?.[0];
   assert.ok(workstation, "workstations have a renderer");
   assert.match(workstation, /button\.draggable = editingSeating/);
   assert.match(workstation, /button\.addEventListener\("dragstart"/);
@@ -428,8 +428,8 @@ test("keeps the embedded office drag behavior synchronized with its source", () 
   })[entity]);
   const sourceGuard = fragment.match(/function canDropSeat\(owner\) \{[\s\S]*?\n  \}/)?.[0];
   const embeddedGuard = srcdoc.match(/function canDropSeat\(owner\) \{[\s\S]*?\n  \}/)?.[0];
-  const sourceWorkstation = fragment.match(/function createWorkstation\(owner, filters\) \{[\s\S]*?\n  \}\n\n  function addFact/)?.[0];
-  const embeddedWorkstation = srcdoc.match(/function createWorkstation\(owner, filters\) \{[\s\S]*?\n  \}\n\n  function addFact/)?.[0];
+  const sourceWorkstation = fragment.match(/function createWorkstation\(owner, filters\) \{[\s\S]*?\n  \}\n\n  function renderTaskList/)?.[0];
+  const embeddedWorkstation = srcdoc.match(/function createWorkstation\(owner, filters\) \{[\s\S]*?\n  \}\n\n  function renderTaskList/)?.[0];
   const sourcePersonArt = fragment.match(/function createPersonArt\(owner, count\) \{[\s\S]*?\n  \}/)?.[0];
   const embeddedPersonArt = srcdoc.match(/function createPersonArt\(owner, count\) \{[\s\S]*?\n  \}/)?.[0];
   const sourceStyle = fragment.match(/<style>[\s\S]*?<\/style>/)?.[0];
@@ -446,16 +446,16 @@ test("keeps the embedded office drag behavior synchronized with its source", () 
   assert.match(srcdoc, /\.workstation\.is-drop-target/);
 });
 
-test("includes completed tasks for employee kanban while keeping communal list and active root count open-only", () => {
+test("excludes completed tasks from employee kanban, communal list, and active root count", () => {
   const active = createOfficeModel({ results: [
     {title: "open", owner: "sb", status: "진행"},
     {title: "done", owner: "sb", status: "완료"},
     {title: "unassigned open", owner: null, status: "예정"},
     {title: "unassigned done", owner: null, status: "완료"},
   ] });
-  assert.deepEqual(Array.from(active.employeeTasks("sb", allFilters), t => t.title), ["open", "done"]);
+  assert.deepEqual(Array.from(active.employeeTasks("sb", allFilters), t => t.title), ["open"]);
   assert.deepEqual(Array.from(active.unassignedTasks(allFilters), t => t.title), ["unassigned open"]);
-  assert.equal(active.employeeTasks("sb", {...allFilters, status: "완료"}).length, 1);
+  assert.equal(active.employeeTasks("sb", {...allFilters, status: "완료"}).length, 0);
   assert.equal(active.unassignedTasks({...allFilters, status: "완료"}).length, 0);
   assert.equal(active.viewForEmployee("sb", allFilters).topLevelCount, 1);
 });
@@ -496,7 +496,7 @@ test("treats 공통 owner as shared schedule tasks and builds stepper + live tic
   );
 });
 
-test("groups employee tasks into 4 kanban lanes and renders selected tasks as a kanban board", () => {
+test("groups employee tasks into 3 active kanban lanes and renders communal list with kanban cards", () => {
   const custom = createOfficeModel({ results: [] });
   const lanes = custom.groupTasksByLane([
     { title: "t-todo", status: "예정" },
@@ -504,7 +504,6 @@ test("groups employee tasks into 4 kanban lanes and renders selected tasks as a 
     { title: "t-prog", status: "진행" },
     { title: "t-ver", status: "검증" },
     { title: "t-long", status: "장시간 테스트 중" },
-    { title: "t-done", status: "완료" },
     { title: "t-unknown", status: "알수없음" },
   ]);
 
@@ -514,14 +513,17 @@ test("groups employee tasks into 4 kanban lanes and renders selected tasks as a 
       ["planned", true, ["t-todo", "t-wait", "t-unknown"]],
       ["progress", false, ["t-prog"]],
       ["review", true, ["t-ver", "t-long"]],
-      ["done", false, ["t-done"]],
     ],
   );
   assert.match(fragment, /id="wips-office-selected-tasks"[^>]*class="kanban-board"|class="kanban-board"[^>]*id="wips-office-selected-tasks"/);
+  assert.match(fragment, /id="wips-office-communal-tasks"[^>]*class="task-list"|class="task-list"[^>]*id="wips-office-communal-tasks"/);
   assert.match(fragment, /function renderKanbanBoard\(/);
+  assert.match(fragment, /communalTasksNode\.querySelectorAll\("\.kanban-card"\)/);
 
+  const listSource = fragment.match(/function renderTaskList\(container, tasks\) \{[\s\S]*?\n  \}/)?.[0];
   const cardSource = fragment.match(/function createKanbanCard\(task, showExactStatus\) \{[\s\S]*?\n  \}/)?.[0];
   const boardSource = fragment.match(/function renderKanbanBoard\(container, tasks\) \{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(listSource, "task list renderer exists");
   assert.ok(cardSource, "kanban card renderer exists");
   assert.ok(boardSource, "kanban board renderer exists");
 
@@ -547,16 +549,16 @@ test("groups employee tasks into 4 kanban lanes and renders selected tasks as a 
     return node;
   };
   const setSafeHref = (el, url) => { el.attributes.href = url; };
-  const renderKanbanBoard = new Function(
+  const { renderKanbanBoard, renderTaskList } = new Function(
     "document", "model", "addText", "setSafeHref",
-    cardSource + "\n" + boardSource + "\nreturn renderKanbanBoard;",
+    listSource + "\n" + cardSource + "\n" + boardSource + "\nreturn { renderKanbanBoard, renderTaskList };",
   )(mockDoc, model, addText, setSafeHref);
 
   const container = createElement("div");
   const sbTasks = model.viewForEmployee("sb", allFilters).tasks;
   renderKanbanBoard(container, sbTasks);
 
-  assert.equal(container.children.length, 4);
+  assert.equal(container.children.length, 3);
   assert.deepEqual(
     container.children.map((col) => [
       col.dataset.laneId,
@@ -567,7 +569,6 @@ test("groups employee tasks into 4 kanban lanes and renders selected tasks as a 
       ["planned", "예정 · 대기", "4"],
       ["progress", "진행", "2"],
       ["review", "검증 · 테스트", "0"],
-      ["done", "완료", "1"],
     ],
   );
 
@@ -583,9 +584,21 @@ test("groups employee tasks into 4 kanban lanes and renders selected tasks as a 
   assert.equal(container.children[2].children[1].children[0].className, "kanban-empty");
   assert.equal(container.children[2].children[1].children[0].textContent, "해당 일감 없음");
 
-  const doneCard = container.children[3].children[1].children[0];
-  assert.equal(doneCard.children[0].children[0].children[1].textContent, "2.3");
-  assert.equal(doneCard.children[1].textContent, "샘플 업무 05");
+  const progressCard = container.children[1].children[1].children[0];
+  assert.equal(progressCard.children[0].children[0].children[1].textContent, "2.3");
+  assert.equal(progressCard.children[1].textContent, "샘플 업무 03");
+
+  const communalContainer = createElement("div");
+  renderTaskList(communalContainer, model.unassignedTasks(allFilters));
+  assert.equal(communalContainer.children.length, 4);
+  const firstCommunalCard = communalContainer.children[0];
+  assert.equal(firstCommunalCard.className, "kanban-card");
+  assert.equal(firstCommunalCard.children[0].children[0].children[1].textContent, "검증 · 2.3");
+  assert.equal(firstCommunalCard.children[1].textContent, "샘플 업무 02");
+  assert.equal(firstCommunalCard.children[3].className, "kanban-next");
+  assert.equal(firstCommunalCard.children[4].tagName, "details");
+  assert.equal(firstCommunalCard.children[4].children[0].textContent, "완료 조건 보기");
+  assert.equal(firstCommunalCard.children[5].textContent, "Notion에서 보기");
 
   const emptyBoard = createElement("div");
   renderKanbanBoard(emptyBoard, []);
