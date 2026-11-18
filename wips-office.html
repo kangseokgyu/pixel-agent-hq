@@ -818,7 +818,7 @@
 }
 #wips-office-root .hq-step-card[data-tone="green"] { border-color: rgba(74, 222, 128, 0.55); }
 #wips-office-root .hq-step-card[data-tone="amber"] { border-color: rgba(251, 191, 36, 0.55); }
-#wips-office-root .hq-step-card[data-tone="cyan"] { border-color: rgba(56, 189, 248, 0.45); }
+#wips-office-root .hq-step-card[data-tone="red"] { border-color: rgba(248, 113, 113, 0.55); }
 #wips-office-root .hq-step-label {
   display: flex;
   align-items: center;
@@ -853,7 +853,7 @@
 }
 #wips-office-root .hq-step-card[data-tone="green"] .hq-step-bar-fill { background: #4ade80; }
 #wips-office-root .hq-step-card[data-tone="amber"] .hq-step-bar-fill { background: #fbbf24; }
-#wips-office-root .hq-step-card[data-tone="cyan"] .hq-step-bar-fill { background: #38bdf8; }
+#wips-office-root .hq-step-card[data-tone="red"] .hq-step-bar-fill { background: #f87171; }
 #wips-office-root .hq-step-foot {
   display: flex;
   align-items: center;
@@ -866,7 +866,7 @@
 #wips-office-root .hq-step-dday { font-weight: 700; color: #cbd5e1; }
 #wips-office-root .hq-step-card[data-tone="green"] .hq-step-dday { color: #4ade80; }
 #wips-office-root .hq-step-card[data-tone="amber"] .hq-step-dday { color: #fbbf24; }
-#wips-office-root .hq-step-card[data-tone="cyan"] .hq-step-dday { color: #38bdf8; }
+#wips-office-root .hq-step-card[data-tone="red"] .hq-step-dday { color: #f87171; }
 #wips-office-root .hq-step-date {
   color: #7dd3fc;
   overflow: hidden;
@@ -1149,6 +1149,12 @@
   border: 1px solid var(--border);
   background: var(--card);
 }
+#wips-office-root .kanban-card-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
 #wips-office-root .kanban-priority {
   font-size: calc(var(--font-size-base) * 0.72);
   font-weight: 700;
@@ -1157,11 +1163,64 @@
   background: color-mix(in srgb, #d9730d 16%, transparent);
   color: #d9730d;
 }
+#wips-office-root .kanban-dday {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: calc(var(--font-size-base) * 0.72);
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, #64748b 18%, transparent);
+  color: light-dark(#475569, #cbd5e1);
+}
+#wips-office-root .kanban-dday[data-tone="green"] {
+  background: color-mix(in srgb, #22c55e 16%, transparent);
+  color: light-dark(#15803d, #4ade80);
+}
+#wips-office-root .kanban-dday[data-tone="amber"] {
+  background: color-mix(in srgb, #f59e0b 18%, transparent);
+  color: light-dark(#b45309, #fbbf24);
+}
+#wips-office-root .kanban-dday[data-tone="red"] {
+  background: color-mix(in srgb, #ef4444 18%, transparent);
+  color: light-dark(#dc2626, #f87171);
+}
 #wips-office-root .kanban-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
   font-size: calc(var(--font-size-base) * 0.75);
   color: var(--muted-foreground);
   overflow-wrap: anywhere;
 }
+#wips-office-root .kanban-progress-pct {
+  flex: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: light-dark(#475569, #94a3b8);
+}
+#wips-office-root .kanban-progress-pct[data-tone="green"] { color: light-dark(#15803d, #4ade80); }
+#wips-office-root .kanban-progress-pct[data-tone="amber"] { color: light-dark(#b45309, #fbbf24); }
+#wips-office-root .kanban-progress-pct[data-tone="red"] { color: light-dark(#dc2626, #f87171); }
+#wips-office-root .kanban-bar {
+  height: 4px;
+  width: 100%;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 12%, transparent);
+  overflow: hidden;
+}
+#wips-office-root .kanban-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #64748b;
+}
+#wips-office-root .kanban-bar-fill[data-tone="green"] { background: light-dark(#16a34a, #4ade80); }
+#wips-office-root .kanban-bar-fill[data-tone="amber"] { background: light-dark(#d97706, #fbbf24); }
+#wips-office-root .kanban-bar-fill[data-tone="red"] { background: light-dark(#dc2626, #f87171); }
 #wips-office-root .kanban-next {
   font-size: calc(var(--font-size-base) * 0.78);
   color: var(--foreground);
@@ -1532,7 +1591,45 @@
     return "미지정";
   }
 
-  function describeTask(task) {
+  function computeScheduleGauge(task, referenceDateIso) {
+    const todayIso = referenceDateIso || todayKstIso();
+    const todayMs = parseIsoDayMs(todayIso);
+    const targetIso = task?.startDate || task?.endDate || null;
+    const targetMs = parseIsoDayMs(targetIso);
+    let dDayLabel = ACTIVE_TICKER_STATUSES.has(task?.status) ? "수시" : "미정";
+    let diffDays = null;
+    if (todayMs !== null && targetMs !== null) {
+      diffDays = Math.round((targetMs - todayMs) / 86_400_000);
+      if (diffDays > 0) dDayLabel = "D-" + diffDays;
+      else if (diffDays === 0) dDayLabel = "D-DAY";
+      else dDayLabel = "D+" + Math.abs(diffDays);
+    }
+
+    let progress = 20;
+    if (diffDays !== null) {
+      if (diffDays <= 0) progress = 100;
+      else if (diffDays >= 14) progress = 10;
+      else progress = Math.round(100 - (diffDays / 14) * 90);
+    }
+
+    let tone = "slate";
+    if (diffDays !== null) {
+      if (diffDays >= 2) {
+        tone = "green";
+      } else if (diffDays === 1 || diffDays === 0) {
+        tone = "amber";
+      } else if (Boolean(task?.startDate) && ACTIVE_TICKER_STATUSES.has(task?.status)) {
+        tone = "green";
+      } else {
+        tone = "red";
+      }
+    }
+
+    return { dDayLabel, diffDays, progress, tone };
+  }
+
+  function describeTask(task, referenceDateIso) {
+    const gauge = computeScheduleGauge(task, referenceDateIso);
     return {
       title: task.title,
       status: task.status,
@@ -1543,6 +1640,9 @@
       nextAction: task.nextAction ?? "미지정",
       doneCondition: task.doneCondition ?? "미지정",
       sourceUrl: safeNotionUrl(task.url),
+      dDayLabel: gauge.dDayLabel,
+      progress: gauge.progress,
+      tone: gauge.tone,
     };
   }
 
@@ -1607,7 +1707,6 @@
 
     function billboardView(filters, referenceDateIso) {
       const todayIso = referenceDateIso || todayKstIso();
-      const todayMs = parseIsoDayMs(todayIso);
       const shared = unassignedTasks(filters);
       const scheduleTasks = shared
         .map((task, index) => ({
@@ -1626,35 +1725,16 @@
           if (Boolean(left.targetIso) !== Boolean(right.targetIso)) return left.targetIso ? -1 : 1;
           return left.rank - right.rank || left.index - right.index;
         })
-        .map(({ task, targetIso }, idx) => {
-          const targetMs = parseIsoDayMs(targetIso);
-          let dDayLabel = ACTIVE_TICKER_STATUSES.has(task.status) ? "수시" : "미정";
-          let diffDays = null;
-          if (todayMs !== null && targetMs !== null) {
-            diffDays = Math.round((targetMs - todayMs) / 86_400_000);
-            if (diffDays > 0) dDayLabel = "D-" + diffDays;
-            else if (diffDays === 0) dDayLabel = "D-DAY";
-            else dDayLabel = "D+" + Math.abs(diffDays);
-          }
-          let progress = 20;
-          if (task.status === "진행") progress = 65;
-          else if (task.status === "검증") progress = 85;
-          else if (task.status === "장시간 테스트 중") progress = 70;
-          else if (task.status === "대기") progress = 35;
-
-          let tone = "slate";
-          if (task.status === "진행") tone = "green";
-          else if (task.status === "검증" || task.status === "장시간 테스트 중" || task.status === "대기") tone = "amber";
-          else if (diffDays !== null && diffDays <= 7) tone = "cyan";
-
+        .map(({ task }, idx) => {
+          const gauge = computeScheduleGauge(task, todayIso);
           return {
             stepLabel: "STEP " + String(idx + 1).padStart(2, "0"),
             title: task.title,
             status: task.status || "미정",
-            dDayLabel,
+            dDayLabel: gauge.dDayLabel,
             shortDate: formatScheduleShort(task, false),
-            progress,
-            tone,
+            progress: gauge.progress,
+            tone: gauge.tone,
             task,
           };
         });
@@ -2052,9 +2132,14 @@
     addText(badge, "span", "", showExactStatus ? details.status + " · " + details.project : details.project);
     top.append(badge);
 
+    const tags = document.createElement("div");
+    tags.className = "kanban-card-tags";
     if (details.priority && details.priority !== "미지정") {
-      addText(top, "span", "kanban-priority", details.priority);
+      addText(tags, "span", "kanban-priority", details.priority);
     }
+    const dday = addText(tags, "span", "kanban-dday", details.dDayLabel);
+    dday.dataset.tone = details.tone;
+    top.append(tags);
     card.append(top);
 
     addText(card, "h3", "", details.title);
@@ -2063,7 +2148,21 @@
     if (details.nextCheck && details.nextCheck !== "미지정") {
       metaParts.push("확인 " + details.nextCheck);
     }
-    addText(card, "div", "kanban-meta", metaParts.join(" · "));
+    const meta = document.createElement("div");
+    meta.className = "kanban-meta";
+    addText(meta, "span", "", metaParts.join(" · "));
+    const pct = addText(meta, "span", "kanban-progress-pct", details.progress + "%");
+    pct.dataset.tone = details.tone;
+    card.append(meta);
+
+    const bar = document.createElement("div");
+    bar.className = "kanban-bar";
+    const fill = document.createElement("span");
+    fill.className = "kanban-bar-fill";
+    fill.dataset.tone = details.tone;
+    if (fill.style) fill.style.width = details.progress + "%";
+    bar.append(fill);
+    card.append(bar);
 
     if (details.nextAction && details.nextAction !== "미지정") {
       const next = document.createElement("div");

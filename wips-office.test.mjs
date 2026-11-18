@@ -479,12 +479,19 @@ test("treats 공통 owner as shared schedule tasks and builds stepper + live tic
   const view = custom.billboardView(allFilters, "2026-11-18");
   assert.equal(view.todayLabel, "11/18");
   assert.deepEqual(
-    view.scheduleTasks.map((item) => [item.stepLabel, item.title, item.dDayLabel, item.shortDate]),
+    view.scheduleTasks.map((item) => [
+      item.stepLabel,
+      item.title,
+      item.dDayLabel,
+      item.shortDate,
+      item.progress,
+      item.tone,
+    ]),
     [
-      ["STEP 01", "취약점 수정 리뷰", "수시", "일정 미지정"],
-      ["STEP 02", "사전 검증 준비", "D-2", "11/20"],
-      ["STEP 03", "사전 검증", "D-5", "11/23~11/27"],
-      ["STEP 04", "QA 입고", "D-14", "12/02"],
+      ["STEP 01", "취약점 수정 리뷰", "수시", "일정 미지정", 20, "slate"],
+      ["STEP 02", "사전 검증 준비", "D-2", "11/20", 87, "green"],
+      ["STEP 03", "사전 검증", "D-5", "11/23~11/27", 68, "green"],
+      ["STEP 04", "QA 입고", "D-14", "12/02", 10, "green"],
     ],
   );
   assert.deepEqual(
@@ -492,6 +499,33 @@ test("treats 공통 owner as shared schedule tasks and builds stepper + live tic
     [
       ["sb", "후속모델 개발", "11/13~"],
       ["여이전트", "서버 취약점 대응", "11/11~11/12"],
+    ],
+  );
+
+  const toneModel = createOfficeModel({ results: [
+    { title: "경과 진행", owner: "공통", status: "진행", startDate: "2026-11-16", endDate: null },
+    { title: "경과 검증", owner: "공통", status: "검증", startDate: "2026-11-16", endDate: null },
+    { title: "경과 예정", owner: "공통", status: "예정", startDate: "2026-11-16", endDate: null },
+    { title: "종료일만 경과", owner: "공통", status: "진행", startDate: null, endDate: "2026-11-17" },
+    { title: "당일 마감", owner: "공통", status: "예정", startDate: "2026-11-18", endDate: null },
+    { title: "내일 시작", owner: "공통", status: "대기", startDate: "2026-11-19", endDate: null },
+    { title: "이틀 남음", owner: "공통", status: "예정", startDate: "2026-11-20", endDate: null },
+    { title: "먼 미래", owner: "공통", status: "예정", startDate: "2026-12-10", endDate: null },
+    { title: "미정 예정", owner: "공통", status: "예정", startDate: null, endDate: null },
+  ] });
+  const toneView = toneModel.billboardView(allFilters, "2026-11-18");
+  assert.deepEqual(
+    toneView.scheduleTasks.map((item) => [item.title, item.dDayLabel, item.progress, item.tone]),
+    [
+      ["경과 진행", "D+2", 100, "green"],
+      ["경과 검증", "D+2", 100, "green"],
+      ["경과 예정", "D+2", 100, "red"],
+      ["종료일만 경과", "D+1", 100, "red"],
+      ["당일 마감", "D-DAY", 100, "amber"],
+      ["내일 시작", "D-1", 94, "amber"],
+      ["이틀 남음", "D-2", 87, "green"],
+      ["먼 미래", "D-22", 10, "green"],
+      ["미정 예정", "미정", 20, "slate"],
     ],
   );
 });
@@ -532,6 +566,7 @@ test("groups employee tasks into 3 active kanban lanes and renders communal list
       tagName,
       className: "",
       dataset: {},
+      style: {},
       children: [],
       attributes: {},
       textContent: "",
@@ -575,11 +610,18 @@ test("groups employee tasks into 3 active kanban lanes and renders communal list
   const plannedCard = container.children[0].children[1].children[0];
   assert.equal(plannedCard.className, "kanban-card");
   assert.equal(plannedCard.children[0].children[0].children[1].textContent, "예정 · 2.3");
+  assert.equal(plannedCard.children[0].children[1].className, "kanban-card-tags");
+  assert.equal(plannedCard.children[0].children[1].children[0].className, "kanban-dday");
   assert.equal(plannedCard.children[1].tagName, "h3");
-  assert.equal(plannedCard.children[3].className, "kanban-next");
-  assert.equal(plannedCard.children[4].tagName, "details");
-  assert.equal(plannedCard.children[4].children[0].textContent, "완료 조건 보기");
-  assert.equal(plannedCard.children[5].textContent, "Notion에서 보기");
+  assert.equal(plannedCard.children[2].className, "kanban-meta");
+  assert.equal(plannedCard.children[2].children[1].className, "kanban-progress-pct");
+  assert.equal(plannedCard.children[3].className, "kanban-bar");
+  assert.equal(plannedCard.children[3].children[0].className, "kanban-bar-fill");
+  assert.match(plannedCard.children[3].children[0].style.width, /^\d+%$/);
+  assert.equal(plannedCard.children[4].className, "kanban-next");
+  assert.equal(plannedCard.children[5].tagName, "details");
+  assert.equal(plannedCard.children[5].children[0].textContent, "완료 조건 보기");
+  assert.equal(plannedCard.children[6].textContent, "Notion에서 보기");
 
   assert.equal(container.children[2].children[1].children[0].className, "kanban-empty");
   assert.equal(container.children[2].children[1].children[0].textContent, "해당 일감 없음");
@@ -594,11 +636,34 @@ test("groups employee tasks into 3 active kanban lanes and renders communal list
   const firstCommunalCard = communalContainer.children[0];
   assert.equal(firstCommunalCard.className, "kanban-card");
   assert.equal(firstCommunalCard.children[0].children[0].children[1].textContent, "검증 · 2.3");
+  assert.equal(firstCommunalCard.children[0].children[1].children[0].className, "kanban-dday");
+  assert.equal(firstCommunalCard.children[0].children[1].children[0].textContent, "수시");
+  assert.equal(firstCommunalCard.children[0].children[1].children[0].dataset.tone, "slate");
   assert.equal(firstCommunalCard.children[1].textContent, "샘플 업무 02");
-  assert.equal(firstCommunalCard.children[3].className, "kanban-next");
-  assert.equal(firstCommunalCard.children[4].tagName, "details");
-  assert.equal(firstCommunalCard.children[4].children[0].textContent, "완료 조건 보기");
-  assert.equal(firstCommunalCard.children[5].textContent, "Notion에서 보기");
+  assert.equal(firstCommunalCard.children[2].className, "kanban-meta");
+  assert.equal(firstCommunalCard.children[2].children[1].textContent, "20%");
+  assert.equal(firstCommunalCard.children[3].className, "kanban-bar");
+  assert.equal(firstCommunalCard.children[3].children[0].style.width, "20%");
+  assert.equal(firstCommunalCard.children[3].children[0].dataset.tone, "slate");
+  assert.equal(firstCommunalCard.children[4].className, "kanban-next");
+  assert.equal(firstCommunalCard.children[5].tagName, "details");
+  assert.equal(firstCommunalCard.children[5].children[0].textContent, "완료 조건 보기");
+  assert.equal(firstCommunalCard.children[6].textContent, "Notion에서 보기");
+
+  assert.deepEqual(
+    [
+      model.describeTask({ title: "p", status: "예정", startDate: "2026-11-16", endDate: null }, "2026-11-18"),
+      model.describeTask({ title: "w", status: "대기", startDate: "2026-11-19", endDate: null }, "2026-11-18"),
+      model.describeTask({ title: "g", status: "진행", startDate: "2026-11-16", endDate: null }, "2026-11-18"),
+      model.describeTask({ title: "s", status: "예정", startDate: null, endDate: null }, "2026-11-18"),
+    ].map((item) => [item.dDayLabel, item.progress, item.tone]),
+    [
+      ["D+2", 100, "red"],
+      ["D-1", 94, "amber"],
+      ["D+2", 100, "green"],
+      ["미정", 20, "slate"],
+    ],
+  );
 
   const emptyBoard = createElement("div");
   renderKanbanBoard(emptyBoard, []);
