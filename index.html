@@ -2957,13 +2957,150 @@ html&gt;body{padding:0}&lt;/style&gt;
   display: inline-block;
   margin-block-start: calc(var(--font-size-base) * 0.55);
 }
+#wips-office-root .kanban-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: calc(var(--font-size-base) * 0.65);
+  align-items: start;
+  min-width: 0;
+}
+#wips-office-root .kanban-col {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: calc(var(--font-size-base) * 0.55);
+  display: grid;
+  gap: calc(var(--font-size-base) * 0.45);
+  min-width: 0;
+}
+#wips-office-root .kanban-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: calc(var(--font-size-base) * 0.35);
+  border-bottom: 1px solid var(--border);
+}
+#wips-office-root .kanban-col-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: calc(var(--font-size-base) * 0.85);
+  font-weight: 700;
+}
+#wips-office-root .kanban-col-count {
+  font-size: calc(var(--font-size-base) * 0.75);
+  font-weight: 600;
+  color: var(--muted-foreground);
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+#wips-office-root .kanban-cards {
+  display: grid;
+  gap: calc(var(--font-size-base) * 0.45);
+  min-width: 0;
+}
+#wips-office-root .kanban-card {
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.85);
+  background: var(--background);
+  padding: calc(var(--font-size-base) * 0.55);
+  display: grid;
+  gap: calc(var(--font-size-base) * 0.35);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#wips-office-root .kanban-card h3 {
+  margin: 0;
+  font-size: calc(var(--font-size-base) * 0.88);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+#wips-office-root .kanban-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+#wips-office-root .kanban-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: calc(var(--font-size-base) * 0.72);
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+#wips-office-root .kanban-priority {
+  font-size: calc(var(--font-size-base) * 0.72);
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, #d9730d 16%, transparent);
+  color: #d9730d;
+}
+#wips-office-root .kanban-meta {
+  font-size: calc(var(--font-size-base) * 0.75);
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+#wips-office-root .kanban-next {
+  font-size: calc(var(--font-size-base) * 0.78);
+  color: var(--foreground);
+  background: var(--card);
+  border-radius: 6px;
+  padding: 5px 7px;
+  overflow-wrap: anywhere;
+}
+#wips-office-root .kanban-next-label {
+  color: var(--muted-foreground);
+  font-weight: 600;
+  margin-right: 4px;
+}
+#wips-office-root .kanban-details {
+  font-size: calc(var(--font-size-base) * 0.75);
+  color: var(--muted-foreground);
+}
+#wips-office-root .kanban-details summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 500;
+}
+#wips-office-root .kanban-details p {
+  margin: 4px 0 0;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+#wips-office-root .kanban-card .task-source {
+  margin-block-start: 0;
+  font-size: calc(var(--font-size-base) * 0.75);
+}
+#wips-office-root .kanban-empty {
+  font-size: calc(var(--font-size-base) * 0.75);
+  color: var(--muted-foreground);
+  text-align: center;
+  padding: 14px 6px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
 #wips-office-root .empty-note {
   padding-block: calc(var(--font-size-base) * 0.5);
   color: var(--muted-foreground);
 }
+@media (max-width: 900px) {
+  #wips-office-root .kanban-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 620px) {
   #wips-office-root .office-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #wips-office-root .task-list { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  #wips-office-root .kanban-board { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 380px) {
   #wips-office-root .office-grid { grid-template-columns: minmax(0, 1fr); }
@@ -3186,7 +3323,7 @@ html&gt;body{padding:0}&lt;/style&gt;
       &lt;/div&gt;
     &lt;/div&gt;
     &lt;p class=&quot;empty-note&quot; id=&quot;wips-office-selected-empty&quot; hidden&gt;&lt;/p&gt;
-    &lt;div class=&quot;task-list&quot; id=&quot;wips-office-selected-tasks&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
+    &lt;div class=&quot;kanban-board&quot; id=&quot;wips-office-selected-tasks&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
   &lt;/section&gt;
 
   &lt;section class=&quot;communal-board&quot; aria-labelledby=&quot;wips-office-communal-title&quot;&gt;
@@ -3207,6 +3344,12 @@ html&gt;body{padding:0}&lt;/style&gt;
 (() =&gt; {
   const STATUS_ORDER = [&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;, &quot;대기&quot;, &quot;예정&quot;, &quot;완료&quot;];
   const STATUS_RANK = new Map(STATUS_ORDER.map((status, index) =&gt; [status, index]));
+  const KANBAN_LANES = [
+    { id: &quot;planned&quot;, title: &quot;예정 · 대기&quot;, dot: &quot;대기&quot;, statuses: [&quot;대기&quot;, &quot;예정&quot;] },
+    { id: &quot;progress&quot;, title: &quot;진행&quot;, dot: &quot;진행&quot;, statuses: [&quot;진행&quot;] },
+    { id: &quot;review&quot;, title: &quot;검증 · 테스트&quot;, dot: &quot;검증&quot;, statuses: [&quot;검증&quot;, &quot;장시간 테스트 중&quot;] },
+    { id: &quot;done&quot;, title: &quot;완료&quot;, dot: &quot;완료&quot;, statuses: [&quot;완료&quot;] },
+  ];
   const EMPLOYEES = [&quot;sb&quot;, &quot;이요원&quot;, &quot;여이전트&quot;, &quot;석규&quot;, &quot;UI&quot;];
   const SHARED_OWNER = &quot;공통&quot;;
   const ACTIVE_TICKER_STATUSES = new Set([&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;]);
@@ -3344,7 +3487,7 @@ html&gt;body{padding:0}&lt;/style&gt;
     }
 
     function employeeTasks(owner, filters) {
-      return filteredTasks(filters).filter((task) =&gt; task.owner === owner &amp;&amp; task.status !== &quot;완료&quot;);
+      return filteredTasks(filters).filter((task) =&gt; task.owner === owner);
     }
 
     function unassignedTasks(filters) {
@@ -3423,7 +3566,7 @@ html&gt;body{padding:0}&lt;/style&gt;
     }
 
     function representativeTask(owner, filters) {
-      const owned = employeeTasks(owner, filters).filter((task) =&gt; !task.parentTaskIds?.length);
+      const owned = employeeTasks(owner, filters).filter((task) =&gt; task.status !== &quot;완료&quot; &amp;&amp; !task.parentTaskIds?.length);
       if (owned.length === 0) return null;
       return owned
         .map((task, index) =&gt; ({ task, index }))
@@ -3436,7 +3579,7 @@ html&gt;body{padding:0}&lt;/style&gt;
 
     function viewForEmployee(owner, filters) {
       const owned = employeeTasks(owner, filters);
-      const topLevelCount = owned.filter((task) =&gt; !task.parentTaskIds?.length).length;
+      const topLevelCount = owned.filter((task) =&gt; task.status !== &quot;완료&quot; &amp;&amp; !task.parentTaskIds?.length).length;
       const representative = representativeTask(owner, filters);
       return {
         owner,
@@ -3468,10 +3611,31 @@ html&gt;body{padding:0}&lt;/style&gt;
       return button;
     }
 
+    function groupTasksByLane(tasks) {
+      const byStatus = new Map();
+      for (const lane of KANBAN_LANES) {
+        for (const status of lane.statuses) byStatus.set(status, lane.id);
+      }
+      const buckets = new Map(KANBAN_LANES.map((lane) =&gt; [lane.id, []]));
+      for (const task of Array.isArray(tasks) ? tasks : []) {
+        const laneId = byStatus.get(task?.status) || KANBAN_LANES[0].id;
+        buckets.get(laneId).push(task);
+      }
+      return KANBAN_LANES.map((lane) =&gt; ({
+        id: lane.id,
+        title: lane.title,
+        dot: lane.dot,
+        showExactStatus: lane.statuses.length &gt; 1,
+        tasks: buckets.get(lane.id),
+      }));
+    }
+
     return {
       employees,
       statuses,
       projects,
+      kanbanLanes: KANBAN_LANES,
+      groupTasksByLane,
       stateFromHost,
       restorePendingState,
       filteredTasks,
@@ -3804,6 +3968,97 @@ html&gt;body{padding:0}&lt;/style&gt;
     container.replaceChildren(...tasks.map(createTaskCard));
   }
 
+  function createKanbanCard(task, showExactStatus) {
+    const details = model.describeTask(task);
+    const card = document.createElement(&quot;article&quot;);
+    card.className = &quot;kanban-card&quot;;
+    card.dataset.taskTitle = details.title;
+
+    const top = document.createElement(&quot;div&quot;);
+    top.className = &quot;kanban-card-top&quot;;
+    const badge = document.createElement(&quot;span&quot;);
+    badge.className = &quot;kanban-badge&quot;;
+    const dot = document.createElement(&quot;span&quot;);
+    dot.className = &quot;status-dot&quot;;
+    dot.dataset.status = details.status;
+    dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+    badge.append(dot);
+    addText(badge, &quot;span&quot;, &quot;&quot;, showExactStatus ? details.status + &quot; · &quot; + details.project : details.project);
+    top.append(badge);
+
+    if (details.priority &amp;&amp; details.priority !== &quot;미지정&quot;) {
+      addText(top, &quot;span&quot;, &quot;kanban-priority&quot;, details.priority);
+    }
+    card.append(top);
+
+    addText(card, &quot;h3&quot;, &quot;&quot;, details.title);
+
+    const metaParts = [&quot;일정 &quot; + details.goalDate];
+    if (details.nextCheck &amp;&amp; details.nextCheck !== &quot;미지정&quot;) {
+      metaParts.push(&quot;확인 &quot; + details.nextCheck);
+    }
+    addText(card, &quot;div&quot;, &quot;kanban-meta&quot;, metaParts.join(&quot; · &quot;));
+
+    if (details.nextAction &amp;&amp; details.nextAction !== &quot;미지정&quot;) {
+      const next = document.createElement(&quot;div&quot;);
+      next.className = &quot;kanban-next&quot;;
+      addText(next, &quot;span&quot;, &quot;kanban-next-label&quot;, &quot;다음&quot;);
+      addText(next, &quot;span&quot;, &quot;&quot;, details.nextAction);
+      card.append(next);
+    }
+
+    if (details.doneCondition &amp;&amp; details.doneCondition !== &quot;미지정&quot;) {
+      const cond = document.createElement(&quot;details&quot;);
+      cond.className = &quot;kanban-details&quot;;
+      addText(cond, &quot;summary&quot;, &quot;&quot;, &quot;완료 조건 보기&quot;);
+      addText(cond, &quot;p&quot;, &quot;&quot;, details.doneCondition);
+      card.append(cond);
+    }
+
+    if (details.sourceUrl) {
+      const link = document.createElement(&quot;a&quot;);
+      link.className = &quot;task-source&quot;;
+      link.textContent = &quot;Notion에서 보기&quot;;
+      setSafeHref(link, details.sourceUrl);
+      card.append(link);
+    }
+
+    return card;
+  }
+
+  function renderKanbanBoard(container, tasks) {
+    const lanes = model.groupTasksByLane(tasks);
+    container.replaceChildren(...lanes.map((lane) =&gt; {
+      const col = document.createElement(&quot;section&quot;);
+      col.className = &quot;kanban-col&quot;;
+      col.dataset.laneId = lane.id;
+
+      const head = document.createElement(&quot;div&quot;);
+      head.className = &quot;kanban-col-head&quot;;
+      const title = document.createElement(&quot;span&quot;);
+      title.className = &quot;kanban-col-title&quot;;
+      const dot = document.createElement(&quot;span&quot;);
+      dot.className = &quot;status-dot&quot;;
+      dot.dataset.status = lane.dot;
+      dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+      title.append(dot);
+      addText(title, &quot;span&quot;, &quot;&quot;, lane.title);
+      head.append(title);
+      addText(head, &quot;span&quot;, &quot;kanban-col-count&quot;, String(lane.tasks.length));
+      col.append(head);
+
+      const cardsWrap = document.createElement(&quot;div&quot;);
+      cardsWrap.className = &quot;kanban-cards&quot;;
+      if (lane.tasks.length === 0) {
+        addText(cardsWrap, &quot;div&quot;, &quot;kanban-empty&quot;, &quot;해당 일감 없음&quot;);
+      } else {
+        cardsWrap.append(...lane.tasks.map((task) =&gt; createKanbanCard(task, lane.showExactStatus)));
+      }
+      col.append(cardsWrap);
+      return col;
+    }));
+  }
+
   function renderStatusCounts(summary) {
     countsNode.replaceChildren();
     model.statuses.forEach((status) =&gt; {
@@ -3949,7 +4204,11 @@ html&gt;body{padding:0}&lt;/style&gt;
     selectedNote.textContent = view.empty ? &quot;선택한 직원은 유지되며, 조건에 맞는 일감이 없습니다.&quot; : &quot;대표 일감 외 &quot; + view.otherCount + &quot;개를 포함합니다.&quot;;
     selectedEmpty.hidden = !view.empty;
     selectedEmpty.textContent = &quot;현재 필터에 맞는 &quot; + state.selectedEmployee + &quot;의 일감이 없습니다.&quot;;
-    renderTaskList(selectedTasksNode, view.tasks);
+    if (view.empty) {
+      selectedTasksNode.replaceChildren();
+    } else {
+      renderKanbanBoard(selectedTasksNode, view.tasks);
+    }
 
     const unassigned = model.unassignedTasks(filters);
     communalCount.textContent = unassigned.length + &quot;개&quot;;

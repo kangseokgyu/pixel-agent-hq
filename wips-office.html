@@ -1107,13 +1107,150 @@
   display: inline-block;
   margin-block-start: calc(var(--font-size-base) * 0.55);
 }
+#wips-office-root .kanban-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: calc(var(--font-size-base) * 0.65);
+  align-items: start;
+  min-width: 0;
+}
+#wips-office-root .kanban-col {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: calc(var(--font-size-base) * 0.55);
+  display: grid;
+  gap: calc(var(--font-size-base) * 0.45);
+  min-width: 0;
+}
+#wips-office-root .kanban-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: calc(var(--font-size-base) * 0.35);
+  border-bottom: 1px solid var(--border);
+}
+#wips-office-root .kanban-col-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: calc(var(--font-size-base) * 0.85);
+  font-weight: 700;
+}
+#wips-office-root .kanban-col-count {
+  font-size: calc(var(--font-size-base) * 0.75);
+  font-weight: 600;
+  color: var(--muted-foreground);
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+#wips-office-root .kanban-cards {
+  display: grid;
+  gap: calc(var(--font-size-base) * 0.45);
+  min-width: 0;
+}
+#wips-office-root .kanban-card {
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.85);
+  background: var(--background);
+  padding: calc(var(--font-size-base) * 0.55);
+  display: grid;
+  gap: calc(var(--font-size-base) * 0.35);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#wips-office-root .kanban-card h3 {
+  margin: 0;
+  font-size: calc(var(--font-size-base) * 0.88);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+#wips-office-root .kanban-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+#wips-office-root .kanban-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: calc(var(--font-size-base) * 0.72);
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+#wips-office-root .kanban-priority {
+  font-size: calc(var(--font-size-base) * 0.72);
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, #d9730d 16%, transparent);
+  color: #d9730d;
+}
+#wips-office-root .kanban-meta {
+  font-size: calc(var(--font-size-base) * 0.75);
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+#wips-office-root .kanban-next {
+  font-size: calc(var(--font-size-base) * 0.78);
+  color: var(--foreground);
+  background: var(--card);
+  border-radius: 6px;
+  padding: 5px 7px;
+  overflow-wrap: anywhere;
+}
+#wips-office-root .kanban-next-label {
+  color: var(--muted-foreground);
+  font-weight: 600;
+  margin-right: 4px;
+}
+#wips-office-root .kanban-details {
+  font-size: calc(var(--font-size-base) * 0.75);
+  color: var(--muted-foreground);
+}
+#wips-office-root .kanban-details summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 500;
+}
+#wips-office-root .kanban-details p {
+  margin: 4px 0 0;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+#wips-office-root .kanban-card .task-source {
+  margin-block-start: 0;
+  font-size: calc(var(--font-size-base) * 0.75);
+}
+#wips-office-root .kanban-empty {
+  font-size: calc(var(--font-size-base) * 0.75);
+  color: var(--muted-foreground);
+  text-align: center;
+  padding: 14px 6px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
 #wips-office-root .empty-note {
   padding-block: calc(var(--font-size-base) * 0.5);
   color: var(--muted-foreground);
 }
+@media (max-width: 900px) {
+  #wips-office-root .kanban-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 620px) {
   #wips-office-root .office-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #wips-office-root .task-list { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  #wips-office-root .kanban-board { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 380px) {
   #wips-office-root .office-grid { grid-template-columns: minmax(0, 1fr); }
@@ -1336,7 +1473,7 @@
       </div>
     </div>
     <p class="empty-note" id="wips-office-selected-empty" hidden></p>
-    <div class="task-list" id="wips-office-selected-tasks" aria-live="polite"></div>
+    <div class="kanban-board" id="wips-office-selected-tasks" aria-live="polite"></div>
   </section>
 
   <section class="communal-board" aria-labelledby="wips-office-communal-title">
@@ -1357,6 +1494,12 @@
 (() => {
   const STATUS_ORDER = ["진행", "검증", "장시간 테스트 중", "대기", "예정", "완료"];
   const STATUS_RANK = new Map(STATUS_ORDER.map((status, index) => [status, index]));
+  const KANBAN_LANES = [
+    { id: "planned", title: "예정 · 대기", dot: "대기", statuses: ["대기", "예정"] },
+    { id: "progress", title: "진행", dot: "진행", statuses: ["진행"] },
+    { id: "review", title: "검증 · 테스트", dot: "검증", statuses: ["검증", "장시간 테스트 중"] },
+    { id: "done", title: "완료", dot: "완료", statuses: ["완료"] },
+  ];
   const EMPLOYEES = ["sb", "이요원", "여이전트", "석규", "UI"];
   const SHARED_OWNER = "공통";
   const ACTIVE_TICKER_STATUSES = new Set(["진행", "검증", "장시간 테스트 중"]);
@@ -1494,7 +1637,7 @@
     }
 
     function employeeTasks(owner, filters) {
-      return filteredTasks(filters).filter((task) => task.owner === owner && task.status !== "완료");
+      return filteredTasks(filters).filter((task) => task.owner === owner);
     }
 
     function unassignedTasks(filters) {
@@ -1573,7 +1716,7 @@
     }
 
     function representativeTask(owner, filters) {
-      const owned = employeeTasks(owner, filters).filter((task) => !task.parentTaskIds?.length);
+      const owned = employeeTasks(owner, filters).filter((task) => task.status !== "완료" && !task.parentTaskIds?.length);
       if (owned.length === 0) return null;
       return owned
         .map((task, index) => ({ task, index }))
@@ -1586,7 +1729,7 @@
 
     function viewForEmployee(owner, filters) {
       const owned = employeeTasks(owner, filters);
-      const topLevelCount = owned.filter((task) => !task.parentTaskIds?.length).length;
+      const topLevelCount = owned.filter((task) => task.status !== "완료" && !task.parentTaskIds?.length).length;
       const representative = representativeTask(owner, filters);
       return {
         owner,
@@ -1618,10 +1761,31 @@
       return button;
     }
 
+    function groupTasksByLane(tasks) {
+      const byStatus = new Map();
+      for (const lane of KANBAN_LANES) {
+        for (const status of lane.statuses) byStatus.set(status, lane.id);
+      }
+      const buckets = new Map(KANBAN_LANES.map((lane) => [lane.id, []]));
+      for (const task of Array.isArray(tasks) ? tasks : []) {
+        const laneId = byStatus.get(task?.status) || KANBAN_LANES[0].id;
+        buckets.get(laneId).push(task);
+      }
+      return KANBAN_LANES.map((lane) => ({
+        id: lane.id,
+        title: lane.title,
+        dot: lane.dot,
+        showExactStatus: lane.statuses.length > 1,
+        tasks: buckets.get(lane.id),
+      }));
+    }
+
     return {
       employees,
       statuses,
       projects,
+      kanbanLanes: KANBAN_LANES,
+      groupTasksByLane,
       stateFromHost,
       restorePendingState,
       filteredTasks,
@@ -1954,6 +2118,97 @@
     container.replaceChildren(...tasks.map(createTaskCard));
   }
 
+  function createKanbanCard(task, showExactStatus) {
+    const details = model.describeTask(task);
+    const card = document.createElement("article");
+    card.className = "kanban-card";
+    card.dataset.taskTitle = details.title;
+
+    const top = document.createElement("div");
+    top.className = "kanban-card-top";
+    const badge = document.createElement("span");
+    badge.className = "kanban-badge";
+    const dot = document.createElement("span");
+    dot.className = "status-dot";
+    dot.dataset.status = details.status;
+    dot.setAttribute("aria-hidden", "true");
+    badge.append(dot);
+    addText(badge, "span", "", showExactStatus ? details.status + " · " + details.project : details.project);
+    top.append(badge);
+
+    if (details.priority && details.priority !== "미지정") {
+      addText(top, "span", "kanban-priority", details.priority);
+    }
+    card.append(top);
+
+    addText(card, "h3", "", details.title);
+
+    const metaParts = ["일정 " + details.goalDate];
+    if (details.nextCheck && details.nextCheck !== "미지정") {
+      metaParts.push("확인 " + details.nextCheck);
+    }
+    addText(card, "div", "kanban-meta", metaParts.join(" · "));
+
+    if (details.nextAction && details.nextAction !== "미지정") {
+      const next = document.createElement("div");
+      next.className = "kanban-next";
+      addText(next, "span", "kanban-next-label", "다음");
+      addText(next, "span", "", details.nextAction);
+      card.append(next);
+    }
+
+    if (details.doneCondition && details.doneCondition !== "미지정") {
+      const cond = document.createElement("details");
+      cond.className = "kanban-details";
+      addText(cond, "summary", "", "완료 조건 보기");
+      addText(cond, "p", "", details.doneCondition);
+      card.append(cond);
+    }
+
+    if (details.sourceUrl) {
+      const link = document.createElement("a");
+      link.className = "task-source";
+      link.textContent = "Notion에서 보기";
+      setSafeHref(link, details.sourceUrl);
+      card.append(link);
+    }
+
+    return card;
+  }
+
+  function renderKanbanBoard(container, tasks) {
+    const lanes = model.groupTasksByLane(tasks);
+    container.replaceChildren(...lanes.map((lane) => {
+      const col = document.createElement("section");
+      col.className = "kanban-col";
+      col.dataset.laneId = lane.id;
+
+      const head = document.createElement("div");
+      head.className = "kanban-col-head";
+      const title = document.createElement("span");
+      title.className = "kanban-col-title";
+      const dot = document.createElement("span");
+      dot.className = "status-dot";
+      dot.dataset.status = lane.dot;
+      dot.setAttribute("aria-hidden", "true");
+      title.append(dot);
+      addText(title, "span", "", lane.title);
+      head.append(title);
+      addText(head, "span", "kanban-col-count", String(lane.tasks.length));
+      col.append(head);
+
+      const cardsWrap = document.createElement("div");
+      cardsWrap.className = "kanban-cards";
+      if (lane.tasks.length === 0) {
+        addText(cardsWrap, "div", "kanban-empty", "해당 일감 없음");
+      } else {
+        cardsWrap.append(...lane.tasks.map((task) => createKanbanCard(task, lane.showExactStatus)));
+      }
+      col.append(cardsWrap);
+      return col;
+    }));
+  }
+
   function renderStatusCounts(summary) {
     countsNode.replaceChildren();
     model.statuses.forEach((status) => {
@@ -2099,7 +2354,11 @@
     selectedNote.textContent = view.empty ? "선택한 직원은 유지되며, 조건에 맞는 일감이 없습니다." : "대표 일감 외 " + view.otherCount + "개를 포함합니다.";
     selectedEmpty.hidden = !view.empty;
     selectedEmpty.textContent = "현재 필터에 맞는 " + state.selectedEmployee + "의 일감이 없습니다.";
-    renderTaskList(selectedTasksNode, view.tasks);
+    if (view.empty) {
+      selectedTasksNode.replaceChildren();
+    } else {
+      renderKanbanBoard(selectedTasksNode, view.tasks);
+    }
 
     const unassigned = model.unassignedTasks(filters);
     communalCount.textContent = unassigned.length + "개";

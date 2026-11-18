@@ -123,7 +123,7 @@ test("retains all 19 tasks and reports every raw status count", () => {
 test("keeps the selected employee and ranks the representative task by raw status", () => {
   const view = model.viewForEmployee("sb", allFilters);
   assert.equal(view.owner, "sb");
-  assert.equal(view.tasks.length, 6);
+  assert.equal(view.tasks.length, 7);
   assert.equal(view.representative.title, "샘플 업무 03");
   assert.equal(view.topLevelCount, 2);
   assert.equal(view.otherCount, 1);
@@ -251,7 +251,7 @@ test("counts and represents only root tasks while retaining employee details", (
   ] });
   const view = hierarchy.viewForEmployee("sb", allFilters);
   assert.equal(view.topLevelCount, 1);
-  assert.equal(view.tasks.length, 2);
+  assert.equal(view.tasks.length, 3);
   assert.equal(view.representative.title, "root");
   assert.equal(view.otherCount, 0);
   const filtered = hierarchy.viewForEmployee("sb", { status: "진행", project: "전체 프로젝트" });
@@ -446,16 +446,16 @@ test("keeps the embedded office drag behavior synchronized with its source", () 
   assert.match(srcdoc, /\.workstation\.is-drop-target/);
 });
 
-test("excludes completed tasks from employee and communal lists for every filter", () => {
+test("includes completed tasks for employee kanban while keeping communal list and active root count open-only", () => {
   const active = createOfficeModel({ results: [
     {title: "open", owner: "sb", status: "진행"},
     {title: "done", owner: "sb", status: "완료"},
     {title: "unassigned open", owner: null, status: "예정"},
     {title: "unassigned done", owner: null, status: "완료"},
   ] });
-  assert.deepEqual(Array.from(active.employeeTasks("sb", allFilters), t => t.title), ["open"]);
+  assert.deepEqual(Array.from(active.employeeTasks("sb", allFilters), t => t.title), ["open", "done"]);
   assert.deepEqual(Array.from(active.unassignedTasks(allFilters), t => t.title), ["unassigned open"]);
-  assert.equal(active.employeeTasks("sb", {...allFilters, status: "완료"}).length, 0);
+  assert.equal(active.employeeTasks("sb", {...allFilters, status: "완료"}).length, 1);
   assert.equal(active.unassignedTasks({...allFilters, status: "완료"}).length, 0);
   assert.equal(active.viewForEmployee("sb", allFilters).topLevelCount, 1);
 });
@@ -494,4 +494,101 @@ test("treats 공통 owner as shared schedule tasks and builds stepper + live tic
       ["여이전트", "서버 취약점 대응", "11/11~11/12"],
     ],
   );
+});
+
+test("groups employee tasks into 4 kanban lanes and renders selected tasks as a kanban board", () => {
+  const custom = createOfficeModel({ results: [] });
+  const lanes = custom.groupTasksByLane([
+    { title: "t-todo", status: "예정" },
+    { title: "t-wait", status: "대기" },
+    { title: "t-prog", status: "진행" },
+    { title: "t-ver", status: "검증" },
+    { title: "t-long", status: "장시간 테스트 중" },
+    { title: "t-done", status: "완료" },
+    { title: "t-unknown", status: "알수없음" },
+  ]);
+
+  assert.deepEqual(
+    Array.from(lanes, (lane) => [lane.id, lane.showExactStatus, Array.from(lane.tasks, (t) => t.title)]),
+    [
+      ["planned", true, ["t-todo", "t-wait", "t-unknown"]],
+      ["progress", false, ["t-prog"]],
+      ["review", true, ["t-ver", "t-long"]],
+      ["done", false, ["t-done"]],
+    ],
+  );
+  assert.match(fragment, /id="wips-office-selected-tasks"[^>]*class="kanban-board"|class="kanban-board"[^>]*id="wips-office-selected-tasks"/);
+  assert.match(fragment, /function renderKanbanBoard\(/);
+
+  const cardSource = fragment.match(/function createKanbanCard\(task, showExactStatus\) \{[\s\S]*?\n  \}/)?.[0];
+  const boardSource = fragment.match(/function renderKanbanBoard\(container, tasks\) \{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(cardSource, "kanban card renderer exists");
+  assert.ok(boardSource, "kanban board renderer exists");
+
+  function createElement(tagName) {
+    return {
+      tagName,
+      className: "",
+      dataset: {},
+      children: [],
+      attributes: {},
+      textContent: "",
+      append(...children) { this.children.push(...children); },
+      replaceChildren(...children) { this.children = [...children]; },
+      setAttribute(name, value) { this.attributes[name] = value; },
+    };
+  }
+  const mockDoc = { createElement };
+  const addText = (parent, tagName, className, text) => {
+    const node = mockDoc.createElement(tagName);
+    node.className = className;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    parent.append(node);
+    return node;
+  };
+  const setSafeHref = (el, url) => { el.attributes.href = url; };
+  const renderKanbanBoard = new Function(
+    "document", "model", "addText", "setSafeHref",
+    cardSource + "\n" + boardSource + "\nreturn renderKanbanBoard;",
+  )(mockDoc, model, addText, setSafeHref);
+
+  const container = createElement("div");
+  const sbTasks = model.viewForEmployee("sb", allFilters).tasks;
+  renderKanbanBoard(container, sbTasks);
+
+  assert.equal(container.children.length, 4);
+  assert.deepEqual(
+    container.children.map((col) => [
+      col.dataset.laneId,
+      col.children[0].children[0].children[1].textContent,
+      col.children[0].children[1].textContent,
+    ]),
+    [
+      ["planned", "예정 · 대기", "4"],
+      ["progress", "진행", "2"],
+      ["review", "검증 · 테스트", "0"],
+      ["done", "완료", "1"],
+    ],
+  );
+
+  const plannedCard = container.children[0].children[1].children[0];
+  assert.equal(plannedCard.className, "kanban-card");
+  assert.equal(plannedCard.children[0].children[0].children[1].textContent, "예정 · 2.3");
+  assert.equal(plannedCard.children[1].tagName, "h3");
+  assert.equal(plannedCard.children[3].className, "kanban-next");
+  assert.equal(plannedCard.children[4].tagName, "details");
+  assert.equal(plannedCard.children[4].children[0].textContent, "완료 조건 보기");
+  assert.equal(plannedCard.children[5].textContent, "Notion에서 보기");
+
+  assert.equal(container.children[2].children[1].children[0].className, "kanban-empty");
+  assert.equal(container.children[2].children[1].children[0].textContent, "해당 일감 없음");
+
+  const doneCard = container.children[3].children[1].children[0];
+  assert.equal(doneCard.children[0].children[0].children[1].textContent, "2.3");
+  assert.equal(doneCard.children[1].textContent, "샘플 업무 05");
+
+  const emptyBoard = createElement("div");
+  renderKanbanBoard(emptyBoard, []);
+  assert.equal(emptyBoard.children[0].children[1].children[0].className, "kanban-empty");
+  assert.equal(emptyBoard.children[0].children[1].children[0].textContent, "해당 일감 없음");
 });
