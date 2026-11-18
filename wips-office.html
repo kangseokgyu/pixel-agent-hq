@@ -1249,8 +1249,30 @@
   overflow-wrap: anywhere;
 }
 #wips-office-root .kanban-card .task-source {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
   margin-block-start: 0;
-  font-size: calc(var(--font-size-base) * 0.75);
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted-foreground);
+  text-decoration: none;
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease;
+}
+#wips-office-root .kanban-card .task-source:hover,
+#wips-office-root .kanban-card .task-source:focus-visible {
+  border-color: var(--primary);
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--primary) 12%, var(--card));
+}
+#wips-office-root .kanban-card .task-source svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex: none;
 }
 #wips-office-root .kanban-empty {
   font-size: calc(var(--font-size-base) * 0.75);
@@ -2139,6 +2161,35 @@
     }
     const dday = addText(tags, "span", "kanban-dday", details.dDayLabel);
     dday.dataset.tone = details.tone;
+    if (details.sourceUrl) {
+      const link = document.createElement("a");
+      link.className = "task-source";
+      link.setAttribute("aria-label", "Notion에서 보기");
+      link.setAttribute("title", "Notion에서 보기");
+      setSafeHref(link, details.sourceUrl);
+      const createSvgNode = (tag, attrs) => {
+        const node = document.createElementNS
+          ? document.createElementNS("http://www.w3.org/2000/svg", tag)
+          : document.createElement(tag);
+        Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, value));
+        return node;
+      };
+      const svg = createSvgNode("svg", {
+        viewBox: "0 0 24 24",
+        fill: "none",
+        "aria-hidden": "true",
+      });
+      const NOTION_ICON_PATHS = [
+        { d: "M3.5 4.8L16.8 3.5L20 6.1L6.7 7.4L3.5 4.8Z", fill: "currentColor", "fill-opacity": "0.16" },
+        { d: "M3.5 4.8L6.7 7.4V20.6L3.5 18V4.8Z", fill: "currentColor", "fill-opacity": "0.28" },
+        { d: "M3.5 4.8L16.8 3.5L20 6.1V19.3L6.7 20.6L3.5 18V4.8Z", stroke: "currentColor", "stroke-width": "1.5", "stroke-linejoin": "round" },
+        { d: "M3.5 4.8L6.7 7.4L20 6.1M6.7 7.4V20.6", stroke: "currentColor", "stroke-width": "1.5", "stroke-linejoin": "round" },
+        { d: "M9.1 9.6L11.9 9.4L15.1 14V9.7L14.3 9.8V9L17.5 8.7V9.5L16.8 9.6V17L15.2 17.1L11.7 12.1V16.6L12.5 16.5V17.3L9.1 17.6V16.8L10 16.7V10.4L9.1 10.5V9.6Z", fill: "currentColor" },
+      ];
+      svg.append(...NOTION_ICON_PATHS.map((attrs) => createSvgNode("path", attrs)));
+      link.append(svg);
+      tags.append(link);
+    }
     top.append(tags);
     card.append(top);
 
@@ -2178,14 +2229,6 @@
       addText(cond, "summary", "", "완료 조건 보기");
       addText(cond, "p", "", details.doneCondition);
       card.append(cond);
-    }
-
-    if (details.sourceUrl) {
-      const link = document.createElement("a");
-      link.className = "task-source";
-      link.textContent = "Notion에서 보기";
-      setSafeHref(link, details.sourceUrl);
-      card.append(link);
     }
 
     return card;

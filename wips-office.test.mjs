@@ -612,6 +612,12 @@ test("groups employee tasks into 3 active kanban lanes and renders communal list
   assert.equal(plannedCard.children[0].children[0].children[1].textContent, "예정 · 2.3");
   assert.equal(plannedCard.children[0].children[1].className, "kanban-card-tags");
   assert.equal(plannedCard.children[0].children[1].children[0].className, "kanban-dday");
+  const plannedSourceLink = plannedCard.children[0].children[1].children[1];
+  assert.equal(plannedSourceLink.className, "task-source");
+  assert.equal(plannedSourceLink.attributes["aria-label"], "Notion에서 보기");
+  assert.equal(plannedSourceLink.attributes.title, "Notion에서 보기");
+  assert.equal(plannedSourceLink.children[0].tagName, "svg");
+  assert.equal(plannedSourceLink.children[0].attributes.viewBox, "0 0 24 24");
   assert.equal(plannedCard.children[1].tagName, "h3");
   assert.equal(plannedCard.children[2].className, "kanban-meta");
   assert.equal(plannedCard.children[2].children[1].className, "kanban-progress-pct");
@@ -621,7 +627,7 @@ test("groups employee tasks into 3 active kanban lanes and renders communal list
   assert.equal(plannedCard.children[4].className, "kanban-next");
   assert.equal(plannedCard.children[5].tagName, "details");
   assert.equal(plannedCard.children[5].children[0].textContent, "완료 조건 보기");
-  assert.equal(plannedCard.children[6].textContent, "Notion에서 보기");
+  assert.equal(plannedCard.children.length, 6);
 
   assert.equal(container.children[2].children[1].children[0].className, "kanban-empty");
   assert.equal(container.children[2].children[1].children[0].textContent, "해당 일감 없음");
@@ -639,6 +645,10 @@ test("groups employee tasks into 3 active kanban lanes and renders communal list
   assert.equal(firstCommunalCard.children[0].children[1].children[0].className, "kanban-dday");
   assert.equal(firstCommunalCard.children[0].children[1].children[0].textContent, "수시");
   assert.equal(firstCommunalCard.children[0].children[1].children[0].dataset.tone, "slate");
+  const communalSourceLink = firstCommunalCard.children[0].children[1].children[1];
+  assert.equal(communalSourceLink.className, "task-source");
+  assert.equal(communalSourceLink.attributes["aria-label"], "Notion에서 보기");
+  assert.equal(communalSourceLink.children[0].tagName, "svg");
   assert.equal(firstCommunalCard.children[1].textContent, "샘플 업무 02");
   assert.equal(firstCommunalCard.children[2].className, "kanban-meta");
   assert.equal(firstCommunalCard.children[2].children[1].textContent, "20%");
@@ -648,7 +658,7 @@ test("groups employee tasks into 3 active kanban lanes and renders communal list
   assert.equal(firstCommunalCard.children[4].className, "kanban-next");
   assert.equal(firstCommunalCard.children[5].tagName, "details");
   assert.equal(firstCommunalCard.children[5].children[0].textContent, "완료 조건 보기");
-  assert.equal(firstCommunalCard.children[6].textContent, "Notion에서 보기");
+  assert.equal(firstCommunalCard.children.length, 6);
 
   assert.deepEqual(
     [
