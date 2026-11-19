@@ -3276,7 +3276,7 @@ html&gt;body{padding:0}&lt;/style&gt;
       &lt;h1 id=&quot;wips-office-title&quot;&gt;Pixel Agent HQ · 쿼터뷰&lt;/h1&gt;
       &lt;p class=&quot;snapshot-meta&quot;&gt;
         &lt;span id=&quot;wips-office-snapshot&quot;&gt;&lt;/span&gt;
-        &lt;a id=&quot;wips-office-source&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;Notion 원본 스냅샷&lt;/a&gt;
+        &lt;a id=&quot;wips-office-source&quot;&gt;Notion 원본 스냅샷&lt;/a&gt;
       &lt;/p&gt;
       &lt;div class=&quot;sync-controls&quot;&gt;
         &lt;button class=&quot;sync-button&quot; id=&quot;wips-office-refresh&quot; type=&quot;button&quot;&gt;지금 갱신&lt;/button&gt;
@@ -3450,10 +3450,21 @@ html&gt;body{padding:0}&lt;/style&gt;
     try {
       const parsed = new URL(value);
       const notionHosts = [&quot;app.notion.com&quot;, &quot;notion.so&quot;, &quot;www.notion.so&quot;];
-      return parsed.protocol === &quot;https:&quot; &amp;&amp; notionHosts.includes(parsed.hostname) ? parsed.href : &quot;&quot;;
+      return parsed.protocol === &quot;https:&quot; &amp;&amp;
+        notionHosts.includes(parsed.hostname) &amp;&amp;
+        parsed.host === parsed.hostname &amp;&amp;
+        parsed.username === &quot;&quot; &amp;&amp;
+        parsed.password === &quot;&quot;
+        ? parsed.href
+        : &quot;&quot;;
     } catch {
       return &quot;&quot;;
     }
+  }
+
+  function toNotionAppUrl(value) {
+    const safeUrl = safeNotionUrl(value);
+    return safeUrl ? safeUrl.replace(/^https:/, &quot;notion:&quot;) : &quot;&quot;;
   }
 
   function formatGoalDate(task) {
@@ -3795,13 +3806,15 @@ html&gt;body{padding:0}&lt;/style&gt;
   projectSelect.value = state.project;
 
   function setSafeHref(anchor, url) {
-    const safeUrl = safeNotionUrl(url);
-    if (safeUrl) {
-      anchor.href = safeUrl;
-      anchor.target = &quot;_blank&quot;;
-      anchor.rel = &quot;noopener noreferrer&quot;;
+    const appUrl = toNotionAppUrl(url);
+    if (appUrl) {
+      anchor.href = appUrl;
+      anchor.removeAttribute(&quot;target&quot;);
+      anchor.removeAttribute(&quot;rel&quot;);
     } else {
       anchor.removeAttribute(&quot;href&quot;);
+      anchor.removeAttribute(&quot;target&quot;);
+      anchor.removeAttribute(&quot;rel&quot;);
     }
   }
 
@@ -5203,9 +5216,21 @@ html&gt;body{padding:0}&lt;/style&gt;
         return;
       }
       let href;
+      let isNotionApp = false;
       try {
         const url = new URL(rawHref, document.baseURI);
-        if (url.protocol !== "https:") {
+        if (url.protocol === "notion:") {
+          const notionHosts = ["app.notion.com", "notion.so", "www.notion.so"];
+          if (
+            !notionHosts.includes(url.hostname) ||
+            url.host !== url.hostname ||
+            url.username !== "" ||
+            url.password !== ""
+          ) {
+            return;
+          }
+          isNotionApp = true;
+        } else if (url.protocol !== "https:") {
           return;
         }
         href = url.href;
@@ -5215,8 +5240,10 @@ html&gt;body{padding:0}&lt;/style&gt;
       if (globalThis.navigator.userActivation?.isActive === true) {
         const anchor = document.createElement("a");
         anchor.href = href;
-        anchor.rel = "noopener noreferrer";
-        anchor.target = "_blank";
+        if (!isNotionApp) {
+          anchor.rel = "noopener noreferrer";
+          anchor.target = "_blank";
+        }
         document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();

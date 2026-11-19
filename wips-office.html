@@ -1426,7 +1426,7 @@
       <h1 id="wips-office-title">Pixel Agent HQ · 쿼터뷰</h1>
       <p class="snapshot-meta">
         <span id="wips-office-snapshot"></span>
-        <a id="wips-office-source" target="_blank" rel="noopener noreferrer">Notion 원본 스냅샷</a>
+        <a id="wips-office-source">Notion 원본 스냅샷</a>
       </p>
       <div class="sync-controls">
         <button class="sync-button" id="wips-office-refresh" type="button">지금 갱신</button>
@@ -1600,10 +1600,21 @@
     try {
       const parsed = new URL(value);
       const notionHosts = ["app.notion.com", "notion.so", "www.notion.so"];
-      return parsed.protocol === "https:" && notionHosts.includes(parsed.hostname) ? parsed.href : "";
+      return parsed.protocol === "https:" &&
+        notionHosts.includes(parsed.hostname) &&
+        parsed.host === parsed.hostname &&
+        parsed.username === "" &&
+        parsed.password === ""
+        ? parsed.href
+        : "";
     } catch {
       return "";
     }
+  }
+
+  function toNotionAppUrl(value) {
+    const safeUrl = safeNotionUrl(value);
+    return safeUrl ? safeUrl.replace(/^https:/, "notion:") : "";
   }
 
   function formatGoalDate(task) {
@@ -1945,13 +1956,15 @@
   projectSelect.value = state.project;
 
   function setSafeHref(anchor, url) {
-    const safeUrl = safeNotionUrl(url);
-    if (safeUrl) {
-      anchor.href = safeUrl;
-      anchor.target = "_blank";
-      anchor.rel = "noopener noreferrer";
+    const appUrl = toNotionAppUrl(url);
+    if (appUrl) {
+      anchor.href = appUrl;
+      anchor.removeAttribute("target");
+      anchor.removeAttribute("rel");
     } else {
       anchor.removeAttribute("href");
+      anchor.removeAttribute("target");
+      anchor.removeAttribute("rel");
     }
   }
 

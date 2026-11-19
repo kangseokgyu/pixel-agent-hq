@@ -680,3 +680,134 @@ test("groups employee tasks into 3 active kanban lanes and renders communal list
   assert.equal(emptyBoard.children[0].children[1].children[0].className, "kanban-empty");
   assert.equal(emptyBoard.children[0].children[1].children[0].textContent, "해당 일감 없음");
 });
+
+test("converts verified Notion links to notion:// app URLs without popup target attributes", () => {
+  const safeNotionSource = fragment.match(/function safeNotionUrl\(value\) \{[\s\S]*?\n  \}/)?.[0];
+  const toAppSource = fragment.match(/function toNotionAppUrl\(value\) \{[\s\S]*?\n  \}/)?.[0];
+  const setSafeHrefSource = fragment.match(/function setSafeHref\(anchor, url\) \{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(safeNotionSource, "safeNotionUrl exists");
+  assert.ok(toAppSource, "toNotionAppUrl exists");
+  assert.ok(setSafeHrefSource, "setSafeHref exists");
+
+  const { safeNotionUrl, toNotionAppUrl, setSafeHref } = new Function(
+    safeNotionSource + "\n" + toAppSource + "\n" + setSafeHrefSource + "\nreturn { safeNotionUrl, toNotionAppUrl, setSafeHref };",
+  )();
+
+  assert.equal(
+    toNotionAppUrl("https://www.notion.so/Page-Title-1234?pvs=4#block"),
+    "notion://www.notion.so/Page-Title-1234?pvs=4#block",
+  );
+  assert.equal(
+    toNotionAppUrl("https://app.notion.com/p/00000000000000000000000000000000"),
+    "notion://app.notion.com/p/00000000000000000000000000000000",
+  );
+  assert.equal(
+    toNotionAppUrl("https://notion.so/abcd"),
+    "notion://notion.so/abcd",
+  );
+
+  for (const invalid of [
+    "https://evil.example/page",
+    "http://www.notion.so/page",
+    "javascript:alert(1)",
+    "https://user:pass@www.notion.so/page",
+    "https://www.notion.so:8443/page",
+    "",
+    null,
+  ]) {
+    assert.equal(safeNotionUrl(invalid), "");
+    assert.equal(toNotionAppUrl(invalid), "");
+  }
+
+  const makeAnchor = () => {
+    const removed = [];
+    return {
+      href: "",
+      target: "_blank",
+      rel: "noopener noreferrer",
+      removed,
+      removeAttribute(name) {
+        removed.push(name);
+        delete this[name];
+      },
+    };
+  };
+
+  const validAnchor = makeAnchor();
+  setSafeHref(validAnchor, "https://app.notion.com/00000000000000000000000000000001");
+  assert.equal(validAnchor.href, "notion://app.notion.com/00000000000000000000000000000001");
+  assert.equal("target" in validAnchor, false);
+  assert.equal("rel" in validAnchor, false);
+
+  const invalidAnchor = makeAnchor();
+  setSafeHref(invalidAnchor, "https://evil.example/phish");
+  assert.equal("href" in invalidAnchor, false);
+  assert.equal("target" in invalidAnchor, false);
+  assert.equal("rel" in invalidAnchor, false);
+
+  assert.doesNotMatch(fragment, /<a id="wips-office-source"[^>]*target="_blank"/);
+});
+
+test("outer host open-external launches allowlisted notion:// URLs directly without _blank popup", () => {
+  const indexHtml = readFileSync(new URL("./index.html", import.meta.url), "utf8");
+  const openExternalBlock = indexHtml.match(/if \(data\.type === "open-external"\) \{[\s\S]*?\n    \}/)?.[0];
+  assert.ok(openExternalBlock, "open-external handler exists in index.html");
+
+  const clicked = [];
+  const mockDoc = {
+    baseURI: "https://example.github.io/WIPS-Office/",
+    body: {
+      appendChild() {},
+    },
+    createElement(tag) {
+      assert.equal(tag, "a");
+      return {
+        href: "",
+        click() {
+          clicked.push({ href: this.href, target: this.target, rel: this.rel });
+        },
+        remove() {},
+      };
+    },
+  };
+  const runOpenExternal = new Function(
+    "data",
+    "document",
+    "globalThis",
+    openExternalBlock,
+  );
+  const activeGlobal = { navigator: { userActivation: { isActive: true } } };
+
+  runOpenExternal(
+    { type: "open-external", href: "notion://www.notion.so/Page-1234?pvs=4" },
+    mockDoc,
+    activeGlobal,
+  );
+  runOpenExternal(
+    { type: "open-external", href: "notion://app.notion.com/p/1234" },
+    mockDoc,
+    activeGlobal,
+  );
+  runOpenExternal(
+    { type: "open-external", href: "https://example.com/docs" },
+    mockDoc,
+    activeGlobal,
+  );
+
+  for (const blocked of [
+    "notion://evil.example/page",
+    "notion:www.notion.so/page",
+    "notion://www.notion.so:8443/page",
+    "notion://user:pass@www.notion.so/page",
+    "javascript:alert(1)",
+    "file:///etc/passwd",
+  ]) {
+    runOpenExternal({ type: "open-external", href: blocked }, mockDoc, activeGlobal);
+  }
+
+  assert.deepEqual(clicked, [
+    { href: "notion://www.notion.so/Page-1234?pvs=4", target: undefined, rel: undefined },
+    { href: "notion://app.notion.com/p/1234", target: undefined, rel: undefined },
+    { href: "https://example.com/docs", target: "_blank", rel: "noopener noreferrer" },
+  ]);
+});
