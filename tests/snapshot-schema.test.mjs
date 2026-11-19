@@ -32,6 +32,44 @@ test("rejects malformed snapshots and unexpected field types", () => {
   assert.equal(validateSnapshot({ ...sampleFixture, snapshotDate: "11-14-2026" }).ok, false);
 });
 
+test("validates optional task id, subTaskIds, and checklist fields while staying backwards-compatible", () => {
+  const withChecklist = {
+    ...sampleFixture,
+    results: [
+      {
+        id: "task-1",
+        title: "체크리스트 포함 일감",
+        subTaskIds: ["sub-1", "sub-2"],
+        checklist: [
+          { text: "첫 번째 확인", done: true },
+          { text: "두 번째 확인", done: false },
+        ],
+      },
+      {
+        title: "필드 생략 레거시 일감",
+      },
+    ],
+  };
+  assert.equal(validateSnapshot(withChecklist).ok, true);
+
+  for (const badTask of [
+    { title: "잘못된 id", id: 123 },
+    { title: "잘못된 subTaskIds 타입", subTaskIds: "sub-1" },
+    { title: "비문자 subTaskIds 원소", subTaskIds: ["sub-1", 42] },
+    { title: "잘못된 checklist 타입", checklist: "not-array" },
+    { title: "null checklist 항목", checklist: [null] },
+    { title: "done 누락 checklist 항목", checklist: [{ text: "항목" }] },
+    { title: "text 비문자 checklist 항목", checklist: [{ text: 99, done: false }] },
+    { title: "done 비불리언 checklist 항목", checklist: [{ text: "항목", done: "true" }] },
+  ]) {
+    assert.equal(
+      validateSnapshot({ ...sampleFixture, results: [badTask] }).ok,
+      false,
+      `expected rejection for: ${badTask.title}`,
+    );
+  }
+});
+
 test("detects local server mode vs static PWA mode from initial snapshot or explicit override", () => {
   assert.equal(detectRuntimeMode({ initialSnapshot: emptyFixture }), "static");
   assert.equal(detectRuntimeMode({ initialSnapshot: sampleFixture }), "local");

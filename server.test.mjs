@@ -83,9 +83,12 @@ test("maps every WIPS property and retains new select values", () => {
   const task = mapNotionPage(makePage());
 
   assert.deepEqual(task, {
+    id: "0123456789abcdef0123456789abcdef",
     url: "https://app.notion.com/0123456789abcdef0123456789abcdef",
     title: "테스트 일감",
     parentTaskIds: [],
+    subTaskIds: [],
+    checklist: [],
     owner: "새 담당자",
     status: "새 상태",
     project: "새 프로젝트",
@@ -117,6 +120,7 @@ test("queries all datasource pages with the required headers and cursor", async 
 
   const result = await fetchNotionSnapshot({
     token: "test-token",
+    includeChecklists: false,
     fetchImpl,
     sleep: async () => {},
   });
@@ -154,6 +158,7 @@ test("sends a datasource query through actual local HTTP", async (t) => {
     token: "test-token",
     dataSourceId: "mock-source",
     apiRoot: `http://127.0.0.1:${port}/v1`,
+    includeChecklists: false,
     fetchImpl: fetch,
   });
   assert.equal(result.results[0].title, "테스트 일감");
@@ -201,6 +206,7 @@ test("coalesces concurrent polls during Retry-After and applies cooldown immedia
       token: "test-token",
       dataSourceId: "mock-source",
       apiRoot: "https://mock.invalid/v1",
+      includeChecklists: false,
       fetchImpl: async () => {
         upstreamRequests += 1;
         return upstreamRequests === 1
@@ -407,11 +413,17 @@ test("keeps the iframe document synchronized with the workspace source and snaps
   );
 });
 
-test("maps parent task relations independently of other relations", () => {
+test("maps parent and child task relations independently of other relations", () => {
   const page = makePage();
   page.properties["상위 일감"] = property("relation", [{ id: "root-task" }]);
+  page.properties["하위 일감"] = property("relation", [{ id: "child-1" }, { id: "child-2" }]);
   page.properties["선행 작업"] = property("relation", [{ id: "dependency" }]);
-  assert.deepEqual(mapNotionPage(page).parentTaskIds, ["root-task"]);
+  const mapped = mapNotionPage(page);
+  assert.deepEqual(mapped.parentTaskIds, ["root-task"]);
+  assert.deepEqual(mapped.subTaskIds, ["child-1", "child-2"]);
   page.properties["상위 일감"].relation = [];
-  assert.deepEqual(mapNotionPage(page).parentTaskIds, []);
+  page.properties["하위 일감"].relation = [];
+  const cleared = mapNotionPage(page);
+  assert.deepEqual(cleared.parentTaskIds, []);
+  assert.deepEqual(cleared.subTaskIds, []);
 });
