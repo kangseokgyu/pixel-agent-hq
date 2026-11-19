@@ -555,27 +555,43 @@ test("groups employee tasks into 3 active kanban lanes and renders communal list
   assert.match(fragment, /communalTasksNode\.querySelectorAll\("\.kanban-card"\)/);
 
   const listSource = fragment.match(/function renderTaskList\(container, tasks\) \{[\s\S]*?\n  \}/)?.[0];
+  const svgSource = fragment.match(/function createSvgNode\(tag, attrs\) \{[\s\S]*?\n  \}/)?.[0];
+  const progressBoxSource = fragment.match(/function createTaskProgressBox\(details\) \{[\s\S]*?\n  \}/)?.[0];
   const cardSource = fragment.match(/function createKanbanCard\(task, showExactStatus\) \{[\s\S]*?\n  \}/)?.[0];
   const boardSource = fragment.match(/function renderKanbanBoard\(container, tasks\) \{[\s\S]*?\n  \}/)?.[0];
   assert.ok(listSource, "task list renderer exists");
+  assert.ok(svgSource, "svg helper exists");
+  assert.ok(progressBoxSource, "task progress box renderer exists");
   assert.ok(cardSource, "kanban card renderer exists");
   assert.ok(boardSource, "kanban board renderer exists");
 
   function createElement(tagName) {
+    const listeners = new Map();
     return {
       tagName,
       className: "",
       dataset: {},
       style: {},
+      open: false,
       children: [],
       attributes: {},
       textContent: "",
       append(...children) { this.children.push(...children); },
       replaceChildren(...children) { this.children = [...children]; },
       setAttribute(name, value) { this.attributes[name] = value; },
+      addEventListener(type, fn) {
+        if (!listeners.has(type)) listeners.set(type, []);
+        listeners.get(type).push(fn);
+      },
+      dispatchEvent(event) {
+        for (const fn of listeners.get(event.type) || []) fn(event);
+      },
     };
   }
-  const mockDoc = { createElement };
+  const mockDoc = {
+    createElement,
+    createElementNS: (_ns, tag) => createElement(tag),
+  };
   const addText = (parent, tagName, className, text) => {
     const node = mockDoc.createElement(tagName);
     node.className = className;
@@ -584,10 +600,11 @@ test("groups employee tasks into 3 active kanban lanes and renders communal list
     return node;
   };
   const setSafeHref = (el, url) => { el.attributes.href = url; };
+  const openProgressDrawers = new Set();
   const { renderKanbanBoard, renderTaskList } = new Function(
-    "document", "model", "addText", "setSafeHref",
-    listSource + "\n" + cardSource + "\n" + boardSource + "\nreturn { renderKanbanBoard, renderTaskList };",
-  )(mockDoc, model, addText, setSafeHref);
+    "document", "model", "addText", "setSafeHref", "openProgressDrawers",
+    listSource + "\n" + svgSource + "\n" + progressBoxSource + "\n" + cardSource + "\n" + boardSource + "\nreturn { renderKanbanBoard, renderTaskList };",
+  )(mockDoc, model, addText, setSafeHref, openProgressDrawers);
 
   const container = createElement("div");
   const sbTasks = model.viewForEmployee("sb", allFilters).tasks;
@@ -635,6 +652,9 @@ test("groups employee tasks into 3 active kanban lanes and renders communal list
   const progressCard = container.children[1].children[1].children[0];
   assert.equal(progressCard.children[0].children[0].children[1].textContent, "2.3");
   assert.equal(progressCard.children[1].textContent, "샘플 업무 03");
+  const progressBoxOn03 = progressCard.children.find((child) => child.className === "kanban-progress-box");
+  assert.ok(progressBoxOn03, "샘플 업무 03 renders the Variant B progress box");
+  assert.equal(progressBoxOn03.children[0].children[0].children.length, 2);
 
   const communalContainer = createElement("div");
   renderTaskList(communalContainer, model.unassignedTasks(allFilters));
@@ -656,9 +676,10 @@ test("groups employee tasks into 3 active kanban lanes and renders communal list
   assert.equal(firstCommunalCard.children[3].children[0].style.width, "20%");
   assert.equal(firstCommunalCard.children[3].children[0].dataset.tone, "slate");
   assert.equal(firstCommunalCard.children[4].className, "kanban-next");
-  assert.equal(firstCommunalCard.children[5].tagName, "details");
-  assert.equal(firstCommunalCard.children[5].children[0].textContent, "완료 조건 보기");
-  assert.equal(firstCommunalCard.children.length, 6);
+  assert.equal(firstCommunalCard.children[5].className, "kanban-progress-box");
+  assert.equal(firstCommunalCard.children[6].tagName, "details");
+  assert.equal(firstCommunalCard.children[6].children[0].textContent, "완료 조건 보기");
+  assert.equal(firstCommunalCard.children.length, 7);
 
   assert.deepEqual(
     [
@@ -810,4 +831,301 @@ test("outer host open-external launches allowlisted notion:// URLs directly with
     { href: "notion://app.notion.com/p/1234", target: undefined, rel: undefined },
     { href: "https://example.com/docs", target: "_blank", rel: "noopener noreferrer" },
   ]);
+});
+
+test("aggregates checklist and sub-task completion counts across completed tasks, ID formats, URLs, and deduplicates bidirectional links", () => {
+  const sample03 = snapshot.results.find((task) => task.title === "샘플 업무 03");
+  const sample03Details = model.describeTask(sample03);
+  assert.equal(sample03Details.taskKey, "00000000-0000-4000-8000-000000000101");
+  assert.equal(sample03Details.checklist.done, 3);
+  assert.equal(sample03Details.checklist.total, 5);
+  assert.equal(sample03Details.subtasks.done, 1);
+  assert.equal(sample03Details.subtasks.total, 5);
+  assert.equal(
+    sample03Details.subtasks.items.find((item) => item.title === "샘플 업무 05")?.done,
+    true,
+  );
+
+  const sample02 = snapshot.results.find((task) => task.title === "샘플 업무 02");
+  const sample02Details = model.describeTask(sample02);
+  assert.equal(sample02Details.checklist.done, 4);
+  assert.equal(sample02Details.checklist.total, 4);
+  assert.equal(sample02Details.subtasks, null);
+
+  const sample08 = snapshot.results.find((task) => task.title === "샘플 업무 08");
+  const sample08Details = model.describeTask(sample08);
+  assert.equal(sample08Details.checklist.done, 2);
+  assert.equal(sample08Details.checklist.total, 4);
+  assert.equal(sample08Details.subtasks, null);
+
+  const sample01 = snapshot.results.find((task) => task.title === "샘플 업무 01");
+  const sample01Details = model.describeTask(sample01);
+  assert.equal(sample01Details.checklist, null);
+  assert.equal(sample01Details.subtasks, null);
+
+  const customModel = createOfficeModel({
+    results: [
+      {
+        url: "https://www.notion.so/Parent-Task-aaaa1111bbbb2222cccc3333dddd4444?pvs=4",
+        title: "URL 기반 상위 일감",
+        owner: "sb",
+        status: "진행",
+        subTaskIds: [
+          "11111111-2222-3333-4444-555555555555",
+          "22222222-2222-3333-4444-555555555555",
+          "99999999-9999-9999-9999-999999999999",
+        ],
+        checklist: [
+          { text: "  항목 1  ", done: true },
+          { text: "", done: true },
+          { text: "항목 2", done: false },
+        ],
+      },
+      {
+        id: "11111111222233334444555555555555",
+        url: "https://app.notion.com/11111111222233334444555555555555",
+        title: "양방향 연결 완료 하위",
+        owner: "sb",
+        status: "완료",
+        parentTaskIds: ["AAAA1111-BBBB-2222-CCCC-3333DDDD4444"],
+      },
+      {
+        id: "22222222-2222-3333-4444-555555555555",
+        url: "https://evil.example/not-notion",
+        title: "subTaskIds 전용 진행 하위",
+        owner: "UI",
+        status: "진행",
+        parentTaskIds: [],
+      },
+      {
+        id: "33333333-2222-3333-4444-555555555555",
+        url: "https://app.notion.com/33333333222233334444555555555555",
+        title: "parentTaskIds 전용 완료 하위",
+        owner: null,
+        status: "완료",
+        parentTaskIds: ["aaaa1111bbbb2222cccc3333dddd4444"],
+      },
+    ],
+  });
+
+  const parent = customModel.describeTask(customModel.employeeTasks("sb", allFilters)[0]);
+  assert.equal(parent.checklist.done, 1);
+  assert.equal(parent.checklist.total, 2);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(parent.checklist.items)),
+    [{ text: "항목 1", done: true }, { text: "항목 2", done: false }],
+  );
+  assert.equal(parent.subtasks.done, 2);
+  assert.equal(parent.subtasks.total, 3);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(parent.subtasks.items)),
+    [
+      {
+        id: "11111111222233334444555555555555",
+        title: "양방향 연결 완료 하위",
+        status: "완료",
+        owner: "sb",
+        done: true,
+        sourceUrl: "https://app.notion.com/11111111222233334444555555555555",
+      },
+      {
+        id: "33333333222233334444555555555555",
+        title: "parentTaskIds 전용 완료 하위",
+        status: "완료",
+        owner: null,
+        done: true,
+        sourceUrl: "https://app.notion.com/33333333222233334444555555555555",
+      },
+      {
+        id: "22222222222233334444555555555555",
+        title: "subTaskIds 전용 진행 하위",
+        status: "진행",
+        owner: "UI",
+        done: false,
+        sourceUrl: "",
+      },
+    ],
+  );
+});
+
+test("renders Variant B progress box with segmented bars, continuous fallback (>12), read-only drawer, and persistent open state", () => {
+  const svgSource = fragment.match(/function createSvgNode\(tag, attrs\) \{[\s\S]*?\n  \}/)?.[0];
+  const progressBoxSource = fragment.match(/function createTaskProgressBox\(details\) \{[\s\S]*?\n  \}/)?.[0];
+  const cardSource = fragment.match(/function createKanbanCard\(task, showExactStatus\) \{[\s\S]*?\n  \}/)?.[0];
+  assert.ok(svgSource && progressBoxSource && cardSource);
+
+  function createElement(tagName) {
+    const listeners = new Map();
+    return {
+      tagName,
+      className: "",
+      dataset: {},
+      style: {},
+      open: false,
+      children: [],
+      attributes: {},
+      textContent: "",
+      append(...children) { this.children.push(...children); },
+      setAttribute(name, value) { this.attributes[name] = value; },
+      removeAttribute(name) { delete this.attributes[name]; },
+      addEventListener(type, fn) {
+        if (!listeners.has(type)) listeners.set(type, []);
+        listeners.get(type).push(fn);
+      },
+      dispatchEvent(event) {
+        for (const fn of listeners.get(event.type) || []) fn(event);
+      },
+    };
+  }
+  const mockDoc = {
+    createElement,
+    createElementNS: (_ns, tag) => createElement(tag),
+  };
+  const addText = (parent, tagName, className, text) => {
+    const node = mockDoc.createElement(tagName);
+    node.className = className;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    parent.append(node);
+    return node;
+  };
+  const setSafeHref = (el, url) => {
+    el.href = url.replace(/^https:/, "notion:");
+  };
+
+  function collectNodes(node, predicate, out = []) {
+    if (predicate(node)) out.push(node);
+    for (const child of node.children || []) collectNodes(child, predicate, out);
+    return out;
+  }
+
+  const manyChecklist = Array.from({ length: 15 }, (_, idx) => ({
+    text: `항목 ${idx + 1}`,
+    done: idx < 6,
+  }));
+  const completeSubtasks = Array.from({ length: 13 }, (_, idx) => ({
+    id: `sub-${idx + 1}`,
+    title: `하위 ${idx + 1}`,
+    status: "완료",
+    owner: "sb",
+    url: idx === 0 ? "https://app.notion.com/00000000000000000000000000000099" : "",
+    parentTaskIds: ["parent-large"],
+  }));
+
+  const testModel = createOfficeModel({
+    results: [
+      {
+        id: "parent-both",
+        url: "https://app.notion.com/00000000000000000000000000000100",
+        title: "체크+하위 일감",
+        owner: "sb",
+        status: "진행",
+        checklist: [
+          { text: "체크 1", done: true },
+          { text: "체크 2", done: false },
+        ],
+      },
+      {
+        id: "child-done",
+        url: "https://app.notion.com/00000000000000000000000000000101",
+        title: "완료된 하위",
+        owner: "sb",
+        status: "완료",
+        parentTaskIds: ["parent-both"],
+      },
+      {
+        id: "child-open",
+        url: "",
+        title: "링크 없는 하위",
+        owner: "sb",
+        status: "예정",
+        parentTaskIds: ["parent-both"],
+      },
+      {
+        id: "only-check-complete",
+        title: "체크만 완료",
+        owner: "sb",
+        status: "검증",
+        checklist: [
+          { text: "끝 1", done: true },
+          { text: "끝 2", done: true },
+        ],
+      },
+      {
+        id: "plain-task",
+        title: "일반 일감",
+        owner: "sb",
+        status: "예정",
+      },
+      {
+        id: "parent-large",
+        title: "대용량 항목 일감",
+        owner: "sb",
+        status: "진행",
+        checklist: manyChecklist,
+      },
+      ...completeSubtasks,
+    ],
+  });
+
+  const openProgressDrawers = new Set();
+  const createKanbanCard = new Function(
+    "document", "model", "addText", "setSafeHref", "openProgressDrawers",
+    svgSource + "\n" + progressBoxSource + "\n" + cardSource + "\nreturn createKanbanCard;",
+  )(mockDoc, testModel, addText, setSafeHref, openProgressDrawers);
+
+  const tasks = testModel.employeeTasks("sb", allFilters);
+  const bothCard = createKanbanCard(tasks.find((t) => t.id === "parent-both"), false);
+  const bothBox = bothCard.children.find((child) => child.className === "kanban-progress-box");
+  assert.ok(bothBox, "renders progress box when checklist and subtasks exist");
+  assert.equal(bothBox.tagName, "details");
+  const summary = bothBox.children[0];
+  assert.equal(summary.className, "kanban-progress-summary");
+  assert.equal(summary.children[0].className, "kanban-progress-rows");
+  assert.equal(summary.children[0].children.length, 2);
+  assert.equal(summary.children[1].attributes.class, "kanban-progress-chevron");
+  assert.equal(summary.children[0].children[0].children[2].textContent, "1/2");
+  assert.equal(summary.children[0].children[1].children[2].textContent, "1/2");
+  assert.equal(collectNodes(bothBox, (n) => n.tagName === "input").length, 0, "checklist drawer stays strictly read-only");
+  const subtaskLinks = collectNodes(bothBox, (n) => n.className === "kanban-subtask-link");
+  assert.equal(subtaskLinks.length, 1);
+  assert.equal(subtaskLinks[0].href, "notion://app.notion.com/00000000000000000000000000000101");
+  const subtaskStatuses = collectNodes(bothBox, (n) => n.className === "kanban-subtask-status").map((n) => n.textContent);
+  assert.deepEqual(subtaskStatuses, ["완료", "예정"]);
+
+  bothBox.open = true;
+  bothBox.dispatchEvent({ type: "toggle" });
+  const rerenderedBoth = createKanbanCard(tasks.find((t) => t.id === "parent-both"), false);
+  const rerenderedBox = rerenderedBoth.children.find((child) => child.className === "kanban-progress-box");
+  assert.equal(rerenderedBox.open, true, "drawer open state survives auto-refresh rerenders");
+  rerenderedBox.open = false;
+  rerenderedBox.dispatchEvent({ type: "toggle" });
+  assert.equal(
+    createKanbanCard(tasks.find((t) => t.id === "parent-both"), false)
+      .children.find((child) => child.className === "kanban-progress-box").open,
+    false,
+  );
+
+  const completeCard = createKanbanCard(tasks.find((t) => t.id === "only-check-complete"), true);
+  const completeBox = completeCard.children.find((child) => child.className === "kanban-progress-box");
+  assert.equal(completeBox.children[0].children[0].children.length, 1);
+  assert.equal(completeBox.children[0].children[0].children[0].children[2].dataset.complete, "true");
+  const doneAllSegs = collectNodes(completeBox, (n) => n.className === "kanban-progress-seg is-done-all");
+  assert.equal(doneAllSegs.length, 2);
+
+  const plainCard = createKanbanCard(tasks.find((t) => t.id === "plain-task"), true);
+  assert.equal(
+    plainCard.children.find((child) => child.className === "kanban-progress-box"),
+    undefined,
+    "ordinary tasks without checklist or subtasks render zero progress DOM",
+  );
+
+  const largeCard = createKanbanCard(tasks.find((t) => t.id === "parent-large"), false);
+  const largeBox = largeCard.children.find((child) => child.className === "kanban-progress-box");
+  assert.equal(collectNodes(largeBox, (n) => n.className === "kanban-progress-segs").length, 0);
+  const fills = collectNodes(largeBox, (n) => n.className === "kanban-progress-fill");
+  assert.equal(fills.length, 2);
+  assert.equal(fills[0].style.width, "40%");
+  assert.equal(fills[0].dataset.complete, undefined);
+  assert.equal(fills[1].style.width, "100%");
+  assert.equal(fills[1].dataset.complete, "true");
 });

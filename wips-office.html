@@ -35,9 +35,28 @@
       "startDate": null,
       "endDate": null,
       "checkDate": null,
-      "parentTaskIds": []
+      "parentTaskIds": [],
+      "checklist": [
+        {
+          "text": "로그인 회귀 시나리오 확인",
+          "done": true
+        },
+        {
+          "text": "권한 매트릭스 점검",
+          "done": true
+        },
+        {
+          "text": "오프라인 동기화 검증",
+          "done": true
+        },
+        {
+          "text": "배포 체크리스트 최종 확인",
+          "done": true
+        }
+      ]
     },
     {
+      "id": "00000000-0000-4000-8000-000000000101",
       "url": "https://app.notion.com/00000000000000000000000000000003",
       "title": "샘플 업무 03",
       "owner": "sb",
@@ -50,7 +69,29 @@
       "startDate": "2026-11-13",
       "endDate": null,
       "checkDate": null,
-      "parentTaskIds": []
+      "parentTaskIds": [],
+      "checklist": [
+        {
+          "text": "OAuth 토큰 발급 확인",
+          "done": true
+        },
+        {
+          "text": "리프레시 만료 처리 점검",
+          "done": true
+        },
+        {
+          "text": "401 재시도 시나리오 검증",
+          "done": true
+        },
+        {
+          "text": "동시 요청 락 재현 및 로그 첨부",
+          "done": false
+        },
+        {
+          "text": "로그 민감정보 마스킹 점검",
+          "done": false
+        }
+      ]
     },
     {
       "url": "https://app.notion.com/00000000000000000000000000000004",
@@ -129,7 +170,25 @@
       "startDate": "2026-11-13",
       "endDate": null,
       "checkDate": "2026-11-12",
-      "parentTaskIds": []
+      "parentTaskIds": [],
+      "checklist": [
+        {
+          "text": "품질 기준 문서 검토",
+          "done": true
+        },
+        {
+          "text": "테스트 데이터셋 준비",
+          "done": true
+        },
+        {
+          "text": "성능 지표 측정 기록",
+          "done": false
+        },
+        {
+          "text": "최종 검수 결과 공유",
+          "done": false
+        }
+      ]
     },
     {
       "url": "https://app.notion.com/00000000000000000000000000000009",
@@ -966,6 +1025,9 @@
   #wips-office-root .hq-ticker-viewport {
     overflow-x: auto;
   }
+  #wips-office-root .kanban-progress-chevron {
+    transition: none;
+  }
 }
 #wips-office-root .desk-top { background: var(--office-desk); }
 #wips-office-root .person-head { background: var(--office-skin); }
@@ -1233,6 +1295,197 @@
   color: var(--muted-foreground);
   font-weight: 600;
   margin-right: 4px;
+}
+#wips-office-root .kanban-progress-box {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--card);
+  overflow: hidden;
+  min-width: 0;
+}
+#wips-office-root .kanban-progress-summary {
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+}
+#wips-office-root .kanban-progress-summary::-webkit-details-marker {
+  display: none;
+}
+#wips-office-root .kanban-progress-summary::marker {
+  content: "";
+}
+#wips-office-root .kanban-progress-summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+#wips-office-root .kanban-progress-rows {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+#wips-office-root .kanban-progress-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-size: calc(var(--font-size-base) * 0.75);
+}
+#wips-office-root .kanban-progress-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted-foreground);
+  font-weight: 600;
+  white-space: nowrap;
+}
+#wips-office-root .kanban-progress-kind svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  display: block;
+}
+#wips-office-root .kanban-progress-segs {
+  display: flex;
+  gap: 2px;
+  height: 5px;
+  min-width: 28px;
+}
+#wips-office-root .kanban-progress-seg {
+  flex: 1 1 0;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--foreground) 14%, transparent);
+}
+#wips-office-root .kanban-progress-seg.is-filled {
+  background: var(--primary);
+}
+#wips-office-root .kanban-progress-seg.is-done-all {
+  background: light-dark(#15803d, #4ade80);
+}
+#wips-office-root .kanban-progress-track {
+  height: 5px;
+  min-width: 28px;
+  width: 100%;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 14%, transparent);
+  overflow: hidden;
+}
+#wips-office-root .kanban-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+}
+#wips-office-root .kanban-progress-fill[data-complete="true"] {
+  background: light-dark(#15803d, #4ade80);
+}
+#wips-office-root .kanban-progress-count {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: calc(var(--font-size-base) * 0.75);
+  font-weight: 700;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+#wips-office-root .kanban-progress-count[data-complete="true"] {
+  color: light-dark(#15803d, #4ade80);
+}
+#wips-office-root .kanban-progress-chevron {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  display: block;
+  color: var(--muted-foreground);
+  transition: transform 140ms ease;
+}
+#wips-office-root .kanban-progress-box[open] .kanban-progress-chevron {
+  transform: rotate(180deg);
+}
+#wips-office-root .kanban-progress-drawer {
+  border-top: 1px solid var(--border);
+  padding: 6px 8px;
+  display: grid;
+  gap: 7px;
+  font-size: calc(var(--font-size-base) * 0.75);
+  min-width: 0;
+}
+#wips-office-root .kanban-progress-group {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+#wips-office-root .kanban-progress-group-title {
+  font-size: calc(var(--font-size-base) * 0.72);
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+#wips-office-root .kanban-progress-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+#wips-office-root .kanban-progress-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 1px 0;
+  color: var(--foreground);
+  min-width: 0;
+  line-height: 1.35;
+}
+#wips-office-root .kanban-progress-item .status-dot {
+  margin-top: 0.36em;
+  flex: none;
+}
+#wips-office-root .kanban-check-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  margin-top: 0.14em;
+  flex: none;
+  color: var(--muted-foreground);
+}
+#wips-office-root .kanban-progress-item.is-done .kanban-check-mark {
+  color: light-dark(#15803d, #4ade80);
+}
+#wips-office-root .kanban-progress-item-text,
+#wips-office-root .kanban-subtask-link {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  flex: 1 1 auto;
+}
+#wips-office-root .kanban-subtask-link {
+  color: inherit;
+  text-decoration: none;
+}
+#wips-office-root .kanban-subtask-link:hover,
+#wips-office-root .kanban-subtask-link:focus-visible {
+  color: var(--primary);
+  text-decoration: underline;
+}
+#wips-office-root .kanban-progress-item.is-done .kanban-progress-item-text,
+#wips-office-root .kanban-progress-item.is-done .kanban-subtask-link {
+  color: var(--muted-foreground);
+  text-decoration: line-through;
+}
+#wips-office-root .kanban-subtask-status {
+  flex: none;
+  margin-left: auto;
+  font-size: calc(var(--font-size-base) * 0.7);
+  color: var(--muted-foreground);
+  white-space: nowrap;
 }
 #wips-office-root .kanban-details {
   font-size: calc(var(--font-size-base) * 0.75);
@@ -1661,22 +1914,18 @@
     return { dDayLabel, diffDays, progress, tone };
   }
 
-  function describeTask(task, referenceDateIso) {
-    const gauge = computeScheduleGauge(task, referenceDateIso);
-    return {
-      title: task.title,
-      status: task.status,
-      project: projectLabel(task),
-      priority: task.priority ?? "미지정",
-      goalDate: formatGoalDate(task),
-      nextCheck: task.checkDate ?? "미지정",
-      nextAction: task.nextAction ?? "미지정",
-      doneCondition: task.doneCondition ?? "미지정",
-      sourceUrl: safeNotionUrl(task.url),
-      dDayLabel: gauge.dDayLabel,
-      progress: gauge.progress,
-      tone: gauge.tone,
-    };
+  function normalizeTaskId(value) {
+    if (typeof value !== "string") return "";
+    return value.trim().toLowerCase().replace(/-/g, "");
+  }
+
+  function extractTaskId(task) {
+    const direct = normalizeTaskId(task?.id);
+    if (direct) return direct;
+    if (typeof task?.url !== "string" || !task.url) return "";
+    const pathOnly = task.url.split(/[?#]/)[0].replace(/\/+$/, "");
+    const match = pathOnly.match(/([0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+    return match ? normalizeTaskId(match[1]) : "";
   }
 
   function createOfficeModel(snapshot) {
@@ -1687,6 +1936,109 @@
       .filter((owner) => !EMPLOYEES.includes(owner)));
     const projects = ["2.3", "2.2.1", "기타"].concat([...new Set(tasks.map((task) => task.project).filter(Boolean))]
       .filter((project) => !["2.3", "2.2.1", "기타"].includes(project)));
+
+    // Index all tasks including completed ones so sub-task completion counts remain accurate.
+    const tasksById = new Map();
+    for (const task of tasks) {
+      const id = extractTaskId(task);
+      if (id && !tasksById.has(id)) {
+        tasksById.set(id, task);
+      }
+    }
+
+    const childrenByParentId = new Map();
+    const seenChildrenByParent = new Map();
+    function addChildLink(parentId, childTask) {
+      if (!parentId || !childTask) return;
+      const childId = extractTaskId(childTask);
+      if (childId && childId === parentId) return;
+      const childKey = childId || childTask;
+      let seen = seenChildrenByParent.get(parentId);
+      if (!seen) {
+        seen = new Set();
+        seenChildrenByParent.set(parentId, seen);
+      }
+      if (seen.has(childKey)) return;
+      seen.add(childKey);
+      let list = childrenByParentId.get(parentId);
+      if (!list) {
+        list = [];
+        childrenByParentId.set(parentId, list);
+      }
+      list.push(childTask);
+    }
+
+    for (const task of tasks) {
+      if (Array.isArray(task.parentTaskIds)) {
+        for (const rawParentId of task.parentTaskIds) {
+          addChildLink(normalizeTaskId(rawParentId), task);
+        }
+      }
+    }
+    for (const task of tasks) {
+      const parentId = extractTaskId(task);
+      if (!parentId || !Array.isArray(task.subTaskIds)) continue;
+      for (const rawChildId of task.subTaskIds) {
+        const childTask = tasksById.get(normalizeTaskId(rawChildId));
+        if (childTask) addChildLink(parentId, childTask);
+      }
+    }
+
+    function computeTaskProgress(task) {
+      const rawChecklist = Array.isArray(task?.checklist) ? task.checklist : [];
+      const checklistItems = rawChecklist
+        .filter((item) => item && typeof item === "object" && typeof item.text === "string" && item.text.trim())
+        .map((item) => ({ text: item.text.trim(), done: Boolean(item.done) }));
+      const checklist = checklistItems.length > 0
+        ? {
+            done: checklistItems.filter((item) => item.done).length,
+            total: checklistItems.length,
+            items: checklistItems,
+          }
+        : null;
+
+      const taskId = extractTaskId(task);
+      const linkedChildren = taskId ? (childrenByParentId.get(taskId) || []) : [];
+      const subtaskItems = linkedChildren.map((child) => ({
+        id: extractTaskId(child) || child.title || "",
+        title: child.title || "제목 없음",
+        status: child.status || "미지정",
+        owner: child.owner ?? null,
+        done: child.status === "완료",
+        sourceUrl: safeNotionUrl(child.url),
+      }));
+      const subtasks = subtaskItems.length > 0
+        ? {
+            done: subtaskItems.filter((item) => item.done).length,
+            total: subtaskItems.length,
+            items: subtaskItems,
+          }
+        : null;
+
+      return { checklist, subtasks };
+    }
+
+    function describeTask(task, referenceDateIso) {
+      const gauge = computeScheduleGauge(task, referenceDateIso);
+      const progressDetail = computeTaskProgress(task);
+      return {
+        taskKey: task.id || task.url || task.title || "",
+        title: task.title,
+        status: task.status,
+        project: projectLabel(task),
+        priority: task.priority ?? "미지정",
+        goalDate: formatGoalDate(task),
+        nextCheck: task.checkDate ?? "미지정",
+        nextAction: task.nextAction ?? "미지정",
+        doneCondition: task.doneCondition ?? "미지정",
+        sourceUrl: safeNotionUrl(task.url),
+        dDayLabel: gauge.dDayLabel,
+        progress: gauge.progress,
+        tone: gauge.tone,
+        checklist: progressDetail.checklist,
+        subtasks: progressDetail.subtasks,
+      };
+    }
 
     function parseStateCandidate(candidate) {
       if (typeof candidate === "string") {
@@ -1952,6 +2304,7 @@
     project: ALL_PROJECTS,
   };
   const WORKING_STATUSES = new Set(["진행", "검증", "장시간 테스트 중"]);
+  const openProgressDrawers = new Set();
   statusSelect.value = state.status;
   projectSelect.value = state.project;
 
@@ -2149,6 +2502,251 @@
     container.replaceChildren(...tasks.map((task) => createKanbanCard(task, true)));
   }
 
+  function createSvgNode(tag, attrs) {
+    const node = document.createElementNS
+      ? document.createElementNS("http://www.w3.org/2000/svg", tag)
+      : document.createElement(tag);
+    Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, value));
+    return node;
+  }
+
+  function createTaskProgressBox(details) {
+    if (!details.checklist && !details.subtasks) return null;
+
+    const SEGMENT_LIMIT = 12;
+    const box = document.createElement("details");
+    box.className = "kanban-progress-box";
+    if (openProgressDrawers.has(details.taskKey)) {
+      box.open = true;
+    }
+    box.addEventListener("toggle", () => {
+      if (box.open) openProgressDrawers.add(details.taskKey);
+      else openProgressDrawers.delete(details.taskKey);
+    });
+
+    const summary = document.createElement("summary");
+    summary.className = "kanban-progress-summary";
+    const rows = document.createElement("div");
+    rows.className = "kanban-progress-rows";
+
+    function createBar(done, total) {
+      const complete = total > 0 && done === total;
+      if (total <= SEGMENT_LIMIT) {
+        const segs = document.createElement("div");
+        segs.className = "kanban-progress-segs";
+        segs.setAttribute("aria-hidden", "true");
+        for (let idx = 0; idx < total; idx += 1) {
+          const seg = document.createElement("span");
+          seg.className = idx < done
+            ? (complete ? "kanban-progress-seg is-done-all" : "kanban-progress-seg is-filled")
+            : "kanban-progress-seg";
+          segs.append(seg);
+        }
+        return segs;
+      }
+      const track = document.createElement("div");
+      track.className = "kanban-progress-track";
+      track.setAttribute("aria-hidden", "true");
+      const fill = document.createElement("span");
+      fill.className = "kanban-progress-fill";
+      if (complete) fill.dataset.complete = "true";
+      if (fill.style) fill.style.width = Math.round((done / total) * 100) + "%";
+      track.append(fill);
+      return track;
+    }
+
+    function createRow(kind, labelText, iconNodes, done, total) {
+      const row = document.createElement("div");
+      row.className = "kanban-progress-row";
+      row.dataset.kind = kind;
+
+      const kindNode = document.createElement("span");
+      kindNode.className = "kanban-progress-kind";
+      const icon = createSvgNode("svg", {
+        width: "13",
+        height: "13",
+        viewBox: "0 0 16 16",
+        fill: "none",
+        "aria-hidden": "true",
+      });
+      icon.append(...iconNodes);
+      kindNode.append(icon);
+      addText(kindNode, "span", "", labelText);
+      row.append(kindNode);
+
+      row.append(createBar(done, total));
+
+      const count = addText(row, "span", "kanban-progress-count", done + "/" + total);
+      if (total > 0 && done === total) {
+        count.dataset.complete = "true";
+      }
+      return row;
+    }
+
+    if (details.checklist) {
+      rows.append(createRow(
+        "checklist",
+        "체크",
+        [
+          createSvgNode("rect", {
+            x: "2",
+            y: "2",
+            width: "12",
+            height: "12",
+            rx: "3",
+            stroke: "currentColor",
+            "stroke-width": "1.4",
+          }),
+          createSvgNode("path", {
+            d: "M5.2 8.2L7.1 10.1L11 6.1",
+            stroke: "currentColor",
+            "stroke-width": "1.5",
+            "stroke-linecap": "round",
+            "stroke-linejoin": "round",
+          }),
+        ],
+        details.checklist.done,
+        details.checklist.total,
+      ));
+    }
+
+    if (details.subtasks) {
+      rows.append(createRow(
+        "subtasks",
+        "하위",
+        [
+          createSvgNode("circle", { cx: "4", cy: "3.5", r: "1.6", stroke: "currentColor", "stroke-width": "1.4" }),
+          createSvgNode("circle", { cx: "11.5", cy: "7.5", r: "1.6", stroke: "currentColor", "stroke-width": "1.4" }),
+          createSvgNode("circle", { cx: "11.5", cy: "12.5", r: "1.6", stroke: "currentColor", "stroke-width": "1.4" }),
+          createSvgNode("path", {
+            d: "M4 5.2V12.5H9.8M4 7.5H9.8",
+            stroke: "currentColor",
+            "stroke-width": "1.4",
+            "stroke-linecap": "round",
+            "stroke-linejoin": "round",
+          }),
+        ],
+        details.subtasks.done,
+        details.subtasks.total,
+      ));
+    }
+
+    const chevron = createSvgNode("svg", {
+      class: "kanban-progress-chevron",
+      width: "13",
+      height: "13",
+      viewBox: "0 0 16 16",
+      fill: "none",
+      "aria-hidden": "true",
+    });
+    chevron.append(createSvgNode("path", {
+      d: "M4 6L8 10L12 6",
+      stroke: "currentColor",
+      "stroke-width": "1.6",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+    }));
+
+    summary.append(rows, chevron);
+    box.append(summary);
+
+    const drawer = document.createElement("div");
+    drawer.className = "kanban-progress-drawer";
+
+    if (details.checklist) {
+      const group = document.createElement("div");
+      group.className = "kanban-progress-group";
+      group.dataset.group = "checklist";
+      addText(
+        group,
+        "div",
+        "kanban-progress-group-title",
+        "체크리스트 (" + details.checklist.done + "/" + details.checklist.total + ")",
+      );
+      const list = document.createElement("ul");
+      list.className = "kanban-progress-list";
+      details.checklist.items.forEach((item) => {
+        const li = document.createElement("li");
+        li.className = item.done ? "kanban-progress-item is-done" : "kanban-progress-item";
+        li.dataset.done = String(item.done);
+        const mark = document.createElement("span");
+        mark.className = "kanban-check-mark";
+        mark.setAttribute("aria-hidden", "true");
+        const markSvg = createSvgNode("svg", {
+          width: "13",
+          height: "13",
+          viewBox: "0 0 16 16",
+          fill: "none",
+          "aria-hidden": "true",
+        });
+        markSvg.append(createSvgNode("rect", {
+          x: "2",
+          y: "2",
+          width: "12",
+          height: "12",
+          rx: "3",
+          stroke: "currentColor",
+          "stroke-width": "1.4",
+        }));
+        if (item.done) {
+          markSvg.append(createSvgNode("path", {
+            d: "M5.2 8.2L7.1 10.1L11 6.1",
+            stroke: "currentColor",
+            "stroke-width": "1.5",
+            "stroke-linecap": "round",
+            "stroke-linejoin": "round",
+          }));
+        }
+        mark.append(markSvg);
+        li.append(mark);
+        addText(li, "span", "kanban-progress-item-text", item.text);
+        list.append(li);
+      });
+      group.append(list);
+      drawer.append(group);
+    }
+
+    if (details.subtasks) {
+      const group = document.createElement("div");
+      group.className = "kanban-progress-group";
+      group.dataset.group = "subtasks";
+      addText(
+        group,
+        "div",
+        "kanban-progress-group-title",
+        "하위 일감 (" + details.subtasks.done + "/" + details.subtasks.total + ")",
+      );
+      const list = document.createElement("ul");
+      list.className = "kanban-progress-list";
+      details.subtasks.items.forEach((item) => {
+        const li = document.createElement("li");
+        li.className = item.done ? "kanban-progress-item is-done" : "kanban-progress-item";
+        li.dataset.done = String(item.done);
+        const dot = document.createElement("span");
+        dot.className = "status-dot";
+        dot.dataset.status = item.status;
+        dot.setAttribute("aria-hidden", "true");
+        li.append(dot);
+        if (item.sourceUrl) {
+          const link = document.createElement("a");
+          link.className = "kanban-subtask-link";
+          link.textContent = item.title;
+          setSafeHref(link, item.sourceUrl);
+          li.append(link);
+        } else {
+          addText(li, "span", "kanban-progress-item-text", item.title);
+        }
+        addText(li, "span", "kanban-subtask-status", item.status);
+        list.append(li);
+      });
+      group.append(list);
+      drawer.append(group);
+    }
+
+    box.append(drawer);
+    return box;
+  }
+
   function createKanbanCard(task, showExactStatus) {
     const details = model.describeTask(task);
     const card = document.createElement("article");
@@ -2180,13 +2778,6 @@
       link.setAttribute("aria-label", "Notion에서 보기");
       link.setAttribute("title", "Notion에서 보기");
       setSafeHref(link, details.sourceUrl);
-      const createSvgNode = (tag, attrs) => {
-        const node = document.createElementNS
-          ? document.createElementNS("http://www.w3.org/2000/svg", tag)
-          : document.createElement(tag);
-        Object.entries(attrs).forEach(([key, value]) => node.setAttribute(key, value));
-        return node;
-      };
       const svg = createSvgNode("svg", {
         viewBox: "0 0 24 24",
         fill: "none",
@@ -2235,6 +2826,9 @@
       addText(next, "span", "", details.nextAction);
       card.append(next);
     }
+
+    const progressBox = createTaskProgressBox(details);
+    if (progressBox) card.append(progressBox);
 
     if (details.doneCondition && details.doneCondition !== "미지정") {
       const cond = document.createElement("details");
@@ -2482,6 +3076,9 @@
   const STATIC_MAX_RETRIES = 2;
   const STATIC_MAX_PAGES = 100;
   const STATIC_REQUEST_TIMEOUT_MS = 10_000;
+  const STATIC_CHECKLIST_MAX_PAGES = 5;
+  const STATIC_CHECKLIST_MAX_DEPTH = 3;
+  const STATIC_CHECKLIST_CONCURRENCY = 3;
   const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const TOKEN_INVALID_PATTERN = /[\s\u0000-\u001F\u007F]/;
 
@@ -2636,9 +3233,12 @@
     const properties = page?.properties || {};
     const taskDate = properties["목표일"]?.date;
     return {
+      id: typeof page?.id === "string" ? page.id : "",
       url: typeof page?.url === "string" ? page.url : "",
       title: staticPlainText(properties["일감"]?.title) || "제목 없음",
-      parentTaskIds: (properties["상위 일감"]?.relation || []).map((parent) => parent.id),
+      parentTaskIds: (properties["상위 일감"]?.relation || []).map((parent) => parent.id).filter(Boolean),
+      subTaskIds: (properties["하위 일감"]?.relation || []).map((child) => child.id).filter(Boolean),
+      checklist: [],
       owner: staticSelectName(properties["담당자"]?.select),
       status: staticSelectName(properties["상태"]?.status) || "미지정",
       project: staticSelectName(properties["프로젝트"]?.select),
@@ -2672,6 +3272,165 @@
     return Number.isFinite(parsedDate) ? Math.max(0, parsedDate - Date.now()) : null;
   }
 
+  function createStaticAbortError() {
+    const abortErr = new Error("요청이 취소되었습니다.");
+    abortErr.code = "NOTION_ABORTED";
+    return abortErr;
+  }
+
+  function staticWait(ms, signal) {
+    if (signal?.aborted) return Promise.reject(createStaticAbortError());
+    return new Promise((resolve, reject) => {
+      const onAbort = () => {
+        clearTimeout(timer);
+        reject(createStaticAbortError());
+      };
+      const timer = setTimeout(() => {
+        signal?.removeEventListener("abort", onAbort);
+        resolve();
+      }, ms);
+      signal?.addEventListener("abort", onAbort, { once: true });
+    });
+  }
+
+  async function staticNotionRequest(endpoint, requestOptions, signal) {
+    let retryCount = 0;
+    while (true) {
+      if (signal?.aborted) {
+        throw createStaticAbortError();
+      }
+      const controller = new AbortController();
+      let timedOut = false;
+      let cancelled = false;
+      const onAbort = () => {
+        cancelled = true;
+        controller.abort();
+      };
+      signal?.addEventListener("abort", onAbort, { once: true });
+      const timer = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, STATIC_REQUEST_TIMEOUT_MS);
+
+      let response;
+      try {
+        response = await fetch(endpoint, {
+          ...requestOptions,
+          redirect: "error",
+          credentials: "omit",
+          cache: "no-store",
+          signal: controller.signal,
+        });
+      } catch (error) {
+        clearTimeout(timer);
+        signal?.removeEventListener("abort", onAbort);
+        if (cancelled || signal?.aborted) {
+          throw createStaticAbortError();
+        }
+        if (timedOut || error?.name === "AbortError") {
+          throw new Error("Notion 조회 요청 시간이 초과되었습니다.");
+        }
+        throw new Error("Notion API 또는 네트워크에 연결할 수 없습니다.");
+      }
+
+      if (response.status === 429) {
+        const retryDelay = staticParseRetryAfter(response.headers.get("retry-after")) ??
+          Math.min(1000 * (2 ** retryCount), STATIC_MAX_RETRY_AFTER_MS);
+        try { await response.body?.cancel(); } catch {}
+        clearTimeout(timer);
+        signal?.removeEventListener("abort", onAbort);
+        if (retryDelay > STATIC_MAX_RETRY_AFTER_MS || retryCount >= STATIC_MAX_RETRIES) {
+          throw new Error("Notion 요청 한도(429)에 도달했습니다. 잠시 후 다시 시도하세요.");
+        }
+        await staticWait(retryDelay, signal);
+        retryCount += 1;
+        continue;
+      }
+
+      if (!response.ok) {
+        const upstreamStatus = response.status;
+        try { await response.body?.cancel(); } catch {}
+        clearTimeout(timer);
+        signal?.removeEventListener("abort", onAbort);
+        const err = upstreamStatus === 401 || upstreamStatus === 403
+          ? new Error("인증 또는 권한 오류(HTTP " + upstreamStatus + "): Notion Integration의 Read content 권한과 단일 DB 연결, 토큰·데이터 소스 ID를 확인하세요.")
+          : new Error("Notion 조회가 실패했습니다 (HTTP " + upstreamStatus + ").");
+        err.upstreamStatus = upstreamStatus;
+        throw err;
+      }
+
+      try {
+        return await response.json();
+      } catch (error) {
+        if (cancelled || signal?.aborted) {
+          throw createStaticAbortError();
+        }
+        if (timedOut || error?.name === "AbortError") {
+          throw new Error("Notion 응답 본문 수신 시간이 초과되었습니다.");
+        }
+        throw new Error("Notion API가 유효한 JSON 응답을 반환하지 않았습니다.");
+      } finally {
+        clearTimeout(timer);
+        signal?.removeEventListener("abort", onAbort);
+      }
+    }
+  }
+
+  async function fetchPageChecklistStatic(token, blockId, signal) {
+    const items = [];
+    const visited = new Set();
+
+    async function walkBlocks(currentBlockId, depth) {
+      const normalized = normalizeTaskId(currentBlockId);
+      if (!currentBlockId || (normalized && visited.has(normalized))) return;
+      if (normalized) visited.add(normalized);
+
+      let cursor = null;
+      let pageCount = 0;
+      while (pageCount < STATIC_CHECKLIST_MAX_PAGES) {
+        if (signal?.aborted) throw createStaticAbortError();
+        let endpoint = STATIC_NOTION_API_ROOT + "/blocks/" + encodeURIComponent(currentBlockId) + "/children?page_size=100";
+        if (cursor) endpoint += "&start_cursor=" + encodeURIComponent(cursor);
+        const payload = await staticNotionRequest(endpoint, {
+          method: "GET",
+          headers: {
+            Authorization: "Bearer " + token,
+            "Notion-Version": STATIC_NOTION_VERSION,
+          },
+        }, signal);
+
+        const blocks = Array.isArray(payload?.results) ? payload.results : [];
+        for (const block of blocks) {
+          if (block?.type === "to_do") {
+            const text = staticPlainText(block.to_do?.rich_text);
+            if (text) {
+              items.push({ text, done: Boolean(block.to_do?.checked) });
+            }
+          }
+          if (
+            block?.has_children &&
+            block.type !== "child_page" &&
+            block.type !== "child_database" &&
+            typeof block.id === "string" &&
+            block.id &&
+            depth < STATIC_CHECKLIST_MAX_DEPTH
+          ) {
+            await walkBlocks(block.id, depth + 1);
+          }
+        }
+
+        pageCount += 1;
+        if (!payload?.has_more || typeof payload.next_cursor !== "string" || !payload.next_cursor) {
+          break;
+        }
+        cursor = payload.next_cursor;
+      }
+    }
+
+    await walkBlocks(blockId, 0);
+    return items;
+  }
+
   async function fetchNotionSnapshotStatic(connection, signal) {
     const valid = validateStaticConnection(connection);
     if (!valid.ok) throw new Error(valid.error);
@@ -2688,101 +3447,15 @@
       const body = { page_size: 100 };
       if (cursor) body.start_cursor = cursor;
 
-      let retryCount = 0;
-      let pagePayload = null;
-      while (true) {
-        if (signal?.aborted) {
-          const abortErr = new Error("요청이 취소되었습니다.");
-          abortErr.code = "NOTION_ABORTED";
-          throw abortErr;
-        }
-        const controller = new AbortController();
-        let timedOut = false;
-        let cancelled = false;
-        const onAbort = () => {
-          cancelled = true;
-          controller.abort();
-        };
-        signal?.addEventListener("abort", onAbort, { once: true });
-        const timer = setTimeout(() => {
-          timedOut = true;
-          controller.abort();
-        }, STATIC_REQUEST_TIMEOUT_MS);
-
-        let response;
-        try {
-          response = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-              Authorization: "Bearer " + token,
-              "Content-Type": "application/json",
-              "Notion-Version": STATIC_NOTION_VERSION,
-            },
-            body: JSON.stringify(body),
-            redirect: "error",
-            credentials: "omit",
-            cache: "no-store",
-            signal: controller.signal,
-          });
-        } catch (error) {
-          clearTimeout(timer);
-          signal?.removeEventListener("abort", onAbort);
-          if (cancelled || signal?.aborted) {
-            const abortErr = new Error("요청이 취소되었습니다.");
-            abortErr.code = "NOTION_ABORTED";
-            throw abortErr;
-          }
-          if (timedOut || error?.name === "AbortError") {
-            throw new Error("Notion 조회 요청 시간이 초과되었습니다.");
-          }
-          throw new Error("Notion API 또는 네트워크에 연결할 수 없습니다.");
-        }
-
-        if (response.status === 429) {
-          const retryDelay = staticParseRetryAfter(response.headers.get("retry-after")) ??
-            Math.min(1000 * (2 ** retryCount), STATIC_MAX_RETRY_AFTER_MS);
-          try { await response.body?.cancel(); } catch {}
-          clearTimeout(timer);
-          signal?.removeEventListener("abort", onAbort);
-          if (retryDelay > STATIC_MAX_RETRY_AFTER_MS || retryCount >= STATIC_MAX_RETRIES) {
-            throw new Error("Notion 요청 한도(429)에 도달했습니다. 잠시 후 다시 시도하세요.");
-          }
-          await new Promise((resolve) => setTimeout(resolve, retryDelay));
-          retryCount += 1;
-          continue;
-        }
-
-        if (!response.ok) {
-          const upstreamStatus = response.status;
-          try { await response.body?.cancel(); } catch {}
-          clearTimeout(timer);
-          signal?.removeEventListener("abort", onAbort);
-          const err = upstreamStatus === 401 || upstreamStatus === 403
-            ? new Error("인증 또는 권한 오류(HTTP " + upstreamStatus + "): Notion Integration의 Read content 권한과 단일 DB 연결, 토큰·데이터 소스 ID를 확인하세요.")
-            : new Error("Notion 조회가 실패했습니다 (HTTP " + upstreamStatus + ").");
-          err.upstreamStatus = upstreamStatus;
-          throw err;
-        }
-
-        try {
-          pagePayload = await response.json();
-        } catch (error) {
-          clearTimeout(timer);
-          signal?.removeEventListener("abort", onAbort);
-          if (cancelled || signal?.aborted) {
-            const abortErr = new Error("요청이 취소되었습니다.");
-            abortErr.code = "NOTION_ABORTED";
-            throw abortErr;
-          }
-          if (timedOut || error?.name === "AbortError") {
-            throw new Error("Notion 응답 본문 수신 시간이 초과되었습니다.");
-          }
-          throw new Error("Notion API가 유효한 JSON 응답을 반환하지 않았습니다.");
-        }
-        clearTimeout(timer);
-        signal?.removeEventListener("abort", onAbort);
-        break;
-      }
+      const pagePayload = await staticNotionRequest(endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + token,
+          "Content-Type": "application/json",
+          "Notion-Version": STATIC_NOTION_VERSION,
+        },
+        body: JSON.stringify(body),
+      }, signal);
 
       if (pagePayload?.request_status?.type === "incomplete") {
         throw new Error("Notion 조회 결과가 불완전(incomplete)하여 기존 데이터를 유지합니다.");
@@ -2798,6 +3471,23 @@
       }
       cursor = pagePayload.next_cursor;
     }
+
+    const activeTasks = results.filter((task) => task.status !== "완료" && typeof task.id === "string" && task.id.trim());
+    let nextIndex = 0;
+    const workerCount = Math.min(STATIC_CHECKLIST_CONCURRENCY, activeTasks.length);
+    await Promise.all(Array.from({ length: workerCount }, async () => {
+      while (nextIndex < activeTasks.length) {
+        if (signal?.aborted) throw createStaticAbortError();
+        const task = activeTasks[nextIndex];
+        nextIndex += 1;
+        try {
+          task.checklist = await fetchPageChecklistStatic(token, task.id, signal);
+        } catch (error) {
+          if (signal?.aborted || error?.code === "NOTION_ABORTED") throw error;
+          task.checklist = [];
+        }
+      }
+    }));
 
     return {
       snapshotDate: staticTodayInKorea(),
@@ -2860,6 +3550,7 @@
   }
 
   function clearViewDom() {
+    openProgressDrawers.clear();
     snapshot = createEmptySnapshotObject();
     model = createOfficeModel(snapshot);
     hasLiveModel = false;

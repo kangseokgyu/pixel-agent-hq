@@ -83,6 +83,8 @@ class MockElement {
     this.id = id;
     this.className = "";
     this.dataset = {};
+    this.style = {};
+    this.open = false;
     this.attributes = {};
     this.children = [];
     this.listeners = new Map();
@@ -263,6 +265,7 @@ function createDomEnvironment(html, { opfs, fetchImpl, onLine = true } = {}) {
     document: {
       getElementById: (id) => byId.get(id) ?? null,
       createElement: (tag) => new MockElement(tag),
+      createElementNS: (_ns, tag) => new MockElement(tag),
     },
     navigator: {
       onLine,
@@ -341,8 +344,18 @@ test("connects via OPFS, queries read-only Notion API directly, keeps data on tr
   let releasePending = null;
 
   const fetchImpl = async (url, options) => {
-    fetchCalls.push({ url: String(url), options });
+    const urlStr = String(url);
+    fetchCalls.push({ url: urlStr, options });
     if (mode === "ok") {
+      if (urlStr.includes("/blocks/") && urlStr.includes("/children")) {
+        return new Response(JSON.stringify({
+          results: [
+            { id: "todo-1", type: "to_do", has_children: false, to_do: { checked: true, rich_text: [{ plain_text: "정적 체크 1" }] } },
+            { id: "todo-2", type: "to_do", has_children: false, to_do: { checked: false, rich_text: [{ plain_text: "정적 체크 2" }] } },
+          ],
+          has_more: false,
+        }), { status: 200, headers: { "content-type": "application/json" } });
+      }
       return makeNotionResponse("신규 OPFS 조회 일감", "sb");
     }
     if (mode === "fail-502") {
@@ -371,17 +384,24 @@ test("connects via OPFS, queries read-only Notion API directly, keeps data on tr
   await env.byId.get("wips-office-connection-form").dispatchEvent({ type: "submit" });
   await flushMicrotasks();
 
-  assert.equal(fetchCalls.length, 1);
+  assert.equal(fetchCalls.length, 2);
   assert.equal(fetchCalls[0].url, "https://api.notion.com/v1/data_sources/11111111-2222-4333-8444-555555555555/query");
   assert.equal(fetchCalls[0].options.method, "POST");
   assert.equal(fetchCalls[0].options.redirect, "error");
   assert.equal(fetchCalls[0].options.credentials, "omit");
   assert.equal(fetchCalls[0].options.cache, "no-store");
+  assert.equal(fetchCalls[1].url, "https://api.notion.com/v1/blocks/aaaa1111bbbb2222cccc3333dddd4444/children?page_size=100");
+  assert.equal(fetchCalls[1].options.method, "GET");
+  assert.equal(fetchCalls[1].options.redirect, "error");
+  assert.equal(fetchCalls[1].options.credentials, "omit");
+  assert.equal(fetchCalls[1].options.cache, "no-store");
 
   assert.equal(env.byId.get("wips-office-main-view").hidden, false);
   assert.equal(env.byId.get("wips-office-connection-panel").hidden, true);
   assert.equal(env.byId.get("wips-office-logout").hidden, false);
   assert.match(env.byId.get("wips-office-selected-tasks").textContent, /신규 OPFS 조회 일감/);
+  assert.match(env.byId.get("wips-office-selected-tasks").textContent, /1\/2/);
+  assert.match(env.byId.get("wips-office-selected-tasks").textContent, /정적 체크 1/);
   assert.equal(env.localStore.size, 0, "tokens and task snapshots must never be stored in localStorage");
   assert.equal(opfs.dirs.get("wips-office-private-v1").has("connection.json"), true);
   assert.equal(opfs.dirs.get("wips-office-private-v1").has("snapshot-cache.json"), true);
@@ -451,4 +471,99 @@ test("preserves existing local server mode (/api/tasks) when non-empty snapshot 
   assert.equal(env.byId.get("wips-office-connect-toggle").hidden, true);
   assert.equal(env.byId.get("wips-office-logout").hidden, true);
   assert.match(env.byId.get("wips-office-selected-tasks").textContent, /로컬 서버 일감/);
+});
+
+test("static checklist fetcher recurses into nested blocks, skips child_page/completed tasks, and falls back on per-page errors", async () => {
+  const staticHtml = injectEmptySnapshot(officeHtml, emptySnapshot);
+  const opfs = createMockOpfsStore();
+  const blockUrls = [];
+
+  const fetchImpl = async (url) => {
+    const urlStr = String(url);
+    if (urlStr.includes("/data_sources/") && urlStr.includes("/query")) {
+      return new Response(JSON.stringify({
+        results: [
+          {
+            id: "active-nested-id",
+            url: "https://app.notion.com/00000000000000000000000000000201",
+            properties: {
+              일감: { title: [{ plain_text: "중첩 체크 일감" }] },
+              담당자: { select: { name: "sb" } },
+              상태: { status: { name: "진행" } },
+              프로젝트: { select: { name: "2.3" } },
+              "하위 일감": { relation: [{ id: "completed-child-id" }] },
+            },
+          },
+          {
+            id: "active-error-id",
+            url: "https://app.notion.com/00000000000000000000000000000202",
+            properties: {
+              일감: { title: [{ plain_text: "블록 실패 일감" }] },
+              담당자: { select: { name: "sb" } },
+              상태: { status: { name: "예정" } },
+              프로젝트: { select: { name: "2.3" } },
+            },
+          },
+          {
+            id: "completed-child-id",
+            url: "https://app.notion.com/00000000000000000000000000000203",
+            properties: {
+              일감: { title: [{ plain_text: "완료된 하위 일감" }] },
+              담당자: { select: { name: "sb" } },
+              상태: { status: { name: "완료" } },
+              프로젝트: { select: { name: "2.3" } },
+            },
+          },
+        ],
+        has_more: false,
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+
+    blockUrls.push(urlStr);
+    if (urlStr.includes("/blocks/active-nested-id/children")) {
+      return new Response(JSON.stringify({
+        results: [
+          { id: "toggle-1", type: "toggle", has_children: true },
+          { id: "sub-page-1", type: "child_page", has_children: true },
+          { id: "sub-db-1", type: "child_database", has_children: true },
+        ],
+        has_more: false,
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (urlStr.includes("/blocks/toggle-1/children")) {
+      return new Response(JSON.stringify({
+        results: [
+          { id: "todo-nested-1", type: "to_do", has_children: false, to_do: { checked: true, rich_text: [{ plain_text: "토글 내부 완료" }] } },
+          { id: "todo-nested-2", type: "to_do", has_children: false, to_do: { checked: false, rich_text: [{ plain_text: "토글 내부 미완료" }] } },
+        ],
+        has_more: false,
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    if (urlStr.includes("/blocks/active-error-id/children")) {
+      return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });
+    }
+    assert.fail(`unexpected block fetch: ${urlStr}`);
+  };
+
+  const env = createDomEnvironment(staticHtml, { opfs, fetchImpl });
+  await flushMicrotasks();
+
+  env.byId.get("wips-office-token").value = "demo_readonly_token_123";
+  env.byId.get("wips-office-datasource-id").value = "11111111-2222-4333-8444-555555555555";
+  await env.byId.get("wips-office-connection-form").dispatchEvent({ type: "submit" });
+  await flushMicrotasks();
+
+  assert.equal(blockUrls.some((u) => u.includes("completed-child-id")), false, "must skip completed tasks");
+  assert.equal(blockUrls.some((u) => u.includes("sub-page-1")), false, "must skip child_page blocks");
+  assert.equal(blockUrls.some((u) => u.includes("sub-db-1")), false, "must skip child_database blocks");
+  assert.equal(blockUrls.some((u) => u.includes("toggle-1")), true, "must recurse into toggle blocks");
+
+  const boardText = env.byId.get("wips-office-selected-tasks").textContent;
+  assert.match(boardText, /중첩 체크 일감/);
+  assert.match(boardText, /블록 실패 일감/);
+  assert.match(boardText, /토글 내부 완료/);
+  assert.match(boardText, /토글 내부 미완료/);
+  assert.match(boardText, /1\/2/);
+  assert.match(boardText, /완료된 하위 일감/);
+  assert.match(boardText, /1\/1/);
 });

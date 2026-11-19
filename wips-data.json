@@ -33,9 +33,28 @@
       "startDate": null,
       "endDate": null,
       "checkDate": null,
-      "parentTaskIds": []
+      "parentTaskIds": [],
+      "checklist": [
+        {
+          "text": "로그인 회귀 시나리오 확인",
+          "done": true
+        },
+        {
+          "text": "권한 매트릭스 점검",
+          "done": true
+        },
+        {
+          "text": "오프라인 동기화 검증",
+          "done": true
+        },
+        {
+          "text": "배포 체크리스트 최종 확인",
+          "done": true
+        }
+      ]
     },
     {
+      "id": "00000000-0000-4000-8000-000000000101",
       "url": "https://app.notion.com/00000000000000000000000000000003",
       "title": "샘플 업무 03",
       "owner": "sb",
@@ -48,7 +67,29 @@
       "startDate": "2026-11-13",
       "endDate": null,
       "checkDate": null,
-      "parentTaskIds": []
+      "parentTaskIds": [],
+      "checklist": [
+        {
+          "text": "OAuth 토큰 발급 확인",
+          "done": true
+        },
+        {
+          "text": "리프레시 만료 처리 점검",
+          "done": true
+        },
+        {
+          "text": "401 재시도 시나리오 검증",
+          "done": true
+        },
+        {
+          "text": "동시 요청 락 재현 및 로그 첨부",
+          "done": false
+        },
+        {
+          "text": "로그 민감정보 마스킹 점검",
+          "done": false
+        }
+      ]
     },
     {
       "url": "https://app.notion.com/00000000000000000000000000000004",
@@ -127,7 +168,25 @@
       "startDate": "2026-11-13",
       "endDate": null,
       "checkDate": "2026-11-12",
-      "parentTaskIds": []
+      "parentTaskIds": [],
+      "checklist": [
+        {
+          "text": "품질 기준 문서 검토",
+          "done": true
+        },
+        {
+          "text": "테스트 데이터셋 준비",
+          "done": true
+        },
+        {
+          "text": "성능 지표 측정 기록",
+          "done": false
+        },
+        {
+          "text": "최종 검수 결과 공유",
+          "done": false
+        }
+      ]
     },
     {
       "url": "https://app.notion.com/00000000000000000000000000000009",

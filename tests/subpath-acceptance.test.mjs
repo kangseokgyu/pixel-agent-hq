@@ -167,6 +167,8 @@ test("built dist/index.html srcdoc runs zero-data boot, OPFS live query, transie
           id,
           className: "",
           dataset: {},
+          style: {},
+          open: false,
           attributes: {},
           children: [],
           listeners,
@@ -249,9 +251,16 @@ test("built dist/index.html srcdoc runs zero-data boot, OPFS live query, transie
     const session1 = bootSrcdoc({
       onLine: true,
       fetchImpl: async (url, init) => {
-        fetchCalls.push({ url: String(url), method: init.method });
+        const urlStr = String(url);
+        fetchCalls.push({ url: urlStr, method: init.method });
         if (mode === "502") {
           return new Response(JSON.stringify({ error: "Upstream unavailable" }), { status: 502 });
+        }
+        if (urlStr.includes("/blocks/") && urlStr.includes("/children")) {
+          return new Response(JSON.stringify({ results: [], has_more: false }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
         }
         return new Response(JSON.stringify({
           results: [{
