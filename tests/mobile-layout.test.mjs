@@ -14,6 +14,14 @@ test("includes responsive mobile touch targets, input zoom prevention, and overf
   assert.match(style, /overflow-x:\s*(?:hidden|clip)/);
 });
 
+test("uses a 6-column 3+2 pixel stage on mobile viewports instead of a 1-column vertical stack", () => {
+  const style = officeHtml.match(/<style>([\s\S]*?)<\/style>/)?.[1] || "";
+  assert.match(style, /@media\s*\(max-width:\s*620px\)[\s\S]*#wips-office-root\s+\.office-grid[\s\S]*grid-template-columns:\s*repeat\(6,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(style, /#wips-office-root\s+\.workstation[\s\S]*grid-column:\s*span\s+2/);
+  assert.match(style, /#wips-office-root\s+\.workstation:nth-child\(3n\s*\+\s*1\):nth-last-child\(2\)[\s\S]*grid-column:\s*span\s+3/);
+  assert.doesNotMatch(style, /#wips-office-root\s+\.office-grid\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+});
+
 test("swaps seats via select control, persists in localStorage, and handles blocked storage gracefully", () => {
   const modelScript = officeHtml.match(/<script id="office-model">([\s\S]*?)<\/script>/)?.[1];
   assert.ok(modelScript);

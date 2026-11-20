@@ -2884,13 +2884,21 @@ html&gt;body{padding:0}&lt;/style&gt;
 #wips-office-root .person-hair { background: var(--office-hair); }
 @media (max-width: 620px) {
   #wips-office-root .office-room {
+    display: flex;
+    flex-direction: column;
     container-type: normal;
     aspect-ratio: auto;
+    border-width: 4px;
+    border-radius: 10px;
+    background-image:
+      linear-gradient(180deg, rgba(15, 23, 42, 0.08) 0%, rgba(15, 23, 42, 0.24) 36%, rgba(10, 17, 30, 0.88) 54%, rgba(10, 17, 30, 0.96) 100%),
+      var(--hq-room-bg);
     background-size: 100% auto;
     background-position: top center;
-    padding: calc(55.8% + 14px) 10px 18px;
+    padding: calc(40% + 8px) 8px 14px;
   }
   #wips-office-root .hq-billboard {
+    order: 2;
     position: static;
     left: auto;
     top: auto;
@@ -2898,7 +2906,8 @@ html&gt;body{padding:0}&lt;/style&gt;
     height: auto;
     gap: 8px;
     padding: 10px;
-    margin-bottom: 14px;
+    margin-top: 12px;
+    margin-bottom: 0;
   }
   #wips-office-root .hq-billboard-head {
     padding-bottom: 6px;
@@ -2923,40 +2932,108 @@ html&gt;body{padding:0}&lt;/style&gt;
   #wips-office-root .hq-ticker-empty { font-size: 11px; }
   #wips-office-root .hq-ticker-track { gap: 12px; }
   #wips-office-root .office-grid {
+    order: 1;
     position: relative;
     inset: auto;
+    width: 100%;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px 12px;
-    align-items: end;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px 6px;
+    align-items: stretch;
   }
   #wips-office-root .workstation {
     position: static;
-    width: auto;
+    width: 100%;
+    min-width: 0;
     transform: none;
+    grid-column: span 2;
+    grid-template-rows: auto 1fr;
+    align-content: end;
+    justify-items: center;
+    gap: 4px;
+    padding: 6px 4px 8px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(51, 74, 102, 0.78);
+    background: rgba(9, 15, 28, 0.68);
+    box-shadow: 0 4px 12px rgba(2, 6, 23, 0.35);
   }
   #wips-office-root .workstation:nth-child(n) {
     left: auto;
     top: auto;
+  }
+  #wips-office-root .workstation:nth-child(3n + 1):nth-last-child(2),
+  #wips-office-root .workstation:nth-child(3n + 2):last-child {
+    grid-column: span 3;
+    padding: 8px;
+  }
+  #wips-office-root .workstation:nth-child(3n + 1):last-child {
+    grid-column: 1 / -1;
+    padding: 8px 10px;
+  }
+  #wips-office-root .workstation:has(.employee-button[aria-pressed=&quot;true&quot;]) {
+    border-color: var(--office-cyan);
+    background: rgba(12, 30, 52, 0.9);
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
   }
   #wips-office-root .workstation:nth-child(2) .speech-bubble {
     position: relative;
     right: auto;
     bottom: auto;
   }
+  #wips-office-root .speech-bubble {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 3px 3px 4px;
+    border-radius: 6px;
+    border-color: #334155;
+    background-color: rgba(15, 23, 42, 0.88);
+  }
+  #wips-office-root .hud-header {
+    width: 100%;
+    min-width: 0;
+    font-size: 9px;
+    letter-spacing: 0;
+  }
+  #wips-office-root .hud-tag,
+  #wips-office-root .hud-state {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #wips-office-root .hud-state {
+    font-size: 7.5px;
+  }
+  #wips-office-root .hud-meter {
+    width: 100%;
+    max-width: 100%;
+  }
+  #wips-office-root .employee-button {
+    width: 100%;
+    min-height: 52px;
+    display: grid;
+    place-items: end center;
+    padding: 2px;
+  }
+  #wips-office-root .employee-button[aria-pressed=&quot;true&quot;] {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
   #wips-office-root .person-art::before,
   #wips-office-root .person-art[data-employee]::before {
-    width: 46px;
-    height: 62px;
+    width: 40px;
+    height: 54px;
   }
   #wips-office-root .person-art[data-employee=&quot;sb&quot;] { --agent-sprite: var(--agent-mobile-sb); }
   #wips-office-root .person-art[data-employee=&quot;이요원&quot;] { --agent-sprite: var(--agent-mobile-lee); }
   #wips-office-root .person-art[data-employee=&quot;여이전트&quot;] { --agent-sprite: var(--agent-mobile-yeo); }
   #wips-office-root .person-art[data-employee=&quot;UI&quot;] { --agent-sprite: var(--agent-mobile-ui); }
-}
-@media (max-width: 420px) {
-  #wips-office-root .office-grid { grid-template-columns: minmax(0, 1fr); }
-  #wips-office-root .speech-bubble { max-width: 260px; }
+  #wips-office-root .seat-control,
+  #wips-office-root .seat-control select {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 #wips-office-root .selected-work h2,
@@ -3394,14 +3471,12 @@ html&gt;body{padding:0}&lt;/style&gt;
   #wips-office-root .task-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 620px) {
-  #wips-office-root .office-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #wips-office-root .task-list { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 560px) {
   #wips-office-root .kanban-board { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 380px) {
-  #wips-office-root .office-grid { grid-template-columns: minmax(0, 1fr); }
   #wips-office-root .filter-field { min-width: 100%; }
 }
 #wips-office-root [hidden] { display: none !important; }
@@ -3515,11 +3590,6 @@ html&gt;body{padding:0}&lt;/style&gt;
   }
   #wips-office-root .connection-actions {
     flex-direction: column;
-  }
-  #wips-office-root .office-room {
-    border-width: 6px;
-    border-bottom-width: 10px;
-    padding: 20px 8px 18px;
   }
 }
 &lt;/style&gt;
