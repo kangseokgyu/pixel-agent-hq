@@ -407,7 +407,6 @@
 #wips-office-root p {
   margin: 0;
 }
-#wips-office-root .office-header,
 #wips-office-root .section-heading,
 #wips-office-root .count-line {
   display: flex;
@@ -417,35 +416,47 @@
   flex-wrap: wrap;
 }
 #wips-office-root .office-header {
-  align-items: flex-start;
-  margin-block-end: calc(var(--font-size-base) * 0.8);
-}
-#wips-office-root .title-stack {
   display: grid;
-  gap: calc(var(--font-size-base) * 0.35);
+  gap: calc(var(--font-size-base) * 0.3);
+  margin-block-end: calc(var(--font-size-base) * 0.8);
   min-width: 0;
 }
-#wips-office-root .snapshot-meta,
+#wips-office-root .office-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+#wips-office-root #wips-office-title {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#wips-office-root .header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: calc(var(--font-size-base) * 0.25) calc(var(--font-size-base) * 0.6);
+  font-size: calc(var(--font-size-base) * 0.85);
+  min-width: 0;
+}
 #wips-office-root .section-note,
 #wips-office-root .count-line {
   color: var(--muted-foreground);
 }
-#wips-office-root .snapshot-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: calc(var(--font-size-base) * 0.5);
-}
-#wips-office-root .snapshot-meta a,
+#wips-office-root .header-meta a,
 #wips-office-root .task-source {
   color: var(--primary);
 }
 #wips-office-root .sync-controls {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: calc(var(--font-size-base) * 0.6);
-  margin-block-start: calc(var(--font-size-base) * 0.5);
+  flex-wrap: nowrap;
+  gap: 2px;
+  flex: none;
 }
 #wips-office-root .sync-status {
   color: var(--muted-foreground);
@@ -453,6 +464,10 @@
 }
 #wips-office-root .sync-status[data-state="error"] { color: var(--destructive); }
 #wips-office-root .sync-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 0.35em 0.8em;
@@ -462,6 +477,34 @@
   cursor: pointer;
 }
 #wips-office-root .sync-button:disabled { cursor: wait; opacity: 0.65; }
+#wips-office-root .sync-button--icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted-foreground);
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+#wips-office-root .sync-button--icon svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  display: block;
+}
+#wips-office-root .sync-button--icon:hover:not(:disabled),
+#wips-office-root .sync-button--icon:focus-visible:not(:disabled) {
+  background: var(--secondary);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+#wips-office-root .sync-button--icon:focus-visible:not(:disabled) {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+#wips-office-root .sync-button--icon:disabled {
+  opacity: 0.45;
+}
 #wips-office-root .employee-button {
   appearance: none; display: block; position: relative;
   margin: 0; padding: 2px 4px; width: auto; height: auto;
@@ -1025,7 +1068,8 @@
   #wips-office-root .hq-ticker-viewport {
     overflow-x: auto;
   }
-  #wips-office-root .kanban-progress-chevron {
+  #wips-office-root .kanban-progress-chevron,
+  #wips-office-root .sync-button--icon {
     transition: none;
   }
 }
@@ -1626,12 +1670,33 @@
 @media (max-width: 560px) {
   #wips-office-root .kanban-board { grid-template-columns: minmax(0, 1fr); }
 }
-@media (max-width: 380px) {
-  #wips-office-root .filter-field { min-width: 100%; }
-}
 #wips-office-root [hidden] { display: none !important; }
 #wips-office-root .sync-button--danger {
   border-color: color-mix(in srgb, var(--destructive) 45%, var(--border));
+  color: var(--destructive);
+}
+#wips-office-root .sync-button--icon.sync-button--danger {
+  position: relative;
+  margin-inline-start: 6px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--destructive);
+}
+#wips-office-root .sync-button--icon.sync-button--danger::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  pointer-events: none;
+}
+#wips-office-root .sync-button--icon.sync-button--danger:hover:not(:disabled),
+#wips-office-root .sync-button--icon.sync-button--danger:focus-visible:not(:disabled) {
+  background: color-mix(in srgb, var(--destructive) 10%, transparent);
+  border-color: color-mix(in srgb, var(--destructive) 35%, transparent);
   color: var(--destructive);
 }
 #wips-office-root .offline-banner {
@@ -1719,19 +1784,39 @@
   min-height: 40px;
 }
 @media (max-width: 480px) {
-  #wips-office-root .sync-controls {
-    gap: 8px;
-  }
-  #wips-office-root .sync-status {
-    flex-basis: 100%;
-  }
   #wips-office-root .sync-button,
   #wips-office-root .seating-toolbar .btn {
     min-height: 44px;
     padding: 0.45em 0.9em;
   }
+  #wips-office-root .title-sub {
+    display: none;
+  }
+  #wips-office-root #wips-office-title {
+    font-size: calc(var(--font-size-base) * 1.2);
+  }
+  #wips-office-root .sync-button--icon {
+    width: 36px;
+    min-height: 44px;
+    height: 44px;
+    padding: 0;
+  }
+  #wips-office-root .sync-button--icon svg {
+    width: 15px;
+    height: 15px;
+  }
+  #wips-office-root .viz-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  #wips-office-root .filter-field {
+    min-width: 0;
+  }
   #wips-office-root .form-input,
   #wips-office-root .form-select {
+    width: 100%;
+    min-width: 0;
     font-size: 16px;
     min-height: 44px;
   }
@@ -1745,18 +1830,35 @@
 </style>
 <section aria-labelledby="wips-office-title">
   <header class="office-header">
-    <div class="title-stack">
-      <h1 id="wips-office-title">Pixel Agent HQ · 쿼터뷰</h1>
-      <p class="snapshot-meta">
-        <span id="wips-office-snapshot"></span>
-        <a id="wips-office-source">Notion 원본 스냅샷</a>
-      </p>
+    <div class="office-header-top">
+      <h1 id="wips-office-title">Pixel Agent HQ<span class="title-sub"> · 쿼터뷰</span></h1>
       <div class="sync-controls">
-        <button class="sync-button" id="wips-office-refresh" type="button">지금 갱신</button>
-        <button class="sync-button" id="wips-office-connect-toggle" type="button" hidden>연결 설정</button>
-        <button class="sync-button sync-button--danger" id="wips-office-logout" type="button" hidden>로그아웃</button>
-        <p class="sync-status" id="wips-office-sync-status" role="status" aria-live="polite"></p>
+        <button class="sync-button sync-button--icon" id="wips-office-refresh" type="button" aria-label="지금 갱신" title="지금 갱신">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M13.2 8A5.2 5.2 0 1 1 11.7 4.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M11.7 2.1V4.3H9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+        <button class="sync-button sync-button--icon" id="wips-office-connect-toggle" type="button" aria-label="연결 설정" title="연결 설정" hidden>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M6.8 5.2H4.8A2.8 2.8 0 0 0 4.8 10.8H6.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M9.2 5.2H11.2A2.8 2.8 0 0 1 11.2 10.8H9.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M5.8 8H10.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+        <button class="sync-button sync-button--icon sync-button--danger" id="wips-office-logout" type="button" aria-label="로그아웃" title="로그아웃" hidden>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M6.5 2.5H4.2A1.7 1.7 0 0 0 2.5 4.2V11.8A1.7 1.7 0 0 0 4.2 13.5H6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M6.5 8H13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M10.8 5.2L13.5 8L10.8 10.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
       </div>
+    </div>
+    <div class="header-meta">
+      <span id="wips-office-snapshot" hidden></span>
+      <p class="sync-status" id="wips-office-sync-status" role="status" aria-live="polite"></p>
+      <a id="wips-office-source">Notion 원본</a>
     </div>
   </header>
   <p class="offline-banner" id="wips-office-offline-banner" role="status" aria-live="polite" hidden></p>
@@ -3114,10 +3216,15 @@
   }
 
   function formatSuccessTime(value) {
-    if (!value) return "마지막 성공: " + (snapshot.snapshotDate || "저장된 스냅샷") + " 스냅샷";
+    if (!value) return snapshot.snapshotDate || "스냅샷";
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "마지막 성공: " + value;
-    return "마지막 성공: " + date.toLocaleString("ko-KR", { timeZone: "Asia/Seoul", hour12: false });
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleTimeString("ko-KR", {
+      timeZone: "Asia/Seoul",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
   }
 
   function setSyncStatus(message, stateName) {
@@ -3607,7 +3714,8 @@
     dataNode.textContent = JSON.stringify(snapshot);
     setSelectOptions(statusSelect, [ALL_STATUS, ...model.statuses], selectedStatus);
     setSelectOptions(projectSelect, [ALL_PROJECTS, ...model.projects, UNSPECIFIED_PROJECT], selectedProject);
-    snapshotNode.textContent = snapshot.snapshotDate ? "Notion 반영 · " + snapshot.snapshotDate + " KST" : "Notion 실시간 조회";
+    snapshotNode.textContent = "";
+    snapshotNode.hidden = true;
     if (snapshot.sourceUrl) {
       sourceNode.hidden = false;
       setSafeHref(sourceNode, snapshot.sourceUrl);
@@ -3638,7 +3746,8 @@
     communalCount.textContent = "";
     communalEmpty.hidden = true;
     communalEmpty.textContent = "";
-    snapshotNode.textContent = "연결되지 않음 (업무 데이터 없음)";
+    snapshotNode.textContent = "";
+    snapshotNode.hidden = true;
     sourceNode.hidden = true;
     sourceNode.removeAttribute("href");
     if (mainView) mainView.hidden = true;
@@ -3662,7 +3771,7 @@
     isRefreshing = true;
     refreshButton.disabled = true;
     const requestEpoch = sessionEpoch;
-    setSyncStatus("Notion 데이터 확인 중…", "loading");
+    setSyncStatus("갱신 중…", "loading");
     let responseData = null;
     try {
       if (IS_STATIC_MODE) {
@@ -3674,7 +3783,7 @@
         if (requestEpoch !== sessionEpoch) return;
         applySnapshot(freshSnapshot);
         setOfflineBanner("");
-        setSyncStatus(formatSuccessTime(freshSnapshot.lastSuccessAt) + " · 30초 간격 자동 갱신", "success");
+        setSyncStatus(formatSuccessTime(freshSnapshot.lastSuccessAt) + " 갱신", "success");
         return;
       }
 
@@ -3693,7 +3802,7 @@
       }
 
       applySnapshot(responseData);
-      setSyncStatus(formatSuccessTime(snapshot.lastSuccessAt) + " · 30초 간격 자동 갱신", "success");
+      setSyncStatus(formatSuccessTime(snapshot.lastSuccessAt) + " 갱신", "success");
     } catch (error) {
       if (requestEpoch !== sessionEpoch || error?.code === "NOTION_ABORTED") return;
       const detail = error.responseData || responseData;
@@ -3744,7 +3853,7 @@
     if (connectCancelButton) connectCancelButton.hidden = true;
     const msg = "로그아웃되었습니다. 이 기기에서 토큰·연결 정보와 업무 데이터를 삭제했습니다.";
     setConnectionMessage(msg, "info");
-    setSyncStatus(msg, "idle");
+    setSyncStatus("로그아웃됨", "idle");
   }
 
   function saveState() {
@@ -3807,7 +3916,7 @@
         "이 브라우저는 OPFS 격리 저장소를 지원하지 않습니다. 연결 정보는 현재 탭 세션 메모리에만 유지되며 새로고침 시 삭제됩니다.",
         "info",
       );
-      setSyncStatus("Notion 연결 설정이 필요합니다 (OPFS 미지원 환경).", "idle");
+      setSyncStatus("연결 필요 (OPFS 미지원)", "idle");
       return;
     }
 
@@ -3824,7 +3933,7 @@
 
     if (!savedConnection) {
       await opfsStore.clearAll().catch(() => {});
-      setSyncStatus("Notion 연결 설정이 필요합니다.", "idle");
+      setSyncStatus("연결 필요", "idle");
       return;
     }
 
@@ -3881,7 +3990,7 @@
     const submitEpoch = sessionEpoch;
     if (connectSubmitButton) connectSubmitButton.disabled = true;
     setConnectionMessage("Notion 연결 확인 및 데이터 조회 중…", "loading");
-    setSyncStatus("Notion 연결 확인 중…", "loading");
+    setSyncStatus("연결 확인 중…", "loading");
     try {
       activeFetchController?.abort();
       activeFetchController = new AbortController();
@@ -3902,7 +4011,7 @@
       applySnapshot(freshSnapshot);
       setOfflineBanner("");
       setConnectionMessage("연결이 저장되었습니다. OPFS에 격리 보관됩니다.", "info");
-      setSyncStatus(formatSuccessTime(freshSnapshot.lastSuccessAt) + " · 30초 간격 자동 갱신", "success");
+      setSyncStatus(formatSuccessTime(freshSnapshot.lastSuccessAt) + " 갱신", "success");
       startStaticPolling();
     } catch (error) {
       if (submitEpoch !== sessionEpoch || error?.code === "NOTION_ABORTED") return;
@@ -3930,11 +4039,11 @@
     });
     void initStaticMode();
   } else {
-    const snapshotLabel = "스냅샷 · " + snapshot.snapshotDate + " KST";
-    snapshotNode.textContent = snapshotLabel;
+    snapshotNode.textContent = "";
+    snapshotNode.hidden = true;
     setSafeHref(sourceNode, snapshot.sourceUrl);
     render();
-    setSyncStatus("서버 동기화 확인 중 · 마지막 성공: " + snapshot.snapshotDate + " 스냅샷", "loading");
+    setSyncStatus("동기화 중…", "loading");
     refreshData();
     window.setInterval(refreshData, 30_000);
   }

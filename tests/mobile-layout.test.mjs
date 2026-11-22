@@ -171,3 +171,24 @@ test("swaps seats via select control, persists in localStorage, and handles bloc
   blockedSelect.dispatchEvent({ type: "change" });
   assert.match(blockedRun.byId.get("wips-office-seating-message").textContent, /저장할 수 없어/);
 });
+
+test("uses Option A-1 two-row appbar header with right-aligned ghost icon buttons", () => {
+  const style = officeHtml.match(/<style>([\s\S]*?)<\/style>/)?.[1] || "";
+  assert.match(style, /#wips-office-root\s+\.office-header-top\s*\{[\s\S]*?flex-wrap:\s*nowrap/);
+  assert.match(style, /#wips-office-root\s+\.sync-button--icon\s*\{[\s\S]*?border-color:\s*transparent;[\s\S]*?background:\s*transparent/);
+  assert.match(style, /@media\s*\(max-width:\s*480px\)[\s\S]*?#wips-office-root\s+\.title-sub\s*\{\s*display:\s*none;\s*\}/);
+  assert.match(style, /@media\s*\(max-width:\s*480px\)[\s\S]*?#wips-office-root\s+\.sync-button--icon\s*\{[\s\S]*?width:\s*36px;[\s\S]*?height:\s*44px;/);
+  assert.match(style, /@media\s*\(max-width:\s*480px\)[\s\S]*?#wips-office-root\s+\.viz-controls\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(officeHtml, /<a id="wips-office-source">Notion 원본<\/a>/);
+
+  for (const [id, label] of [
+    ["wips-office-refresh", "지금 갱신"],
+    ["wips-office-connect-toggle", "연결 설정"],
+    ["wips-office-logout", "로그아웃"],
+  ]) {
+    const pattern = new RegExp(
+      `<button\\s+class="sync-button\\s+sync-button--icon(?:\\s+sync-button--danger)?"\\s+id="${id}"[^>]*aria-label="${label}"[^>]*title="${label}"[^>]*>\\s*<svg[^>]*aria-hidden="true"`,
+    );
+    assert.match(officeHtml, pattern, `${id} should be a labeled ghost icon button with aria-hidden SVG`);
+  }
+});
