@@ -645,3 +645,40 @@ test("logout aborts in-flight static fetch and discards late response via sessio
   assert.equal(env.byId.get("wips-office-selected-tasks").children.length, 0);
   assert.equal(env.byId.get("wips-office-connection-panel").hidden, false);
 });
+
+test("corrupt OPFS snapshot-cache.json preserves connection.json and re-queries Notion", async () => {
+  const staticHtml = injectEmptySnapshot(officeHtml, emptySnapshot);
+  const opfs = createMockOpfsStore();
+  const root = await opfs.getDirectory();
+  const dir = await root.getDirectoryHandle("wips-office-private-v1", { create: true });
+  const connHandle = await dir.getFileHandle("connection.json", { create: true });
+  const connWriter = await connHandle.createWritable();
+  await connWriter.write(JSON.stringify({
+    token: "demo_readonly_token_123",
+    dataSourceId: "11111111-2222-4333-8444-555555555555",
+  }));
+  await connWriter.close();
+
+  const snapHandle = await dir.getFileHandle("snapshot-cache.json", { create: true });
+  const snapWriter = await snapHandle.createWritable();
+  await snapWriter.write("{corrupt-json");
+  await snapWriter.close();
+
+  let queryCount = 0;
+  const env = createDomEnvironment(staticHtml, {
+    opfs,
+    fetchImpl: async (url) => {
+      if (String(url).includes("/data_sources/")) {
+        queryCount += 1;
+        return makeNotionResponse("복구된 일감", "sb");
+      }
+      return new Response(JSON.stringify({ results: [], has_more: false }), { status: 200 });
+    },
+  });
+  await flushMicrotasks();
+
+  assert.equal(queryCount, 1);
+  assert.equal(env.byId.get("wips-office-main-view").hidden, false);
+  assert.match(env.byId.get("wips-office-selected-tasks").textContent, /복구된 일감/);
+  assert.equal(opfs.dirs.get("wips-office-private-v1").has("connection.json"), true);
+});

@@ -8,6 +8,7 @@ import {
   OUTER_CSP,
   SRCDOC_CSP,
   buildSyncedIndexHtml,
+  syncOfficeHtml,
   unescapeHtmlAttr,
 } from "../scripts/sync-office.mjs";
 
@@ -57,5 +58,29 @@ test("strips all task titles, real DATA_SOURCE_ID, and SOURCE_URL in empty stati
   for (const task of sourceData.results) {
     assert.equal(srcdoc.includes(task.title), false, `srcdoc must not contain task title ${task.title}`);
     assert.equal(built.includes(task.title), false, `built html must not contain task title ${task.title}`);
+  }
+});
+
+test("syncOfficeHtml check reports drift when wips-office.html differs from source bundle", async () => {
+  const { mkdtempSync, cpSync, readFileSync, rmSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const tempRoot = mkdtempSync(join(tmpdir(), "wips-sync-check-"));
+  try {
+    for (const rel of ["index.html", "wips-office.html"]) {
+      cpSync(join(rootDir, rel), join(tempRoot, rel));
+    }
+    cpSync(join(rootDir, "fixtures"), join(tempRoot, "fixtures"), { recursive: true });
+    cpSync(join(rootDir, "lib"), join(tempRoot, "lib"), { recursive: true });
+    cpSync(join(rootDir, "src"), join(tempRoot, "src"), { recursive: true });
+
+    assert.equal(syncOfficeHtml({ rootDir: tempRoot, check: true }).ok, true);
+    const stale = readFileSync(join(tempRoot, "wips-office.html"), "utf8").replace("window.__wipsOfficeModel", "window.__stale");
+    writeFileSync(join(tempRoot, "wips-office.html"), stale);
+    const drifted = syncOfficeHtml({ rootDir: tempRoot, check: true });
+    assert.equal(drifted.ok, false);
+    assert.ok(drifted.drifted.includes("wips-office.html"));
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
   }
 });

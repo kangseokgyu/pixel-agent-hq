@@ -3754,2047 +3754,2296 @@ html&gt;body{padding:0}&lt;/style&gt;
 &lt;/div&gt;
 &lt;script id=&quot;office-model&quot;&gt;
 (() =&gt; {
-  const STATUS_ORDER = [&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;, &quot;대기&quot;, &quot;예정&quot;, &quot;완료&quot;];
-  const STATUS_RANK = new Map(STATUS_ORDER.map((status, index) =&gt; [status, index]));
-  const KANBAN_LANES = [
-    { id: &quot;planned&quot;, title: &quot;예정 · 대기&quot;, dot: &quot;대기&quot;, statuses: [&quot;대기&quot;, &quot;예정&quot;] },
-    { id: &quot;progress&quot;, title: &quot;진행&quot;, dot: &quot;진행&quot;, statuses: [&quot;진행&quot;] },
-    { id: &quot;review&quot;, title: &quot;검증 · 테스트&quot;, dot: &quot;검증&quot;, statuses: [&quot;검증&quot;, &quot;장시간 테스트 중&quot;] },
-  ];
-  const EMPLOYEES = [&quot;sb&quot;, &quot;이요원&quot;, &quot;여이전트&quot;, &quot;석규&quot;, &quot;UI&quot;];
-  const SHARED_OWNER = &quot;공통&quot;;
-  const ACTIVE_TICKER_STATUSES = new Set([&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;]);
-  const NOTION_ICON_PATHS = [
-    { d: &quot;M3.5 4.8L16.8 3.5L20 6.1L6.7 7.4L3.5 4.8Z&quot;, fill: &quot;currentColor&quot;, &quot;fill-opacity&quot;: &quot;0.16&quot; },
-    { d: &quot;M3.5 4.8L6.7 7.4V20.6L3.5 18V4.8Z&quot;, fill: &quot;currentColor&quot;, &quot;fill-opacity&quot;: &quot;0.28&quot; },
-    { d: &quot;M3.5 4.8L16.8 3.5L20 6.1V19.3L6.7 20.6L3.5 18V4.8Z&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.5&quot;, &quot;stroke-linejoin&quot;: &quot;round&quot; },
-    { d: &quot;M3.5 4.8L6.7 7.4L20 6.1M6.7 7.4V20.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.5&quot;, &quot;stroke-linejoin&quot;: &quot;round&quot; },
-    { d: &quot;M9.1 9.6L11.9 9.4L15.1 14V9.7L14.3 9.8V9L17.5 8.7V9.5L16.8 9.6V17L15.2 17.1L11.7 12.1V16.6L12.5 16.5V17.3L9.1 17.6V16.8L10 16.7V10.4L9.1 10.5V9.6Z&quot;, fill: &quot;currentColor&quot; },
-  ];
-  const ALL_STATUS = &quot;전체 상태&quot;;
-  const ALL_PROJECTS = &quot;전체 프로젝트&quot;;
-  const UNSPECIFIED_PROJECT = &quot;프로젝트 미지정&quot;;
-
-  function isSharedOwner(owner) {
-    return owner === null || owner === undefined || owner === &quot;&quot; || owner === SHARED_OWNER;
-  }
-
-  function todayKstIso() {
-    try {
-      return new Intl.DateTimeFormat(&quot;en-CA&quot;, { timeZone: &quot;Asia/Seoul&quot; }).format(new Date());
-    } catch {
-      return new Date().toISOString().slice(0, 10);
-    }
-  }
-
-  function parseIsoDayMs(value) {
-    if (typeof value !== &quot;string&quot;) return null;
-    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!match) return null;
-    return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  }
-
-  function formatMmDd(value) {
-    if (typeof value !== &quot;string&quot;) return &quot;&quot;;
-    const match = value.match(/^\d{4}-(\d{2})-(\d{2})$/);
-    return match ? match[1] + &quot;/&quot; + match[2] : value;
-  }
-
-  function formatScheduleShort(task, includeTrailingTilde) {
-    if (task.startDate &amp;&amp; task.endDate) {
-      return formatMmDd(task.startDate) + &quot;~&quot; + formatMmDd(task.endDate);
-    }
-    if (task.startDate) {
-      return formatMmDd(task.startDate) + (includeTrailingTilde ? &quot;~&quot; : &quot;&quot;);
-    }
-    if (task.endDate) return &quot;~&quot; + formatMmDd(task.endDate);
-    return &quot;일정 미지정&quot;;
-  }
-
-  function projectLabel(task) {
-    return task.project === null || task.project === undefined ? UNSPECIFIED_PROJECT : task.project;
-  }
-
-  function matches(task, filters) {
-    const statusMatches = filters.status === ALL_STATUS || task.status === filters.status;
-    const projectMatches = filters.project === ALL_PROJECTS || projectLabel(task) === filters.project;
-    return statusMatches &amp;&amp; projectMatches;
-  }
-
-  function safeNotionUrl(value) {
-    if (typeof value !== &quot;string&quot;) return &quot;&quot;;
-    try {
-      const parsed = new URL(value);
-      const notionHosts = [&quot;app.notion.com&quot;, &quot;notion.so&quot;, &quot;www.notion.so&quot;];
-      return parsed.protocol === &quot;https:&quot; &amp;&amp;
-        notionHosts.includes(parsed.hostname) &amp;&amp;
-        parsed.host === parsed.hostname &amp;&amp;
-        parsed.username === &quot;&quot; &amp;&amp;
-        parsed.password === &quot;&quot;
-        ? parsed.href
-        : &quot;&quot;;
-    } catch {
-      return &quot;&quot;;
-    }
-  }
-
-  function toNotionAppUrl(value) {
-    const safeUrl = safeNotionUrl(value);
-    return safeUrl ? safeUrl.replace(/^https:/, &quot;notion:&quot;) : &quot;&quot;;
-  }
-
-  function formatGoalDate(task) {
-    if (task.startDate &amp;&amp; task.endDate) return task.startDate + &quot; — &quot; + task.endDate;
-    if (task.startDate) return task.startDate + &quot; · 종료일 미지정&quot;;
-    if (task.endDate) return &quot;시작일 미지정 · &quot; + task.endDate;
-    return &quot;미지정&quot;;
-  }
-
-  function computeScheduleGauge(task, referenceDateIso) {
-    const todayIso = referenceDateIso || todayKstIso();
-    const todayMs = parseIsoDayMs(todayIso);
-    const targetIso = task?.startDate || task?.endDate || null;
-    const targetMs = parseIsoDayMs(targetIso);
-    let dDayLabel = ACTIVE_TICKER_STATUSES.has(task?.status) ? &quot;수시&quot; : &quot;미정&quot;;
-    let diffDays = null;
-    if (todayMs !== null &amp;&amp; targetMs !== null) {
-      diffDays = Math.round((targetMs - todayMs) / 86_400_000);
-      if (diffDays &gt; 0) dDayLabel = &quot;D-&quot; + diffDays;
-      else if (diffDays === 0) dDayLabel = &quot;D-DAY&quot;;
-      else dDayLabel = &quot;D+&quot; + Math.abs(diffDays);
-    }
-
-    let progress = 20;
-    if (diffDays !== null) {
-      if (diffDays &lt;= 0) progress = 100;
-      else if (diffDays &gt;= 14) progress = 10;
-      else progress = Math.round(100 - (diffDays / 14) * 90);
-    }
-
-    let tone = &quot;slate&quot;;
-    if (diffDays !== null) {
-      if (diffDays &gt;= 2) {
-        tone = &quot;green&quot;;
-      } else if (diffDays === 1 || diffDays === 0) {
-        tone = &quot;amber&quot;;
-      } else if (Boolean(task?.startDate) &amp;&amp; ACTIVE_TICKER_STATUSES.has(task?.status)) {
-        tone = &quot;green&quot;;
-      } else {
-        tone = &quot;red&quot;;
-      }
-    }
-
-    return { dDayLabel, diffDays, progress, tone };
-  }
-
-  function normalizeTaskId(value) {
-    if (typeof value !== &quot;string&quot;) return &quot;&quot;;
-    return value.trim().toLowerCase().replace(/-/g, &quot;&quot;);
-  }
-
-  function extractTaskId(task) {
-    const direct = normalizeTaskId(task?.id);
-    if (direct) return direct;
-    if (typeof task?.url !== &quot;string&quot; || !task.url) return &quot;&quot;;
-    const pathOnly = task.url.split(/[?#]/)[0].replace(/\/+$/, &quot;&quot;);
-    const match = pathOnly.match(/([0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
-    return match ? normalizeTaskId(match[1]) : &quot;&quot;;
-  }
-
-  function createOfficeModel(snapshot) {
-    const tasks = Array.isArray(snapshot.results) ? snapshot.results.slice() : [];
-    const statuses = STATUS_ORDER.concat([...new Set(tasks.map((task) =&gt; task.status).filter(Boolean))]
-      .filter((status) =&gt; !STATUS_ORDER.includes(status)));
-    const employees = EMPLOYEES.concat([...new Set(tasks.map((task) =&gt; task.owner).filter((owner) =&gt; owner &amp;&amp; !isSharedOwner(owner)))]
-      .filter((owner) =&gt; !EMPLOYEES.includes(owner)));
-    const projects = [&quot;2.3&quot;, &quot;2.2.1&quot;, &quot;기타&quot;].concat([...new Set(tasks.map((task) =&gt; task.project).filter(Boolean))]
-      .filter((project) =&gt; ![&quot;2.3&quot;, &quot;2.2.1&quot;, &quot;기타&quot;].includes(project)));
-
-    // Index all tasks including completed ones so sub-task completion counts remain accurate.
-    const tasksById = new Map();
-    for (const task of tasks) {
-      const id = extractTaskId(task);
-      if (id &amp;&amp; !tasksById.has(id)) {
-        tasksById.set(id, task);
-      }
-    }
-
-    const childrenByParentId = new Map();
-    const seenChildrenByParent = new Map();
-    function addChildLink(parentId, childTask) {
-      if (!parentId || !childTask) return;
-      const childId = extractTaskId(childTask);
-      if (childId &amp;&amp; childId === parentId) return;
-      const childKey = childId || childTask;
-      let seen = seenChildrenByParent.get(parentId);
-      if (!seen) {
-        seen = new Set();
-        seenChildrenByParent.set(parentId, seen);
-      }
-      if (seen.has(childKey)) return;
-      seen.add(childKey);
-      let list = childrenByParentId.get(parentId);
-      if (!list) {
-        list = [];
-        childrenByParentId.set(parentId, list);
-      }
-      list.push(childTask);
-    }
-
-    for (const task of tasks) {
-      if (Array.isArray(task.parentTaskIds)) {
-        for (const rawParentId of task.parentTaskIds) {
-          addChildLink(normalizeTaskId(rawParentId), task);
-        }
-      }
-    }
-    for (const task of tasks) {
-      const parentId = extractTaskId(task);
-      if (!parentId || !Array.isArray(task.subTaskIds)) continue;
-      for (const rawChildId of task.subTaskIds) {
-        const childTask = tasksById.get(normalizeTaskId(rawChildId));
-        if (childTask) addChildLink(parentId, childTask);
-      }
-    }
-
-    function computeTaskProgress(task) {
-      const rawChecklist = Array.isArray(task?.checklist) ? task.checklist : [];
-      const checklistItems = rawChecklist
-        .filter((item) =&gt; item &amp;&amp; typeof item === &quot;object&quot; &amp;&amp; typeof item.text === &quot;string&quot; &amp;&amp; item.text.trim())
-        .map((item) =&gt; ({ text: item.text.trim(), done: Boolean(item.done) }));
-      const checklist = checklistItems.length &gt; 0
-        ? {
-            done: checklistItems.filter((item) =&gt; item.done).length,
-            total: checklistItems.length,
-            items: checklistItems,
-          }
-        : null;
-
-      const taskId = extractTaskId(task);
-      const linkedChildren = taskId ? (childrenByParentId.get(taskId) || []) : [];
-      const subtaskItems = linkedChildren.map((child) =&gt; ({
-        id: extractTaskId(child) || child.title || &quot;&quot;,
-        title: child.title || &quot;제목 없음&quot;,
-        status: child.status || &quot;미지정&quot;,
-        owner: child.owner ?? null,
-        done: child.status === &quot;완료&quot;,
-        sourceUrl: safeNotionUrl(child.url),
-      }));
-      const subtasks = subtaskItems.length &gt; 0
-        ? {
-            done: subtaskItems.filter((item) =&gt; item.done).length,
-            total: subtaskItems.length,
-            items: subtaskItems,
-          }
-        : null;
-
-      return { checklist, subtasks };
-    }
-
-    function describeTask(task, referenceDateIso) {
-      const gauge = computeScheduleGauge(task, referenceDateIso);
-      const progressDetail = computeTaskProgress(task);
-      return {
-        taskKey: task.id || task.url || task.title || &quot;&quot;,
-        title: task.title,
-        status: task.status,
-        project: projectLabel(task),
-        priority: task.priority ?? &quot;미지정&quot;,
-        goalDate: formatGoalDate(task),
-        nextCheck: task.checkDate ?? &quot;미지정&quot;,
-        nextAction: task.nextAction ?? &quot;미지정&quot;,
-        doneCondition: task.doneCondition ?? &quot;미지정&quot;,
-        sourceUrl: safeNotionUrl(task.url),
-        dDayLabel: gauge.dDayLabel,
-        progress: gauge.progress,
-        tone: gauge.tone,
-        checklist: progressDetail.checklist,
-        subtasks: progressDetail.subtasks,
-      };
-    }
-
-    function parseStateCandidate(candidate) {
-      if (typeof candidate === &quot;string&quot;) {
-        try { return JSON.parse(candidate); } catch { return null; }
-      }
-      return candidate &amp;&amp; typeof candidate === &quot;object&quot; ? candidate : null;
-    }
-
-    function stateFromHost(candidate) {
-      const outer = parseStateCandidate(candidate);
-      if (!outer) return null;
-      const nested = parseStateCandidate(outer.privateContent) || parseStateCandidate(outer.modelContent);
-      const saved = nested || outer;
-      const selectedEmployee = employees.includes(saved.selectedEmployee) ? saved.selectedEmployee : &quot;sb&quot;;
-      const status = [ALL_STATUS].concat(statuses).includes(saved.status) ? saved.status : ALL_STATUS;
-      const projectOptions = [ALL_PROJECTS, ...projects, UNSPECIFIED_PROJECT];
-      const project = projectOptions.includes(saved.project) ? saved.project : ALL_PROJECTS;
-      return { selectedEmployee, status, project };
-    }
-
-    function restorePendingState(candidate, currentState, userChangedState) {
-      if (userChangedState) return currentState;
-      return stateFromHost(candidate) || currentState;
-    }
-
-    function filteredTasks(filters) {
-      return tasks.filter((task) =&gt; matches(task, filters));
-    }
-
-    function summary(filters) {
-      const shown = filteredTasks(filters);
-      const statusCounts = Object.fromEntries(statuses.map((status) =&gt; [
-        status,
-        shown.filter((task) =&gt; task.status === status).length,
-      ]));
-      return {
-        total: shown.length,
-        snapshotTotal: tasks.length,
-        unassigned: shown.filter((task) =&gt; isSharedOwner(task.owner)).length,
-        statuses: statusCounts,
-      };
-    }
-
-    function employeeTasks(owner, filters) {
-      return filteredTasks(filters).filter((task) =&gt; task.owner === owner &amp;&amp; task.status !== &quot;완료&quot;);
-    }
-
-    function unassignedTasks(filters) {
-      return filteredTasks(filters).filter((task) =&gt; isSharedOwner(task.owner) &amp;&amp; task.status !== &quot;완료&quot;);
-    }
-
-    function billboardView(filters, referenceDateIso) {
-      const todayIso = referenceDateIso || todayKstIso();
-      const shared = unassignedTasks(filters);
-      const scheduleTasks = shared
-        .map((task, index) =&gt; ({
-          task,
-          index,
-          targetIso: task.startDate || task.endDate || null,
-          rank: STATUS_RANK.get(task.status) ?? STATUS_ORDER.length,
-        }))
-        .sort((left, right) =&gt; {
-          const leftActiveUndated = !left.targetIso &amp;&amp; ACTIVE_TICKER_STATUSES.has(left.task.status);
-          const rightActiveUndated = !right.targetIso &amp;&amp; ACTIVE_TICKER_STATUSES.has(right.task.status);
-          if (leftActiveUndated !== rightActiveUndated) return leftActiveUndated ? -1 : 1;
-          if (left.targetIso &amp;&amp; right.targetIso &amp;&amp; left.targetIso !== right.targetIso) {
-            return left.targetIso.localeCompare(right.targetIso);
-          }
-          if (Boolean(left.targetIso) !== Boolean(right.targetIso)) return left.targetIso ? -1 : 1;
-          return left.rank - right.rank || left.index - right.index;
-        })
-        .map(({ task }, idx) =&gt; {
-          const gauge = computeScheduleGauge(task, todayIso);
-          return {
-            stepLabel: &quot;STEP &quot; + String(idx + 1).padStart(2, &quot;0&quot;),
-            title: task.title,
-            status: task.status || &quot;미정&quot;,
-            dDayLabel: gauge.dDayLabel,
-            shortDate: formatScheduleShort(task, false),
-            progress: gauge.progress,
-            tone: gauge.tone,
-            task,
-          };
-        });
-
-      const tickerTasks = filteredTasks(filters)
-        .filter((task) =&gt; !isSharedOwner(task.owner) &amp;&amp; ACTIVE_TICKER_STATUSES.has(task.status))
-        .map((task) =&gt; ({
-          owner: task.owner,
-          title: task.title,
-          status: task.status,
-          shortDate: formatScheduleShort(task, true),
-          task,
-        }));
-
-      return {
-        todayLabel: formatMmDd(todayIso),
-        scheduleTasks,
-        tickerTasks,
-      };
-    }
-
-    function representativeTask(owner, filters) {
-      const owned = employeeTasks(owner, filters).filter((task) =&gt; task.status !== &quot;완료&quot; &amp;&amp; !task.parentTaskIds?.length);
-      if (owned.length === 0) return null;
-      return owned
-        .map((task, index) =&gt; ({ task, index }))
-        .sort((left, right) =&gt; {
-          const leftRank = STATUS_RANK.get(left.task.status) ?? STATUS_ORDER.length;
-          const rightRank = STATUS_RANK.get(right.task.status) ?? STATUS_ORDER.length;
-          return leftRank - rightRank || left.index - right.index;
-        })[0].task;
-    }
-
-    function viewForEmployee(owner, filters) {
-      const owned = employeeTasks(owner, filters);
-      const topLevelCount = owned.filter((task) =&gt; task.status !== &quot;완료&quot; &amp;&amp; !task.parentTaskIds?.length).length;
-      const representative = representativeTask(owner, filters);
-      return {
-        owner,
-        tasks: owned,
-        topLevelCount,
-        representative,
-        otherCount: representative ? topLevelCount - 1 : 0,
-        empty: owned.length === 0,
-      };
-    }
-
-    function normalizeSeating(saved) {
-      const valid = Array.isArray(saved) ? saved.filter((owner) =&gt; employees.includes(owner)) : [];
-      return [...new Set([...valid, ...employees])];
-    }
-
-    function swapSeats(saved, owner, target) {
-      const order = normalizeSeating(saved);
-      const from = order.indexOf(owner);
-      const to = order.indexOf(target);
-      if (from &gt;= 0 &amp;&amp; to &gt;= 0) [order[from], order[to]] = [order[to], order[from]];
-      return order;
-    }
-
-    function focusEmployeeButton(buttons, owner) {
-      const button = buttons.find((candidate) =&gt; candidate.dataset.owner === owner);
-      if (!button || typeof button.focus !== &quot;function&quot;) return null;
-      button.focus();
-      return button;
-    }
-
-    function groupTasksByLane(tasks) {
-      const byStatus = new Map();
-      for (const lane of KANBAN_LANES) {
-        for (const status of lane.statuses) byStatus.set(status, lane.id);
-      }
-      const buckets = new Map(KANBAN_LANES.map((lane) =&gt; [lane.id, []]));
-      for (const task of Array.isArray(tasks) ? tasks : []) {
-        const laneId = byStatus.get(task?.status) || KANBAN_LANES[0].id;
-        buckets.get(laneId).push(task);
-      }
-      return KANBAN_LANES.map((lane) =&gt; ({
-        id: lane.id,
-        title: lane.title,
-        dot: lane.dot,
-        showExactStatus: lane.statuses.length &gt; 1,
-        tasks: buckets.get(lane.id),
-      }));
-    }
-
-    return {
-      employees,
-      statuses,
-      projects,
-      kanbanLanes: KANBAN_LANES,
-      groupTasksByLane,
-      stateFromHost,
-      restorePendingState,
-      filteredTasks,
-      summary,
-      employeeTasks,
-      unassignedTasks,
-      representativeTask,
-      viewForEmployee,
-      focusEmployeeButton,
-      normalizeSeating,
-      swapSeats,
-      describeTask,
-      billboardView,
-    };
-  }
-
-  window.__wipsOfficeModel = createOfficeModel;
-
-  const root = document.getElementById(&quot;wips-office-root&quot;);
-  if (!root) return;
-
-  const dataNode = document.getElementById(&quot;wips-office-data&quot;);
-  let snapshot = JSON.parse(dataNode.textContent);
-  let model = createOfficeModel(snapshot);
-  const statusSelect = document.getElementById(&quot;wips-office-status&quot;);
-  const projectSelect = document.getElementById(&quot;wips-office-project&quot;);
-  const refreshButton = document.getElementById(&quot;wips-office-refresh&quot;);
-  const syncStatus = document.getElementById(&quot;wips-office-sync-status&quot;);
-  const summaryNode = document.getElementById(&quot;wips-office-summary&quot;);
-  const countsNode = document.getElementById(&quot;wips-office-status-counts&quot;);
-  const employeeNode = document.getElementById(&quot;wips-office-employees&quot;);
-  const seatingEdit = document.getElementById(&quot;wips-office-edit-seating&quot;);
-  const seatingReset = document.getElementById(&quot;wips-office-reset-seating&quot;);
-  const seatingMessage = document.getElementById(&quot;wips-office-seating-message&quot;);
-  const seatingKey = &quot;wips-office-seating-v1&quot;;
-  let editingSeating = false;
-  let draggingOwner = null;
-  let suppressEmployeeClick = false;
-  let savedSeating = [];
-  try { savedSeating = JSON.parse(window.localStorage.getItem(seatingKey)); } catch {}
-  let seatingOrder = model.normalizeSeating(savedSeating);
-
-  function persistSeating(message) {
-    try {
-      window.localStorage.setItem(seatingKey, JSON.stringify(seatingOrder));
-      seatingMessage.textContent = message + &quot; 이 브라우저에 저장했습니다.&quot;;
-    } catch {
-      seatingMessage.textContent = message + &quot; 저장할 수 없어 현재 화면에만 적용됩니다.&quot;;
-    }
-  }
-
-  function canDropSeat(owner) {
-    return editingSeating &amp;&amp; draggingOwner !== null &amp;&amp; draggingOwner !== owner &amp;&amp;
-      model.employees.includes(draggingOwner) &amp;&amp; model.employees.includes(owner);
-  }
-
-  seatingEdit.addEventListener(&quot;click&quot;, () =&gt; {
-    editingSeating = !editingSeating;
-    seatingEdit.setAttribute(&quot;aria-pressed&quot;, String(editingSeating));
-    seatingEdit.textContent = editingSeating ? &quot;배치 완료&quot; : &quot;자리 배치&quot;;
-    seatingReset.hidden = !editingSeating;
-    seatingMessage.textContent = editingSeating
-      ? &quot;요원을 다른 자리로 끌거나 아래 선택 메뉴에서 고르면 두 요원의 자리를 서로 바꿉니다. 변경 즉시 저장됩니다.&quot;
-      : &quot;자리 배치는 이 브라우저에 저장됩니다.&quot;;
-    render();
-  });
-  seatingReset.addEventListener(&quot;click&quot;, () =&gt; {
-    seatingOrder = model.normalizeSeating([]);
-    persistSeating(&quot;기본 배치로 되돌렸습니다.&quot;);
-    render();
-  });
-  const selectedTitle = document.getElementById(&quot;wips-office-selected-title&quot;);
-  const selectedNote = document.getElementById(&quot;wips-office-selected-note&quot;);
-  const selectedEmpty = document.getElementById(&quot;wips-office-selected-empty&quot;);
-  const selectedTasksNode = document.getElementById(&quot;wips-office-selected-tasks&quot;);
-  const communalCount = document.getElementById(&quot;wips-office-communal-count&quot;);
-  const communalEmpty = document.getElementById(&quot;wips-office-communal-empty&quot;);
-  const communalTasksNode = document.getElementById(&quot;wips-office-communal-tasks&quot;);
-  const communalTitleNode = document.getElementById(&quot;wips-office-communal-title&quot;);
-  const billboardNode = document.getElementById(&quot;wips-office-billboard&quot;);
-  const sourceNode = document.getElementById(&quot;wips-office-source&quot;);
-  let pendingHostState = window.openai &amp;&amp; window.openai.widgetState;
-  let hasLiveModel = false;
-  let userChangedState = false;
-  const initialState = model.stateFromHost(pendingHostState);
-  const state = initialState || {
-    selectedEmployee: &quot;sb&quot;,
-    status: ALL_STATUS,
-    project: ALL_PROJECTS,
-  };
-  const openProgressDrawers = new Set();
-  statusSelect.value = state.status;
-  projectSelect.value = state.project;
-
-  function setSafeHref(anchor, url) {
-    const appUrl = toNotionAppUrl(url);
-    if (appUrl) {
-      anchor.href = appUrl;
-      anchor.removeAttribute(&quot;target&quot;);
-      anchor.removeAttribute(&quot;rel&quot;);
-    } else {
-      anchor.removeAttribute(&quot;href&quot;);
-      anchor.removeAttribute(&quot;target&quot;);
-      anchor.removeAttribute(&quot;rel&quot;);
-    }
-  }
-
-  function addText(parent, tag, className, text) {
-    const node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined &amp;&amp; text !== null) node.textContent = String(text);
-    parent.append(node);
-    return node;
-  }
-
-  function createPersonArt(owner) {
-    const art = document.createElement(&quot;span&quot;);
-    art.className = &quot;person-art&quot;;
-    art.dataset.employee = owner;
-    art.dataset.agentStyle = owner === &quot;석규&quot; || owner === &quot;UI&quot; ? &quot;cyber&quot; : &quot;suit&quot;;
-    let motionPhase = 0;
-    for (const character of owner) motionPhase = (motionPhase * 31 + character.codePointAt(0)) % 5;
-    art.dataset.motionPhase = String(motionPhase);
-    art.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-    return art;
-  }
-
-  function createWorkstation(owner, filters) {
-    const view = model.viewForEmployee(owner, filters);
-    const station = document.createElement(&quot;article&quot;);
-    station.className = &quot;workstation&quot;;
-    const isWorking = Boolean(view.representative &amp;&amp; ACTIVE_TICKER_STATUSES.has(view.representative.status));
-    station.dataset.activity = isWorking ? &quot;working&quot; : &quot;idle&quot;;
-    station.dataset.status = view.representative ? view.representative.status : &quot;idle&quot;;
-
-    const bubble = document.createElement(&quot;div&quot;);
-    bubble.className = &quot;speech-bubble&quot;;
-    bubble.title = view.representative
-      ? view.representative.status + &quot; · &quot; + view.representative.title + &quot; (&quot; + view.topLevelCount + &quot;건)&quot;
-      : &quot;할당된 활성 일감 없음&quot;;
-    const STATUS_LABELS_EN = {
-      진행: &quot;RUNNING&quot;,
-      검증: &quot;TESTING&quot;,
-      &quot;장시간 테스트 중&quot;: &quot;LONG TEST&quot;,
-      대기: &quot;WAITING&quot;,
-      예정: &quot;STANDBY&quot;,
-      완료: &quot;DONE&quot;,
-    };
-    const rawStatus = view.representative ? view.representative.status : null;
-    const statusEn = rawStatus ? (STATUS_LABELS_EN[rawStatus] || rawStatus) : &quot;IDLE&quot;;
-    const taskCount = view.topLevelCount || 0;
-    const taskCountLabel = taskCount + (taskCount === 1 ? &quot; TASK&quot; : &quot; TASKS&quot;);
-    const hudStatusText = view.representative ? statusEn + &quot; · &quot; + taskCountLabel : &quot;IDLE · 0 TASKS&quot;;
-    const hudHeader = document.createElement(&quot;div&quot;);
-    hudHeader.className = &quot;hud-header&quot;;
-    addText(hudHeader, &quot;span&quot;, &quot;hud-tag&quot;, &quot;[&quot; + owner + &quot;]&quot;);
-    addText(hudHeader, &quot;span&quot;, &quot;hud-state&quot;, hudStatusText);
-    bubble.append(hudHeader);
-    const hudMeter = document.createElement(&quot;div&quot;);
-    hudMeter.className = &quot;hud-meter&quot;;
-    const hudMeterFill = document.createElement(&quot;span&quot;);
-    hudMeterFill.className = &quot;hud-meter-fill&quot;;
-    hudMeter.append(hudMeterFill);
-    bubble.append(hudMeter);
-
-    const button = document.createElement(&quot;button&quot;);
-    button.type = &quot;button&quot;;
-    button.className = &quot;employee-button&quot;;
-    button.dataset.owner = owner;
-    button.setAttribute(&quot;aria-label&quot;, owner + &quot;의 최상위 일감 &quot; + view.topLevelCount + &quot;개 보기&quot;);
-    button.setAttribute(&quot;aria-pressed&quot;, String(state.selectedEmployee === owner));
-    button.draggable = editingSeating;
-    button.append(createPersonArt(owner));
-    button.addEventListener(&quot;click&quot;, (event) =&gt; {
-      if (suppressEmployeeClick) {
-        event.preventDefault();
-        event.stopPropagation();
-        suppressEmployeeClick = false;
-        return;
-      }
-      userChangedState = true;
-      state.selectedEmployee = owner;
-      render();
-      model.focusEmployeeButton(Array.from(employeeNode.querySelectorAll(&quot;button&quot;)), owner);
-      saveState();
-    });
-    button.addEventListener(&quot;dragstart&quot;, (event) =&gt; {
-      if (!editingSeating) {
-        event.preventDefault();
-        return;
-      }
-      draggingOwner = owner;
-      suppressEmployeeClick = true;
-      button.classList.add(&quot;is-dragging&quot;);
-      if (event.dataTransfer) {
-        event.dataTransfer.effectAllowed = &quot;move&quot;;
-        event.dataTransfer.setData(&quot;text/plain&quot;, owner);
-      }
-    });
-
-    station.append(bubble, button);
-    if (editingSeating) {
-      station.addEventListener(&quot;dragover&quot;, (event) =&gt; {
-        if (!canDropSeat(owner)) return;
-        event.preventDefault();
-        if (event.dataTransfer) event.dataTransfer.dropEffect = &quot;move&quot;;
-        station.classList.add(&quot;is-drop-target&quot;);
-      });
-      station.addEventListener(&quot;dragleave&quot;, (event) =&gt; {
-        if (station.contains(event.relatedTarget)) return;
-        station.classList.remove(&quot;is-drop-target&quot;);
-      });
-      station.addEventListener(&quot;drop&quot;, (event) =&gt; {
-        if (!canDropSeat(owner)) return;
-        event.preventDefault();
-        const source = draggingOwner;
-        draggingOwner = null;
-        seatingOrder = model.swapSeats(seatingOrder, source, owner);
-        persistSeating(source + &quot;와 &quot; + owner + &quot;의 자리를 바꿨습니다.&quot;);
-        render();
-      });
-      button.addEventListener(&quot;dragend&quot;, () =&gt; {
-        draggingOwner = null;
-        button.classList.remove(&quot;is-dragging&quot;);
-        employeeNode.querySelectorAll(&quot;.workstation.is-drop-target&quot;).forEach((target) =&gt; {
-          target.classList.remove(&quot;is-drop-target&quot;);
-        });
-        window.setTimeout(() =&gt; { suppressEmployeeClick = false; }, 0);
-      });
-      const label = document.createElement(&quot;label&quot;);
-      label.className = &quot;seat-control&quot;;
-      addText(label, &quot;span&quot;, &quot;&quot;, (seatingOrder.indexOf(owner) + 1) + &quot;번 자리 · &quot; + owner);
-      const select = document.createElement(&quot;select&quot;);
-      select.className = &quot;form-select&quot;;
-      select.dataset.seatOwner = owner;
-      select.setAttribute(&quot;aria-label&quot;, owner + &quot; 이동할 자리&quot;);
-      seatingOrder.forEach((occupant, index) =&gt; {
-        const option = document.createElement(&quot;option&quot;);
-        option.value = occupant;
-        option.textContent = (index + 1) + &quot;번 · &quot; + occupant + (occupant === owner ? &quot; (현재)&quot; : &quot;와 교환&quot;);
-        select.append(option);
-      });
-      select.value = owner;
-      select.addEventListener(&quot;change&quot;, () =&gt; {
-        const target = select.value;
-        seatingOrder = model.swapSeats(seatingOrder, owner, target);
-        persistSeating(owner + &quot;와 &quot; + target + &quot;의 자리를 바꿨습니다.&quot;);
-        render();
-        Array.from(employeeNode.querySelectorAll(&quot;select&quot;)).find((node) =&gt; node.dataset.seatOwner === owner)?.focus();
-      });
-      label.append(select);
-      station.append(label);
-    }
-    return station;
-  }
-
-  function renderTaskList(container, tasks) {
-    container.replaceChildren(...tasks.map((task) =&gt; createKanbanCard(task, true)));
-  }
-
-  function createSvgNode(tag, attrs) {
-    const node = document.createElementNS
-      ? document.createElementNS(&quot;http://www.w3.org/2000/svg&quot;, tag)
-      : document.createElement(tag);
-    Object.entries(attrs).forEach(([key, value]) =&gt; node.setAttribute(key, value));
-    return node;
-  }
-
-  function createTaskProgressBox(details) {
-    if (!details.checklist &amp;&amp; !details.subtasks) return null;
-
-    const SEGMENT_LIMIT = 12;
-    const box = document.createElement(&quot;details&quot;);
-    box.className = &quot;kanban-progress-box&quot;;
-    if (openProgressDrawers.has(details.taskKey)) {
-      box.open = true;
-    }
-    box.addEventListener(&quot;toggle&quot;, () =&gt; {
-      if (box.open) openProgressDrawers.add(details.taskKey);
-      else openProgressDrawers.delete(details.taskKey);
-    });
-
-    const summary = document.createElement(&quot;summary&quot;);
-    summary.className = &quot;kanban-progress-summary&quot;;
-    const rows = document.createElement(&quot;div&quot;);
-    rows.className = &quot;kanban-progress-rows&quot;;
-
-    function createBar(done, total) {
-      const complete = total &gt; 0 &amp;&amp; done === total;
-      if (total &lt;= SEGMENT_LIMIT) {
-        const segs = document.createElement(&quot;div&quot;);
-        segs.className = &quot;kanban-progress-segs&quot;;
-        segs.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-        for (let idx = 0; idx &lt; total; idx += 1) {
-          const seg = document.createElement(&quot;span&quot;);
-          seg.className = idx &lt; done
-            ? (complete ? &quot;kanban-progress-seg is-done-all&quot; : &quot;kanban-progress-seg is-filled&quot;)
-            : &quot;kanban-progress-seg&quot;;
-          segs.append(seg);
-        }
-        return segs;
-      }
-      const track = document.createElement(&quot;div&quot;);
-      track.className = &quot;kanban-progress-track&quot;;
-      track.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-      const fill = document.createElement(&quot;span&quot;);
-      fill.className = &quot;kanban-progress-fill&quot;;
-      if (complete) fill.dataset.complete = &quot;true&quot;;
-      if (fill.style) fill.style.width = Math.round((done / total) * 100) + &quot;%&quot;;
-      track.append(fill);
-      return track;
-    }
-
-    function createRow(kind, labelText, iconNodes, done, total) {
-      const row = document.createElement(&quot;div&quot;);
-      row.className = &quot;kanban-progress-row&quot;;
-      row.dataset.kind = kind;
-
-      const kindNode = document.createElement(&quot;span&quot;);
-      kindNode.className = &quot;kanban-progress-kind&quot;;
-      const icon = createSvgNode(&quot;svg&quot;, {
-        width: &quot;13&quot;,
-        height: &quot;13&quot;,
-        viewBox: &quot;0 0 16 16&quot;,
-        fill: &quot;none&quot;,
-        &quot;aria-hidden&quot;: &quot;true&quot;,
-      });
-      icon.append(...iconNodes);
-      kindNode.append(icon);
-      addText(kindNode, &quot;span&quot;, &quot;&quot;, labelText);
-      row.append(kindNode);
-
-      row.append(createBar(done, total));
-
-      const count = addText(row, &quot;span&quot;, &quot;kanban-progress-count&quot;, done + &quot;/&quot; + total);
-      if (total &gt; 0 &amp;&amp; done === total) {
-        count.dataset.complete = &quot;true&quot;;
-      }
-      return row;
-    }
-
-    if (details.checklist) {
-      rows.append(createRow(
-        &quot;checklist&quot;,
-        &quot;체크&quot;,
-        [
-          createSvgNode(&quot;rect&quot;, {
-            x: &quot;2&quot;,
-            y: &quot;2&quot;,
-            width: &quot;12&quot;,
-            height: &quot;12&quot;,
-            rx: &quot;3&quot;,
-            stroke: &quot;currentColor&quot;,
-            &quot;stroke-width&quot;: &quot;1.4&quot;,
-          }),
-          createSvgNode(&quot;path&quot;, {
-            d: &quot;M5.2 8.2L7.1 10.1L11 6.1&quot;,
-            stroke: &quot;currentColor&quot;,
-            &quot;stroke-width&quot;: &quot;1.5&quot;,
-            &quot;stroke-linecap&quot;: &quot;round&quot;,
-            &quot;stroke-linejoin&quot;: &quot;round&quot;,
-          }),
-        ],
-        details.checklist.done,
-        details.checklist.total,
-      ));
-    }
-
-    if (details.subtasks) {
-      rows.append(createRow(
-        &quot;subtasks&quot;,
-        &quot;하위&quot;,
-        [
-          createSvgNode(&quot;circle&quot;, { cx: &quot;4&quot;, cy: &quot;3.5&quot;, r: &quot;1.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.4&quot; }),
-          createSvgNode(&quot;circle&quot;, { cx: &quot;11.5&quot;, cy: &quot;7.5&quot;, r: &quot;1.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.4&quot; }),
-          createSvgNode(&quot;circle&quot;, { cx: &quot;11.5&quot;, cy: &quot;12.5&quot;, r: &quot;1.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.4&quot; }),
-          createSvgNode(&quot;path&quot;, {
-            d: &quot;M4 5.2V12.5H9.8M4 7.5H9.8&quot;,
-            stroke: &quot;currentColor&quot;,
-            &quot;stroke-width&quot;: &quot;1.4&quot;,
-            &quot;stroke-linecap&quot;: &quot;round&quot;,
-            &quot;stroke-linejoin&quot;: &quot;round&quot;,
-          }),
-        ],
-        details.subtasks.done,
-        details.subtasks.total,
-      ));
-    }
-
-    const chevron = createSvgNode(&quot;svg&quot;, {
-      class: &quot;kanban-progress-chevron&quot;,
-      width: &quot;13&quot;,
-      height: &quot;13&quot;,
-      viewBox: &quot;0 0 16 16&quot;,
-      fill: &quot;none&quot;,
-      &quot;aria-hidden&quot;: &quot;true&quot;,
-    });
-    chevron.append(createSvgNode(&quot;path&quot;, {
-      d: &quot;M4 6L8 10L12 6&quot;,
-      stroke: &quot;currentColor&quot;,
-      &quot;stroke-width&quot;: &quot;1.6&quot;,
-      &quot;stroke-linecap&quot;: &quot;round&quot;,
-      &quot;stroke-linejoin&quot;: &quot;round&quot;,
-    }));
-
-    summary.append(rows, chevron);
-    box.append(summary);
-
-    const drawer = document.createElement(&quot;div&quot;);
-    drawer.className = &quot;kanban-progress-drawer&quot;;
-
-    if (details.checklist) {
-      const group = document.createElement(&quot;div&quot;);
-      group.className = &quot;kanban-progress-group&quot;;
-      group.dataset.group = &quot;checklist&quot;;
-      addText(
-        group,
-        &quot;div&quot;,
-        &quot;kanban-progress-group-title&quot;,
-        &quot;체크리스트 (&quot; + details.checklist.done + &quot;/&quot; + details.checklist.total + &quot;)&quot;,
-      );
-      const list = document.createElement(&quot;ul&quot;);
-      list.className = &quot;kanban-progress-list&quot;;
-      details.checklist.items.forEach((item) =&gt; {
-        const li = document.createElement(&quot;li&quot;);
-        li.className = item.done ? &quot;kanban-progress-item is-done&quot; : &quot;kanban-progress-item&quot;;
-        li.dataset.done = String(item.done);
-        const mark = document.createElement(&quot;span&quot;);
-        mark.className = &quot;kanban-check-mark&quot;;
-        mark.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-        const markSvg = createSvgNode(&quot;svg&quot;, {
-          width: &quot;13&quot;,
-          height: &quot;13&quot;,
-          viewBox: &quot;0 0 16 16&quot;,
-          fill: &quot;none&quot;,
-          &quot;aria-hidden&quot;: &quot;true&quot;,
-        });
-        markSvg.append(createSvgNode(&quot;rect&quot;, {
-          x: &quot;2&quot;,
-          y: &quot;2&quot;,
-          width: &quot;12&quot;,
-          height: &quot;12&quot;,
-          rx: &quot;3&quot;,
-          stroke: &quot;currentColor&quot;,
-          &quot;stroke-width&quot;: &quot;1.4&quot;,
-        }));
-        if (item.done) {
-          markSvg.append(createSvgNode(&quot;path&quot;, {
-            d: &quot;M5.2 8.2L7.1 10.1L11 6.1&quot;,
-            stroke: &quot;currentColor&quot;,
-            &quot;stroke-width&quot;: &quot;1.5&quot;,
-            &quot;stroke-linecap&quot;: &quot;round&quot;,
-            &quot;stroke-linejoin&quot;: &quot;round&quot;,
-          }));
-        }
-        mark.append(markSvg);
-        li.append(mark);
-        addText(li, &quot;span&quot;, &quot;kanban-progress-item-text&quot;, item.text);
-        list.append(li);
-      });
-      group.append(list);
-      drawer.append(group);
-    }
-
-    if (details.subtasks) {
-      const group = document.createElement(&quot;div&quot;);
-      group.className = &quot;kanban-progress-group&quot;;
-      group.dataset.group = &quot;subtasks&quot;;
-      addText(
-        group,
-        &quot;div&quot;,
-        &quot;kanban-progress-group-title&quot;,
-        &quot;하위 일감 (&quot; + details.subtasks.done + &quot;/&quot; + details.subtasks.total + &quot;)&quot;,
-      );
-      const list = document.createElement(&quot;ul&quot;);
-      list.className = &quot;kanban-progress-list&quot;;
-      details.subtasks.items.forEach((item) =&gt; {
-        const li = document.createElement(&quot;li&quot;);
-        li.className = item.done ? &quot;kanban-progress-item is-done&quot; : &quot;kanban-progress-item&quot;;
-        li.dataset.done = String(item.done);
-        const dot = document.createElement(&quot;span&quot;);
-        dot.className = &quot;status-dot&quot;;
-        dot.dataset.status = item.status;
-        dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-        li.append(dot);
-        if (item.sourceUrl) {
-          const link = document.createElement(&quot;a&quot;);
-          link.className = &quot;kanban-subtask-link&quot;;
-          link.textContent = item.title;
-          setSafeHref(link, item.sourceUrl);
-          li.append(link);
-        } else {
-          addText(li, &quot;span&quot;, &quot;kanban-progress-item-text&quot;, item.title);
-        }
-        addText(li, &quot;span&quot;, &quot;kanban-subtask-status&quot;, item.status);
-        list.append(li);
-      });
-      group.append(list);
-      drawer.append(group);
-    }
-
-    box.append(drawer);
-    return box;
-  }
-
-  function createKanbanCard(task, showExactStatus) {
-    const details = model.describeTask(task);
-    const card = document.createElement(&quot;article&quot;);
-    card.className = &quot;kanban-card&quot;;
-    card.dataset.taskTitle = details.title;
-
-    const top = document.createElement(&quot;div&quot;);
-    top.className = &quot;kanban-card-top&quot;;
-    const badge = document.createElement(&quot;span&quot;);
-    badge.className = &quot;kanban-badge&quot;;
-    const dot = document.createElement(&quot;span&quot;);
-    dot.className = &quot;status-dot&quot;;
-    dot.dataset.status = details.status;
-    dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-    badge.append(dot);
-    addText(badge, &quot;span&quot;, &quot;&quot;, showExactStatus ? details.status + &quot; · &quot; + details.project : details.project);
-    top.append(badge);
-
-    const tags = document.createElement(&quot;div&quot;);
-    tags.className = &quot;kanban-card-tags&quot;;
-    if (details.priority &amp;&amp; details.priority !== &quot;미지정&quot;) {
-      addText(tags, &quot;span&quot;, &quot;kanban-priority&quot;, details.priority);
-    }
-    const dday = addText(tags, &quot;span&quot;, &quot;kanban-dday&quot;, details.dDayLabel);
-    dday.dataset.tone = details.tone;
-    if (details.sourceUrl) {
-      const link = document.createElement(&quot;a&quot;);
-      link.className = &quot;task-source&quot;;
-      link.setAttribute(&quot;aria-label&quot;, &quot;Notion에서 보기&quot;);
-      link.setAttribute(&quot;title&quot;, &quot;Notion에서 보기&quot;);
-      setSafeHref(link, details.sourceUrl);
-      const svg = createSvgNode(&quot;svg&quot;, {
-        viewBox: &quot;0 0 24 24&quot;,
-        fill: &quot;none&quot;,
-        &quot;aria-hidden&quot;: &quot;true&quot;,
-      });
-      svg.append(...NOTION_ICON_PATHS.map((attrs) =&gt; createSvgNode(&quot;path&quot;, attrs)));
-      link.append(svg);
-      tags.append(link);
-    }
-    top.append(tags);
-    card.append(top);
-
-    addText(card, &quot;h3&quot;, &quot;&quot;, details.title);
-
-    const metaParts = [&quot;일정 &quot; + details.goalDate];
-    if (details.nextCheck &amp;&amp; details.nextCheck !== &quot;미지정&quot;) {
-      metaParts.push(&quot;확인 &quot; + details.nextCheck);
-    }
-    const meta = document.createElement(&quot;div&quot;);
-    meta.className = &quot;kanban-meta&quot;;
-    addText(meta, &quot;span&quot;, &quot;&quot;, metaParts.join(&quot; · &quot;));
-    const pct = addText(meta, &quot;span&quot;, &quot;kanban-progress-pct&quot;, details.progress + &quot;%&quot;);
-    pct.dataset.tone = details.tone;
-    card.append(meta);
-
-    const bar = document.createElement(&quot;div&quot;);
-    bar.className = &quot;kanban-bar&quot;;
-    const fill = document.createElement(&quot;span&quot;);
-    fill.className = &quot;kanban-bar-fill&quot;;
-    fill.dataset.tone = details.tone;
-    if (fill.style) fill.style.width = details.progress + &quot;%&quot;;
-    bar.append(fill);
-    card.append(bar);
-
-    if (details.nextAction &amp;&amp; details.nextAction !== &quot;미지정&quot;) {
-      const next = document.createElement(&quot;div&quot;);
-      next.className = &quot;kanban-next&quot;;
-      addText(next, &quot;span&quot;, &quot;kanban-next-label&quot;, &quot;다음&quot;);
-      addText(next, &quot;span&quot;, &quot;&quot;, details.nextAction);
-      card.append(next);
-    }
-
-    const progressBox = createTaskProgressBox(details);
-    if (progressBox) card.append(progressBox);
-
-    if (details.doneCondition &amp;&amp; details.doneCondition !== &quot;미지정&quot;) {
-      const cond = document.createElement(&quot;details&quot;);
-      cond.className = &quot;kanban-details&quot;;
-      addText(cond, &quot;summary&quot;, &quot;&quot;, &quot;완료 조건 보기&quot;);
-      addText(cond, &quot;p&quot;, &quot;&quot;, details.doneCondition);
-      card.append(cond);
-    }
-
-    return card;
-  }
-
-  function renderKanbanBoard(container, tasks) {
-    const lanes = model.groupTasksByLane(tasks);
-    container.replaceChildren(...lanes.map((lane) =&gt; {
-      const col = document.createElement(&quot;section&quot;);
-      col.className = &quot;kanban-col&quot;;
-      col.dataset.laneId = lane.id;
-
-      const head = document.createElement(&quot;div&quot;);
-      head.className = &quot;kanban-col-head&quot;;
-      const title = document.createElement(&quot;span&quot;);
-      title.className = &quot;kanban-col-title&quot;;
-      const dot = document.createElement(&quot;span&quot;);
-      dot.className = &quot;status-dot&quot;;
-      dot.dataset.status = lane.dot;
-      dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-      title.append(dot);
-      addText(title, &quot;span&quot;, &quot;&quot;, lane.title);
-      head.append(title);
-      addText(head, &quot;span&quot;, &quot;kanban-col-count&quot;, String(lane.tasks.length));
-      col.append(head);
-
-      const cardsWrap = document.createElement(&quot;div&quot;);
-      cardsWrap.className = &quot;kanban-cards&quot;;
-      if (lane.tasks.length === 0) {
-        addText(cardsWrap, &quot;div&quot;, &quot;kanban-empty&quot;, &quot;해당 일감 없음&quot;);
-      } else {
-        cardsWrap.append(...lane.tasks.map((task) =&gt; createKanbanCard(task, lane.showExactStatus)));
-      }
-      col.append(cardsWrap);
-      return col;
-    }));
-  }
-
-  function renderStatusCounts(summary) {
-    countsNode.replaceChildren();
-    model.statuses.forEach((status) =&gt; {
-      const item = document.createElement(&quot;span&quot;);
-      item.className = &quot;status-count&quot;;
-      const dot = document.createElement(&quot;span&quot;);
-      dot.className = &quot;status-dot&quot;;
-      dot.dataset.status = status;
-      dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-      item.append(dot);
-      addText(item, &quot;span&quot;, &quot;&quot;, status);
-      addText(item, &quot;strong&quot;, &quot;tabular-nums&quot;, summary.statuses[status]);
-      countsNode.append(item);
-    });
-  }
-
-  function createBillboardStep(item) {
-    const button = document.createElement(&quot;button&quot;);
-    button.type = &quot;button&quot;;
-    button.className = &quot;hq-step-card&quot;;
-    button.dataset.tone = item.tone;
-    button.title = item.title + &quot; (&quot; + item.shortDate + &quot;)&quot;;
-
-    const labelRow = document.createElement(&quot;div&quot;);
-    labelRow.className = &quot;hq-step-label&quot;;
-    addText(labelRow, &quot;span&quot;, &quot;&quot;, item.stepLabel);
-    addText(labelRow, &quot;span&quot;, &quot;&quot;, item.status);
-    button.append(labelRow);
-
-    addText(button, &quot;div&quot;, &quot;hq-step-title&quot;, item.title);
-
-    const bar = document.createElement(&quot;div&quot;);
-    bar.className = &quot;hq-step-bar&quot;;
-    const fill = document.createElement(&quot;span&quot;);
-    fill.className = &quot;hq-step-bar-fill&quot;;
-    if (fill.style) fill.style.width = item.progress + &quot;%&quot;;
-    bar.append(fill);
-    button.append(bar);
-
-    const foot = document.createElement(&quot;div&quot;);
-    foot.className = &quot;hq-step-foot&quot;;
-    addText(foot, &quot;span&quot;, &quot;hq-step-dday&quot;, item.dDayLabel);
-    addText(foot, &quot;span&quot;, &quot;hq-step-date&quot;, item.shortDate);
-    button.append(foot);
-
-    button.addEventListener(&quot;click&quot;, () =&gt; {
-      const cards = Array.from(communalTasksNode.querySelectorAll(&quot;.kanban-card&quot;));
-      cards.forEach((card) =&gt; card.classList.remove(&quot;is-billboard-highlight&quot;));
-      const match = cards.find((card) =&gt; card.dataset.taskTitle === item.title);
-      if (match) {
-        match.classList.add(&quot;is-billboard-highlight&quot;);
-        match.scrollIntoView?.({ behavior: &quot;smooth&quot;, block: &quot;center&quot; });
-      } else {
-        communalTitleNode?.scrollIntoView?.({ behavior: &quot;smooth&quot;, block: &quot;start&quot; });
-      }
-    });
-    return button;
-  }
-
-  function createTickerButton(item) {
-    const button = document.createElement(&quot;button&quot;);
-    button.type = &quot;button&quot;;
-    button.className = &quot;hq-ticker-item&quot;;
-    button.title = &quot;[&quot; + item.owner + &quot;] &quot; + item.title + &quot; (&quot; + item.shortDate + &quot;)&quot;;
-    addText(button, &quot;span&quot;, &quot;hq-ticker-owner&quot;, &quot;[&quot; + item.owner + &quot;]&quot;);
-    addText(button, &quot;span&quot;, &quot;&quot;, item.title);
-    addText(button, &quot;span&quot;, &quot;hq-ticker-date&quot;, &quot;(&quot; + item.shortDate + &quot;)&quot;);
-    button.addEventListener(&quot;click&quot;, () =&gt; {
-      userChangedState = true;
-      state.selectedEmployee = item.owner;
-      render();
-      model.focusEmployeeButton(Array.from(employeeNode.querySelectorAll(&quot;button&quot;)), item.owner);
-      saveState();
-    });
-    return button;
-  }
-
-  function renderBillboard(filters) {
-    if (!billboardNode) return;
-    const view = model.billboardView(filters);
-    const head = document.createElement(&quot;div&quot;);
-    head.className = &quot;hq-billboard-head&quot;;
-    const titleWrap = document.createElement(&quot;span&quot;);
-    titleWrap.className = &quot;hq-billboard-title&quot;;
-    const dot = document.createElement(&quot;span&quot;);
-    dot.className = &quot;hq-billboard-dot&quot;;
-    dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-    titleWrap.append(dot);
-    const projectSuffix = filters.project !== ALL_PROJECTS ? &quot; · &quot; + filters.project : &quot;&quot;;
-    addText(titleWrap, &quot;span&quot;, &quot;&quot;, &quot;SHARED SCHEDULE&quot; + projectSuffix);
-    head.append(titleWrap);
-    addText(
-      head,
-      &quot;span&quot;,
-      &quot;hq-billboard-meta&quot;,
-      &quot;TODAY &quot; + view.todayLabel + &quot; · 공통 &quot; + view.scheduleTasks.length + &quot; · 진행 &quot; + view.tickerTasks.length,
-    );
-
-    let upperNode;
-    if (view.scheduleTasks.length === 0) {
-      upperNode = document.createElement(&quot;div&quot;);
-      upperNode.className = &quot;hq-billboard-empty&quot;;
-      upperNode.textContent = &quot;표시할 공통 일정이 없습니다.&quot;;
-    } else {
-      upperNode = document.createElement(&quot;div&quot;);
-      upperNode.className = &quot;hq-stepper&quot;;
-      upperNode.append(...view.scheduleTasks.slice(0, 4).map(createBillboardStep));
-    }
-
-    const tickerBar = document.createElement(&quot;div&quot;);
-    tickerBar.className = &quot;hq-ticker-bar&quot;;
-    addText(tickerBar, &quot;span&quot;, &quot;hq-ticker-badge&quot;, &quot;LIVE&quot;);
-    const viewport = document.createElement(&quot;div&quot;);
-    viewport.className = &quot;hq-ticker-viewport&quot;;
-    if (view.tickerTasks.length === 0) {
-      addText(viewport, &quot;span&quot;, &quot;hq-ticker-empty&quot;, &quot;진행 중인 요원 일감이 없습니다.&quot;);
-    } else {
-      const track = document.createElement(&quot;div&quot;);
-      track.className = &quot;hq-ticker-track&quot;;
-      const sequence = view.tickerTasks.concat(view.tickerTasks);
-      sequence.forEach((item, index) =&gt; {
-        if (index &gt; 0) addText(track, &quot;span&quot;, &quot;hq-ticker-sep&quot;, &quot;·&quot;);
-        track.append(createTickerButton(item));
-      });
-      viewport.append(track);
-    }
-    tickerBar.append(viewport);
-
-    billboardNode.replaceChildren(head, upperNode, tickerBar);
-  }
-
-  function render() {
-    const filters = { status: statusSelect.value, project: projectSelect.value };
-    const summary = model.summary(filters);
-    const view = model.viewForEmployee(state.selectedEmployee, filters);
-    summaryNode.textContent = &quot;현재 표시 &quot; + summary.total + &quot; / &quot; + summary.snapshotTotal + &quot;개 · 미배정 &quot; + summary.unassigned + &quot;개&quot;;
-    renderStatusCounts(summary);
-    renderBillboard(filters);
-    seatingOrder = model.normalizeSeating(seatingOrder);
-    employeeNode.replaceChildren(...seatingOrder.map((owner) =&gt; createWorkstation(owner, filters)));
-
-    selectedTitle.textContent = state.selectedEmployee + &quot;의 일감 · &quot; + view.tasks.length + &quot;개&quot;;
-    selectedNote.textContent = view.empty ? &quot;선택한 직원은 유지되며, 조건에 맞는 일감이 없습니다.&quot; : &quot;대표 일감 외 &quot; + view.otherCount + &quot;개를 포함합니다.&quot;;
-    selectedEmpty.hidden = !view.empty;
-    selectedEmpty.textContent = &quot;현재 필터에 맞는 &quot; + state.selectedEmployee + &quot;의 일감이 없습니다.&quot;;
-    if (view.empty) {
-      selectedTasksNode.replaceChildren();
-    } else {
-      renderKanbanBoard(selectedTasksNode, view.tasks);
-    }
-
-    const unassigned = model.unassignedTasks(filters);
-    communalCount.textContent = unassigned.length + &quot;개&quot;;
-    communalEmpty.hidden = unassigned.length &gt; 0;
-    communalEmpty.textContent = &quot;현재 조건에 맞는 미배정 일감이 없습니다.&quot;;
-    renderTaskList(communalTasksNode, unassigned);
-  }
-
-  function setSelectOptions(select, values, selectedValue) {
-    const options = [...new Set(values.concat(selectedValue ? [selectedValue] : []))];
-    select.replaceChildren(...options.map((value) =&gt; {
-      const option = document.createElement(&quot;option&quot;);
-      option.value = value;
-      option.textContent = value;
-      return option;
-    }));
-    select.value = selectedValue;
-  }
-
-  function formatSuccessTime(value) {
-    if (!value) return snapshot.snapshotDate || &quot;스냅샷&quot;;
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return String(value);
-    return date.toLocaleTimeString(&quot;ko-KR&quot;, {
-      timeZone: &quot;Asia/Seoul&quot;,
-      hour: &quot;2-digit&quot;,
-      minute: &quot;2-digit&quot;,
-      hour12: false,
-    });
-  }
-
-  function setSyncStatus(message, stateName) {
-    syncStatus.textContent = message;
-    syncStatus.dataset.state = stateName;
-  }
-
-  const connectToggleButton = document.getElementById(&quot;wips-office-connect-toggle&quot;);
-  const logoutButton = document.getElementById(&quot;wips-office-logout&quot;);
-  const offlineBanner = document.getElementById(&quot;wips-office-offline-banner&quot;);
-  const connectionPanel = document.getElementById(&quot;wips-office-connection-panel&quot;);
-  const connectionForm = document.getElementById(&quot;wips-office-connection-form&quot;);
-  const tokenInput = document.getElementById(&quot;wips-office-token&quot;);
-  const dataSourceIdInput = document.getElementById(&quot;wips-office-datasource-id&quot;);
-  const connectSubmitButton = document.getElementById(&quot;wips-office-connect-submit&quot;);
-  const connectCancelButton = document.getElementById(&quot;wips-office-connect-cancel&quot;);
-  const connectionMessage = document.getElementById(&quot;wips-office-connection-message&quot;);
-  const mainView = document.getElementById(&quot;wips-office-main-view&quot;);
-
-  const OPFS_DIR_NAME = &quot;wips-office-private-v1&quot;;
-  const OPFS_CONNECTION_FILE = &quot;connection.json&quot;;
-  const OPFS_SNAPSHOT_FILE = &quot;snapshot-cache.json&quot;;
-  const STATIC_NOTION_API_ROOT = &quot;https://api.notion.com/v1&quot;;
-  const STATIC_NOTION_VERSION = &quot;2026-03-11&quot;;
-  const STATIC_MAX_RETRY_AFTER_MS = 10_000;
-  const STATIC_MAX_RETRIES = 2;
-  const STATIC_MAX_PAGES = 100;
-  const STATIC_REQUEST_TIMEOUT_MS = 10_000;
-  const STATIC_CHECKLIST_MAX_PAGES = 5;
-  const STATIC_CHECKLIST_MAX_DEPTH = 3;
-  const STATIC_CHECKLIST_CONCURRENCY = 3;
-  const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const TOKEN_INVALID_PATTERN = /[\s\u0000-\u001F\u007F]/;
-
-  function createEmptySnapshotObject() {
-    return {
-      snapshotDate: &quot;&quot;,
-      timezone: &quot;Asia/Seoul&quot;,
-      sourceUrl: &quot;&quot;,
-      results: [],
-      has_more: false,
-      data_source_ids: [],
-    };
-  }
-
-  function isEmptySnapshotData(data) {
-    return Boolean(
-      data &amp;&amp;
-      Array.isArray(data.results) &amp;&amp;
-      data.results.length === 0 &amp;&amp;
-      (data.snapshotDate || &quot;&quot;) === &quot;&quot; &amp;&amp;
-      (data.sourceUrl || &quot;&quot;) === &quot;&quot; &amp;&amp;
-      (!Array.isArray(data.data_source_ids) || data.data_source_ids.length === 0)
-    );
-  }
-
-  const IS_STATIC_MODE =
-    window.__WIPS_RUNTIME_MODE === &quot;static&quot; ||
-    (window.__WIPS_RUNTIME_MODE !== &quot;local&quot; &amp;&amp; isEmptySnapshotData(snapshot));
-
-  let activeConnection = null;
-  let activeFetchController = null;
-  let pollTimerId = null;
-  let sessionEpoch = 0;
-  let isRefreshing = false;
-
-  function validateStaticConnection(input) {
-    const rawToken = typeof input?.token === &quot;string&quot; ? input.token : &quot;&quot;;
-    if (!rawToken || TOKEN_INVALID_PATTERN.test(rawToken)) {
-      return { ok: false, error: &quot;Notion 토큰은 공백이나 제어 문자 없이 입력해야 합니다.&quot; };
-    }
-    const rawId = typeof input?.dataSourceId === &quot;string&quot; ? input.dataSourceId.trim() : &quot;&quot;;
-    if (!UUID_PATTERN.test(rawId)) {
-      return { ok: false, error: &quot;데이터 소스 ID는 표준 UUID(8-4-4-4-12) 형식이어야 합니다.&quot; };
-    }
-    return {
-      ok: true,
-      value: {
-        token: rawToken,
-        dataSourceId: rawId.toLowerCase(),
-      },
-    };
-  }
-
-  function createBrowserOpfsStore() {
-    function isSupported() {
-      return typeof navigator !== &quot;undefined&quot; &amp;&amp; Boolean(navigator.storage) &amp;&amp; typeof navigator.storage.getDirectory === &quot;function&quot;;
-    }
-    async function getPrivateDir(create) {
-      if (!isSupported()) throw new Error(&quot;OPFS를 지원하지 않는 브라우저입니다.&quot;);
-      const rootDir = await navigator.storage.getDirectory();
-      try {
-        return await rootDir.getDirectoryHandle(OPFS_DIR_NAME, { create });
-      } catch (error) {
-        if (!create &amp;&amp; error?.name === &quot;NotFoundError&quot;) return null;
-        throw error;
-      }
-    }
-    async function writeVerified(fileName, payload) {
-      const dir = await getPrivateDir(true);
-      const serialized = JSON.stringify(payload);
-      const handle = await dir.getFileHandle(fileName, { create: true });
-      const writable = await handle.createWritable();
-      await writable.write(serialized);
-      await writable.close();
-      const file = await handle.getFile();
-      const readback = await file.text();
-      if (JSON.stringify(JSON.parse(readback)) !== JSON.stringify(JSON.parse(serialized))) {
-        throw new Error(&quot;OPFS 저장 검증에 실패했습니다.&quot;);
-      }
-      return payload;
-    }
-    async function readJson(fileName) {
-      const dir = await getPrivateDir(false);
-      if (!dir) return null;
-      let handle;
-      try {
-        handle = await dir.getFileHandle(fileName, { create: false });
-      } catch (error) {
-        if (error?.name === &quot;NotFoundError&quot;) return null;
-        throw error;
-      }
-      const file = await handle.getFile();
-      const text = await file.text();
-      return text ? JSON.parse(text) : null;
-    }
-    return {
-      isSupported,
-      async saveConnection(config) {
-        const check = validateStaticConnection(config);
-        if (!check.ok) throw new Error(check.error);
-        return writeVerified(OPFS_CONNECTION_FILE, check.value);
-      },
-      async loadConnection() {
-        if (!isSupported()) return null;
-        const stored = await readJson(OPFS_CONNECTION_FILE);
-        if (!stored) return null;
-        const check = validateStaticConnection(stored);
-        return check.ok ? check.value : null;
-      },
-      async saveSnapshot(nextSnapshot) {
-        if (!isSupported()) return nextSnapshot;
-        return writeVerified(OPFS_SNAPSHOT_FILE, nextSnapshot);
-      },
-      async loadSnapshot() {
-        if (!isSupported()) return null;
-        const stored = await readJson(OPFS_SNAPSHOT_FILE);
-        if (!stored || !Array.isArray(stored.results)) return null;
-        return stored;
-      },
-      async clearAll() {
-        if (!isSupported()) return;
-        const dir = await getPrivateDir(false);
-        if (!dir) return;
-        for (const name of [OPFS_CONNECTION_FILE, OPFS_SNAPSHOT_FILE]) {
-          try {
-            await dir.removeEntry(name);
-          } catch (error) {
-            if (error?.name !== &quot;NotFoundError&quot;) throw error;
-          }
-        }
-      },
-    };
-  }
-
-  const opfsStore = createBrowserOpfsStore();
-
-  function staticPlainText(items) {
-    if (!Array.isArray(items)) return null;
-    const text = items.map((item) =&gt; {
-      if (typeof item?.plain_text === &quot;string&quot;) return item.plain_text;
-      if (typeof item?.text?.content === &quot;string&quot;) return item.text.content;
-      return &quot;&quot;;
-    }).join(&quot;&quot;);
-    return text || null;
-  }
-
-  function staticSelectName(value) {
-    return typeof value?.name === &quot;string&quot; &amp;&amp; value.name.trim() ? value.name : null;
-  }
-
-  function staticMapNotionPage(page) {
-    const properties = page?.properties || {};
-    const taskDate = properties[&quot;목표일&quot;]?.date;
-    return {
-      id: typeof page?.id === &quot;string&quot; ? page.id : &quot;&quot;,
-      url: typeof page?.url === &quot;string&quot; ? page.url : &quot;&quot;,
-      title: staticPlainText(properties[&quot;일감&quot;]?.title) || &quot;제목 없음&quot;,
-      parentTaskIds: (properties[&quot;상위 일감&quot;]?.relation || []).map((parent) =&gt; parent.id).filter(Boolean),
-      subTaskIds: (properties[&quot;하위 일감&quot;]?.relation || []).map((child) =&gt; child.id).filter(Boolean),
-      checklist: [],
-      owner: staticSelectName(properties[&quot;담당자&quot;]?.select),
-      status: staticSelectName(properties[&quot;상태&quot;]?.status) || &quot;미지정&quot;,
-      project: staticSelectName(properties[&quot;프로젝트&quot;]?.select),
-      priority: staticSelectName(properties[&quot;우선순위&quot;]?.select),
-      category: staticSelectName(properties[&quot;구분&quot;]?.select),
-      nextAction: staticPlainText(properties[&quot;다음 조치&quot;]?.rich_text),
-      doneCondition: staticPlainText(properties[&quot;완료 조건&quot;]?.rich_text),
-      startDate: typeof taskDate?.start === &quot;string&quot; ? taskDate.start : null,
-      endDate: typeof taskDate?.end === &quot;string&quot; ? taskDate.end : null,
-      checkDate: typeof properties[&quot;다음 확인일&quot;]?.date?.start === &quot;string&quot;
-        ? properties[&quot;다음 확인일&quot;].date.start
-        : null,
-    };
-  }
-
-  function staticParseRetryAfter(value) {
-    if (value == null || value === &quot;&quot;) return null;
-    const seconds = Number(value);
-    if (Number.isFinite(seconds) &amp;&amp; seconds &gt;= 0) return Math.ceil(seconds * 1000);
-    const parsedDate = Date.parse(value);
-    return Number.isFinite(parsedDate) ? Math.max(0, parsedDate - Date.now()) : null;
-  }
-
-  function createStaticAbortError() {
-    const abortErr = new Error(&quot;요청이 취소되었습니다.&quot;);
-    abortErr.code = &quot;NOTION_ABORTED&quot;;
-    return abortErr;
-  }
-
-  function staticWait(ms, signal) {
-    if (signal?.aborted) return Promise.reject(createStaticAbortError());
-    return new Promise((resolve, reject) =&gt; {
-      const onAbort = () =&gt; {
-        clearTimeout(timer);
-        reject(createStaticAbortError());
-      };
-      const timer = setTimeout(() =&gt; {
-        signal?.removeEventListener(&quot;abort&quot;, onAbort);
-        resolve();
-      }, ms);
-      signal?.addEventListener(&quot;abort&quot;, onAbort, { once: true });
-    });
-  }
-
-  async function staticNotionRequest(endpoint, requestOptions, signal) {
-    let retryCount = 0;
-    while (true) {
-      if (signal?.aborted) {
-        throw createStaticAbortError();
-      }
-      const controller = new AbortController();
-      let timedOut = false;
-      let cancelled = false;
-      const onAbort = () =&gt; {
-        cancelled = true;
-        controller.abort();
-      };
-      signal?.addEventListener(&quot;abort&quot;, onAbort, { once: true });
-      const timer = setTimeout(() =&gt; {
-        timedOut = true;
-        controller.abort();
-      }, STATIC_REQUEST_TIMEOUT_MS);
-
-      let response;
-      try {
-        response = await fetch(endpoint, {
-          ...requestOptions,
-          redirect: &quot;error&quot;,
-          credentials: &quot;omit&quot;,
-          cache: &quot;no-store&quot;,
-          signal: controller.signal,
-        });
-      } catch (error) {
-        clearTimeout(timer);
-        signal?.removeEventListener(&quot;abort&quot;, onAbort);
-        if (cancelled || signal?.aborted) {
-          throw createStaticAbortError();
-        }
-        if (timedOut || error?.name === &quot;AbortError&quot;) {
-          throw new Error(&quot;Notion 조회 요청 시간이 초과되었습니다.&quot;);
-        }
-        throw new Error(&quot;Notion API 또는 네트워크에 연결할 수 없습니다.&quot;);
-      }
-
-      if (response.status === 429) {
-        const retryDelay = staticParseRetryAfter(response.headers.get(&quot;retry-after&quot;)) ??
-          Math.min(1000 * (2 ** retryCount), STATIC_MAX_RETRY_AFTER_MS);
-        try { await response.body?.cancel(); } catch {}
-        clearTimeout(timer);
-        signal?.removeEventListener(&quot;abort&quot;, onAbort);
-        if (retryDelay &gt; STATIC_MAX_RETRY_AFTER_MS || retryCount &gt;= STATIC_MAX_RETRIES) {
-          throw new Error(&quot;Notion 요청 한도(429)에 도달했습니다. 잠시 후 다시 시도하세요.&quot;);
-        }
-        await staticWait(retryDelay, signal);
-        retryCount += 1;
-        continue;
-      }
-
-      if (!response.ok) {
-        const upstreamStatus = response.status;
-        try { await response.body?.cancel(); } catch {}
-        clearTimeout(timer);
-        signal?.removeEventListener(&quot;abort&quot;, onAbort);
-        const err = upstreamStatus === 401 || upstreamStatus === 403
-          ? new Error(&quot;인증 또는 권한 오류(HTTP &quot; + upstreamStatus + &quot;): Notion Integration의 Read content 권한과 단일 DB 연결, 토큰·데이터 소스 ID를 확인하세요.&quot;)
-          : new Error(&quot;Notion 조회가 실패했습니다 (HTTP &quot; + upstreamStatus + &quot;).&quot;);
-        err.upstreamStatus = upstreamStatus;
-        throw err;
-      }
-
-      try {
-        return await response.json();
-      } catch (error) {
-        if (cancelled || signal?.aborted) {
-          throw createStaticAbortError();
-        }
-        if (timedOut || error?.name === &quot;AbortError&quot;) {
-          throw new Error(&quot;Notion 응답 본문 수신 시간이 초과되었습니다.&quot;);
-        }
-        throw new Error(&quot;Notion API가 유효한 JSON 응답을 반환하지 않았습니다.&quot;);
-      } finally {
-        clearTimeout(timer);
-        signal?.removeEventListener(&quot;abort&quot;, onAbort);
-      }
-    }
-  }
-
-  async function fetchPageChecklistStatic(token, blockId, signal) {
-    const items = [];
-    const visited = new Set();
-
-    async function walkBlocks(currentBlockId, depth) {
-      const normalized = normalizeTaskId(currentBlockId);
-      if (!currentBlockId || (normalized &amp;&amp; visited.has(normalized))) return;
-      if (normalized) visited.add(normalized);
-
-      let cursor = null;
-      let pageCount = 0;
-      while (pageCount &lt; STATIC_CHECKLIST_MAX_PAGES) {
-        if (signal?.aborted) throw createStaticAbortError();
-        let endpoint = STATIC_NOTION_API_ROOT + &quot;/blocks/&quot; + encodeURIComponent(currentBlockId) + &quot;/children?page_size=100&quot;;
-        if (cursor) endpoint += &quot;&amp;start_cursor=&quot; + encodeURIComponent(cursor);
-        const payload = await staticNotionRequest(endpoint, {
-          method: &quot;GET&quot;,
-          headers: {
-            Authorization: &quot;Bearer &quot; + token,
-            &quot;Notion-Version&quot;: STATIC_NOTION_VERSION,
-          },
-        }, signal);
-
-        const blocks = Array.isArray(payload?.results) ? payload.results : [];
-        for (const block of blocks) {
-          if (block?.type === &quot;to_do&quot;) {
-            const text = staticPlainText(block.to_do?.rich_text);
-            if (text) {
-              items.push({ text, done: Boolean(block.to_do?.checked) });
-            }
-          }
-          if (
-            block?.has_children &amp;&amp;
-            block.type !== &quot;child_page&quot; &amp;&amp;
-            block.type !== &quot;child_database&quot; &amp;&amp;
-            typeof block.id === &quot;string&quot; &amp;&amp;
-            block.id &amp;&amp;
-            depth &lt; STATIC_CHECKLIST_MAX_DEPTH
-          ) {
-            await walkBlocks(block.id, depth + 1);
-          }
-        }
-
-        pageCount += 1;
-        if (!payload?.has_more || typeof payload.next_cursor !== &quot;string&quot; || !payload.next_cursor) {
-          break;
-        }
-        cursor = payload.next_cursor;
-      }
-    }
-
-    await walkBlocks(blockId, 0);
-    return items;
-  }
-
-  async function fetchNotionSnapshotStatic(connection, signal) {
-    const valid = validateStaticConnection(connection);
-    if (!valid.ok) throw new Error(valid.error);
-    const { token, dataSourceId } = valid.value;
-    const endpoint = STATIC_NOTION_API_ROOT + &quot;/data_sources/&quot; + encodeURIComponent(dataSourceId) + &quot;/query&quot;;
-    const results = [];
-    let cursor;
-    let pageCount = 0;
-
-    while (true) {
-      if (pageCount &gt;= STATIC_MAX_PAGES) {
-        throw new Error(&quot;Notion 페이지네이션 안전 한도(&quot; + STATIC_MAX_PAGES + &quot;)를 초과했습니다.&quot;);
-      }
-      const body = { page_size: 100 };
-      if (cursor) body.start_cursor = cursor;
-
-      const pagePayload = await staticNotionRequest(endpoint, {
-        method: &quot;POST&quot;,
-        headers: {
-          Authorization: &quot;Bearer &quot; + token,
-          &quot;Content-Type&quot;: &quot;application/json&quot;,
-          &quot;Notion-Version&quot;: STATIC_NOTION_VERSION,
-        },
-        body: JSON.stringify(body),
-      }, signal);
-
-      if (pagePayload?.request_status?.type === &quot;incomplete&quot;) {
-        throw new Error(&quot;Notion 조회 결과가 불완전(incomplete)하여 기존 데이터를 유지합니다.&quot;);
-      }
-      if (!Array.isArray(pagePayload?.results)) {
-        throw new Error(&quot;Notion 응답에 results 목록이 없습니다.&quot;);
-      }
-      results.push(...pagePayload.results.map(staticMapNotionPage));
-      pageCount += 1;
-      if (!pagePayload.has_more) break;
-      if (typeof pagePayload.next_cursor !== &quot;string&quot; || !pagePayload.next_cursor) {
-        throw new Error(&quot;Notion 페이지네이션 응답에 next_cursor가 없습니다.&quot;);
-      }
-      cursor = pagePayload.next_cursor;
-    }
-
-    const activeTasks = results.filter((task) =&gt; task.status !== &quot;완료&quot; &amp;&amp; typeof task.id === &quot;string&quot; &amp;&amp; task.id.trim());
-    let nextIndex = 0;
-    const workerCount = Math.min(STATIC_CHECKLIST_CONCURRENCY, activeTasks.length);
-    await Promise.all(Array.from({ length: workerCount }, async () =&gt; {
-      while (nextIndex &lt; activeTasks.length) {
-        if (signal?.aborted) throw createStaticAbortError();
-        const task = activeTasks[nextIndex];
-        nextIndex += 1;
-        try {
-          task.checklist = await fetchPageChecklistStatic(token, task.id, signal);
-        } catch (error) {
-          if (signal?.aborted || error?.code === &quot;NOTION_ABORTED&quot;) throw error;
-          task.checklist = [];
-        }
-      }
-    }));
-
-    return {
-      snapshotDate: todayKstIso(),
-      timezone: &quot;Asia/Seoul&quot;,
-      sourceUrl: &quot;&quot;,
-      results,
-      has_more: false,
-      data_source_ids: [dataSourceId],
-      lastSuccessAt: new Date().toISOString(),
-    };
-  }
-
-  function setConnectionMessage(message, stateName) {
-    if (!connectionMessage) return;
-    connectionMessage.textContent = message;
-    connectionMessage.dataset.state = stateName || &quot;idle&quot;;
-  }
-
-  function setOfflineBanner(message) {
-    if (!offlineBanner) return;
-    if (message) {
-      offlineBanner.textContent = message;
-      offlineBanner.hidden = false;
-    } else {
-      offlineBanner.textContent = &quot;&quot;;
-      offlineBanner.hidden = true;
-    }
-  }
-
-  function applySnapshot(nextSnapshot) {
-    let selectedStatus = statusSelect.value;
-    let selectedProject = projectSelect.value;
-    snapshot = nextSnapshot;
-    model = createOfficeModel(snapshot);
-    if (!hasLiveModel) {
-      const restored = model.restorePendingState(pendingHostState, {
-        selectedEmployee: state.selectedEmployee,
-        status: selectedStatus,
-        project: selectedProject,
-      }, userChangedState);
-      state.selectedEmployee = restored.selectedEmployee;
-      selectedStatus = restored.status;
-      selectedProject = restored.project;
-      pendingHostState = null;
-      hasLiveModel = true;
-    }
-    dataNode.textContent = JSON.stringify(snapshot);
-    setSelectOptions(statusSelect, [ALL_STATUS, ...model.statuses], selectedStatus);
-    setSelectOptions(projectSelect, [ALL_PROJECTS, ...model.projects, UNSPECIFIED_PROJECT], selectedProject);
-    if (snapshot.sourceUrl) {
-      sourceNode.hidden = false;
-      setSafeHref(sourceNode, snapshot.sourceUrl);
-    } else {
-      sourceNode.hidden = true;
-      sourceNode.removeAttribute(&quot;href&quot;);
-    }
-    if (mainView) mainView.hidden = false;
-    render();
-  }
-
-  function clearViewDom() {
-    openProgressDrawers.clear();
-    snapshot = createEmptySnapshotObject();
-    model = createOfficeModel(snapshot);
-    hasLiveModel = false;
-    dataNode.textContent = JSON.stringify(snapshot);
-    billboardNode?.replaceChildren();
-    employeeNode.replaceChildren();
-    selectedTasksNode.replaceChildren();
-    communalTasksNode.replaceChildren();
-    countsNode.replaceChildren();
-    summaryNode.textContent = &quot;&quot;;
-    selectedTitle.textContent = &quot;&quot;;
-    selectedNote.textContent = &quot;&quot;;
-    selectedEmpty.hidden = true;
-    selectedEmpty.textContent = &quot;&quot;;
-    communalCount.textContent = &quot;&quot;;
-    communalEmpty.hidden = true;
-    communalEmpty.textContent = &quot;&quot;;
-    sourceNode.hidden = true;
-    sourceNode.removeAttribute(&quot;href&quot;);
-    if (mainView) mainView.hidden = true;
-    setOfflineBanner(&quot;&quot;);
-  }
-
-  function stopStaticPolling() {
-    if (pollTimerId !== null) {
-      window.clearInterval(pollTimerId);
-      pollTimerId = null;
-    }
-  }
-
-  function startStaticPolling() {
-    if (pollTimerId !== null) return;
-    pollTimerId = window.setInterval(refreshData, 30_000);
-  }
-
-  async function refreshData() {
-    if (isRefreshing || (IS_STATIC_MODE &amp;&amp; !activeConnection)) return;
-    isRefreshing = true;
-    refreshButton.disabled = true;
-    const requestEpoch = sessionEpoch;
-    setSyncStatus(&quot;갱신 중…&quot;, &quot;loading&quot;);
-    let responseData = null;
-    try {
-      if (IS_STATIC_MODE) {
-        activeFetchController?.abort();
-        activeFetchController = new AbortController();
-        const freshSnapshot = await fetchNotionSnapshotStatic(activeConnection, activeFetchController.signal);
-        if (requestEpoch !== sessionEpoch) return;
-        await opfsStore.saveSnapshot(freshSnapshot).catch(() =&gt; {});
-        if (requestEpoch !== sessionEpoch) return;
-        applySnapshot(freshSnapshot);
-        setOfflineBanner(&quot;&quot;);
-        setSyncStatus(formatSuccessTime(freshSnapshot.lastSuccessAt) + &quot; 갱신&quot;, &quot;success&quot;);
-        return;
-      }
-
-      const response = await fetch(&quot;/api/tasks&quot;, {
-        headers: { Accept: &quot;application/json&quot; },
-        cache: &quot;no-store&quot;,
-      });
-      responseData = await response.json().catch(() =&gt; null);
-      if (!response.ok) {
-        const error = new Error(responseData?.error || &quot;Notion 데이터를 갱신하지 못했습니다.&quot;);
-        error.responseData = responseData;
-        throw error;
-      }
-      if (!responseData || !Array.isArray(responseData.results) || typeof responseData.snapshotDate !== &quot;string&quot;) {
-        throw new Error(&quot;서버가 유효한 Notion 스냅샷을 반환하지 않았습니다.&quot;);
-      }
-
-      applySnapshot(responseData);
-      setSyncStatus(formatSuccessTime(snapshot.lastSuccessAt) + &quot; 갱신&quot;, &quot;success&quot;);
-    } catch (error) {
-      if (requestEpoch !== sessionEpoch || error?.code === &quot;NOTION_ABORTED&quot;) return;
-      const detail = error.responseData || responseData;
-      const fallbackTime = IS_STATIC_MODE ? snapshot.lastSuccessAt : detail?.lastSuccessAt;
-      const message = error.message || &quot;서버에 연결할 수 없습니다. 연결 상태를 확인하세요.&quot;;
-      if (IS_STATIC_MODE &amp;&amp; navigator?.onLine === false &amp;&amp; snapshot.results.length &gt; 0) {
-        setOfflineBanner(&quot;오프라인 상태입니다. 기기 OPFS에 저장된 마지막 조회 데이터를 표시합니다.&quot;);
-      }
-      setSyncStatus(message + (fallbackTime ? &quot; · &quot; + formatSuccessTime(fallbackTime) : &quot;&quot;), &quot;error&quot;);
-    } finally {
-      isRefreshing = false;
-      if (requestEpoch === sessionEpoch) {
-        refreshButton.disabled = IS_STATIC_MODE &amp;&amp; !activeConnection;
-      }
-    }
-  }
-
-  async function logoutSession() {
-    sessionEpoch += 1;
-    isRefreshing = false;
-    activeFetchController?.abort();
-    activeFetchController = null;
-    stopStaticPolling();
-    activeConnection = null;
-    if (logoutButton) logoutButton.hidden = true;
-    refreshButton.disabled = true;
-    if (connectSubmitButton) connectSubmitButton.disabled = false;
-
-    await opfsStore.clearAll().catch(() =&gt; {});
-    if (typeof window.__wipsClearSwSession === &quot;function&quot;) {
-      await window.__wipsClearSwSession().catch(() =&gt; {});
-    }
-    try {
-      if (typeof CustomEvent === &quot;function&quot;) {
-        window.dispatchEvent(new CustomEvent(&quot;wips:logout&quot;));
-      }
-    } catch {}
-    try {
-      if (window.parent &amp;&amp; window.parent !== window) {
-        window.parent.postMessage({ type: &quot;wips:logout&quot; }, window.location.origin);
-      }
-    } catch {}
-
-    clearViewDom();
-    if (tokenInput) tokenInput.value = &quot;&quot;;
-    if (dataSourceIdInput) dataSourceIdInput.value = &quot;&quot;;
-    if (connectionPanel) connectionPanel.hidden = false;
-    if (connectCancelButton) connectCancelButton.hidden = true;
-    const msg = &quot;로그아웃되었습니다. 이 기기에서 토큰·연결 정보와 업무 데이터를 삭제했습니다.&quot;;
-    setConnectionMessage(msg, &quot;info&quot;);
-    setSyncStatus(&quot;로그아웃됨&quot;, &quot;idle&quot;);
-  }
-
-  function saveState() {
-    try {
-      if (!window.openai || typeof window.openai.setWidgetState !== &quot;function&quot;) return;
-      const pending = window.openai.setWidgetState({
-        modelContent: { selectedEmployee: state.selectedEmployee },
-        privateContent: {
-          selectedEmployee: state.selectedEmployee,
-          status: statusSelect.value,
-          project: projectSelect.value,
-        },
-      });
-      if (pending &amp;&amp; typeof pending.catch === &quot;function&quot;) pending.catch(() =&gt; {});
-    } catch {}
-  }
-
-  statusSelect.addEventListener(&quot;change&quot;, () =&gt; {
-    userChangedState = true;
-    state.status = statusSelect.value;
-    render();
-    saveState();
-  });
-  projectSelect.addEventListener(&quot;change&quot;, () =&gt; {
-    userChangedState = true;
-    state.project = projectSelect.value;
-    render();
-    saveState();
-  });
-  window.addEventListener?.(&quot;openai:set_globals&quot;, (event) =&gt; {
-    const widgetState = event.detail &amp;&amp; event.detail.globals &amp;&amp; event.detail.globals.widgetState;
-    if (!hasLiveModel) {
-      pendingHostState = widgetState;
-      if (userChangedState) return;
-    }
-    const incoming = model.stateFromHost(widgetState);
-    if (!incoming) return;
-    if (
-      incoming.selectedEmployee === state.selectedEmployee &amp;&amp;
-      incoming.status === statusSelect.value &amp;&amp;
-      incoming.project === projectSelect.value
-    ) return;
-    state.selectedEmployee = incoming.selectedEmployee;
-    statusSelect.value = incoming.status;
-    projectSelect.value = incoming.project;
-    render();
-  });
-
-  async function initStaticMode() {
-    const startEpoch = sessionEpoch;
-    clearViewDom();
-    if (connectToggleButton) connectToggleButton.hidden = false;
-    if (logoutButton) logoutButton.hidden = true;
-    refreshButton.disabled = true;
-    if (connectionPanel) connectionPanel.hidden = false;
-    if (connectCancelButton) connectCancelButton.hidden = true;
-
-    if (!opfsStore.isSupported()) {
-      setConnectionMessage(
-        &quot;이 브라우저는 OPFS 격리 저장소를 지원하지 않습니다. 연결 정보는 현재 탭 세션 메모리에만 유지되며 새로고침 시 삭제됩니다.&quot;,
-        &quot;info&quot;,
-      );
-      setSyncStatus(&quot;연결 필요 (OPFS 미지원)&quot;, &quot;idle&quot;);
-      return;
-    }
-
-    let savedConnection = null;
-    let savedSnapshot = null;
-    try {
-      savedConnection = await opfsStore.loadConnection();
-      savedSnapshot = await opfsStore.loadSnapshot();
-    } catch {
-      savedConnection = null;
-      savedSnapshot = null;
-    }
-    if (startEpoch !== sessionEpoch) return;
-
-    if (!savedConnection) {
-      await opfsStore.clearAll().catch(() =&gt; {});
-      setSyncStatus(&quot;연결 필요&quot;, &quot;idle&quot;);
-      return;
-    }
-
-    activeConnection = savedConnection;
-    if (dataSourceIdInput) dataSourceIdInput.value = savedConnection.dataSourceId;
-    if (logoutButton) logoutButton.hidden = false;
-    refreshButton.disabled = false;
-    if (connectionPanel) connectionPanel.hidden = true;
-
-    if (savedSnapshot &amp;&amp; !isEmptySnapshotData(savedSnapshot)) {
-      applySnapshot(savedSnapshot);
-      if (navigator?.onLine === false) {
-        setOfflineBanner(&quot;오프라인 상태입니다. 기기 OPFS에 저장된 마지막 조회 데이터를 표시합니다.&quot;);
-        setSyncStatus(&quot;오프라인 · &quot; + formatSuccessTime(savedSnapshot.lastSuccessAt), &quot;error&quot;);
-        startStaticPolling();
-        return;
-      }
-    }
-
-    await refreshData();
-    if (startEpoch === sessionEpoch &amp;&amp; activeConnection) {
-      startStaticPolling();
-    }
-  }
-
-  refreshButton.addEventListener(&quot;click&quot;, refreshData);
-  connectToggleButton?.addEventListener(&quot;click&quot;, () =&gt; {
-    if (!connectionPanel) return;
-    connectionPanel.hidden = !connectionPanel.hidden;
-    if (connectCancelButton) connectCancelButton.hidden = !activeConnection;
-    if (!connectionPanel.hidden &amp;&amp; activeConnection) {
-      if (dataSourceIdInput) dataSourceIdInput.value = activeConnection.dataSourceId;
-    }
-  });
-  connectCancelButton?.addEventListener(&quot;click&quot;, () =&gt; {
-    if (connectionPanel &amp;&amp; activeConnection) {
-      connectionPanel.hidden = true;
-    }
-  });
-  logoutButton?.addEventListener(&quot;click&quot;, () =&gt; {
-    void logoutSession();
-  });
-  connectionForm?.addEventListener(&quot;submit&quot;, async (event) =&gt; {
-    event.preventDefault();
-    const validation = validateStaticConnection({
-      token: tokenInput?.value || &quot;&quot;,
-      dataSourceId: dataSourceIdInput?.value || &quot;&quot;,
-    });
-    if (!validation.ok) {
-      setConnectionMessage(validation.error, &quot;error&quot;);
-      return;
-    }
-
-    const submitEpoch = sessionEpoch;
-    if (connectSubmitButton) connectSubmitButton.disabled = true;
-    setConnectionMessage(&quot;Notion 연결 확인 및 데이터 조회 중…&quot;, &quot;loading&quot;);
-    setSyncStatus(&quot;연결 확인 중…&quot;, &quot;loading&quot;);
-    try {
-      activeFetchController?.abort();
-      activeFetchController = new AbortController();
-      const freshSnapshot = await fetchNotionSnapshotStatic(validation.value, activeFetchController.signal);
-      if (submitEpoch !== sessionEpoch) return;
-
-      if (opfsStore.isSupported()) {
-        await opfsStore.saveConnection(validation.value);
-        await opfsStore.saveSnapshot(freshSnapshot);
-      }
-      if (submitEpoch !== sessionEpoch) return;
-
-      activeConnection = validation.value;
-      if (tokenInput) tokenInput.value = &quot;&quot;;
-      if (connectionPanel) connectionPanel.hidden = true;
-      if (logoutButton) logoutButton.hidden = false;
-      refreshButton.disabled = false;
-      applySnapshot(freshSnapshot);
-      setOfflineBanner(&quot;&quot;);
-      setConnectionMessage(&quot;연결이 저장되었습니다. OPFS에 격리 보관됩니다.&quot;, &quot;info&quot;);
-      setSyncStatus(formatSuccessTime(freshSnapshot.lastSuccessAt) + &quot; 갱신&quot;, &quot;success&quot;);
-      startStaticPolling();
-    } catch (error) {
-      if (submitEpoch !== sessionEpoch || error?.code === &quot;NOTION_ABORTED&quot;) return;
-      const msg = error?.message || &quot;Notion 연결에 실패했습니다.&quot;;
-      setConnectionMessage(msg, &quot;error&quot;);
-      setSyncStatus(msg, &quot;error&quot;);
-    } finally {
-      if (connectSubmitButton &amp;&amp; submitEpoch === sessionEpoch) {
-        connectSubmitButton.disabled = false;
-      }
-    }
-  });
-
-  if (IS_STATIC_MODE) {
-    window.addEventListener?.(&quot;offline&quot;, () =&gt; {
-      if (activeConnection &amp;&amp; snapshot.results.length &gt; 0) {
-        setOfflineBanner(&quot;오프라인 상태입니다. 기기 OPFS에 저장된 마지막 조회 데이터를 표시합니다.&quot;);
-      }
-    });
-    window.addEventListener?.(&quot;online&quot;, () =&gt; {
-      if (activeConnection) {
-        setOfflineBanner(&quot;&quot;);
-        void refreshData();
-      }
-    });
-    void initStaticMode();
-  } else {
-    setSafeHref(sourceNode, snapshot.sourceUrl);
-    render();
-    setSyncStatus(&quot;동기화 중…&quot;, &quot;loading&quot;);
-    refreshData();
-    window.setInterval(refreshData, 30_000);
-  }
+const __wips_mod_0 = (() =&gt; {
+const EMPTY_SNAPSHOT = Object.freeze({
+snapshotDate: &quot;&quot;,
+timezone: &quot;Asia/Seoul&quot;,
+sourceUrl: &quot;&quot;,
+results: Object.freeze([]),
+has_more: false,
+data_source_ids: Object.freeze([]),
+});
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CONTROL_OR_WHITESPACE_PATTERN = /[\s\u0000-\u001F\u007F]/;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+function createEmptySnapshot() {
+return {
+snapshotDate: &quot;&quot;,
+timezone: &quot;Asia/Seoul&quot;,
+sourceUrl: &quot;&quot;,
+results: [],
+has_more: false,
+data_source_ids: [],
+};
+}
+function isValidChecklistItem(item) {
+if (!item || typeof item !== &quot;object&quot; || Array.isArray(item)) return false;
+return typeof item.text === &quot;string&quot; &amp;&amp; typeof item.done === &quot;boolean&quot;;
+}
+function isValidTask(task) {
+if (!task || typeof task !== &quot;object&quot; || Array.isArray(task)) return false;
+if (typeof task.title !== &quot;string&quot; || !task.title.trim()) return false;
+if (task.id !== undefined &amp;&amp; typeof task.id !== &quot;string&quot;) return false;
+if (task.owner !== undefined &amp;&amp; task.owner !== null &amp;&amp; typeof task.owner !== &quot;string&quot;) return false;
+if (task.status !== undefined &amp;&amp; task.status !== null &amp;&amp; typeof task.status !== &quot;string&quot;) return false;
+if (task.project !== undefined &amp;&amp; task.project !== null &amp;&amp; typeof task.project !== &quot;string&quot;) return false;
+if (task.parentTaskIds !== undefined &amp;&amp; !Array.isArray(task.parentTaskIds)) return false;
+if (task.subTaskIds !== undefined &amp;&amp; (!Array.isArray(task.subTaskIds) || task.subTaskIds.some((id) =&gt; typeof id !== &quot;string&quot;))) {
+return false;
+}
+if (task.checklist !== undefined &amp;&amp; (!Array.isArray(task.checklist) || !task.checklist.every(isValidChecklistItem))) {
+return false;
+}
+return true;
+}
+function validateSnapshot(snapshot) {
+const errors = [];
+if (!snapshot || typeof snapshot !== &quot;object&quot; || Array.isArray(snapshot)) {
+return { ok: false, error: &quot;Snapshot must be a JSON object.&quot;, errors: [&quot;Snapshot must be a JSON object.&quot;] };
+}
+if (typeof snapshot.snapshotDate !== &quot;string&quot; || (snapshot.snapshotDate !== &quot;&quot; &amp;&amp; !DATE_PATTERN.test(snapshot.snapshotDate))) {
+errors.push(&quot;snapshotDate must be empty or YYYY-MM-DD.&quot;);
+}
+if (typeof snapshot.timezone !== &quot;string&quot; || !snapshot.timezone.trim()) {
+errors.push(&quot;timezone must be a non-empty string.&quot;);
+}
+if (snapshot.sourceUrl !== undefined &amp;&amp; typeof snapshot.sourceUrl !== &quot;string&quot;) {
+errors.push(&quot;sourceUrl must be a string.&quot;);
+}
+if (!Array.isArray(snapshot.results) || !snapshot.results.every(isValidTask)) {
+errors.push(&quot;results must be an array of valid task objects.&quot;);
+}
+if (snapshot.has_more !== undefined &amp;&amp; typeof snapshot.has_more !== &quot;boolean&quot;) {
+errors.push(&quot;has_more must be a boolean.&quot;);
+}
+if (snapshot.data_source_ids !== undefined &amp;&amp; (!Array.isArray(snapshot.data_source_ids) || snapshot.data_source_ids.some((id) =&gt; typeof id !== &quot;string&quot;))) {
+errors.push(&quot;data_source_ids must be an array of strings.&quot;);
+}
+if (snapshot.lastSuccessAt !== undefined &amp;&amp; snapshot.lastSuccessAt !== null &amp;&amp; typeof snapshot.lastSuccessAt !== &quot;string&quot;) {
+errors.push(&quot;lastSuccessAt must be an ISO string or null.&quot;);
+}
+if (errors.length &gt; 0) {
+return { ok: false, error: errors[0], errors };
+}
+return { ok: true, value: snapshot };
+}
+function isEmptySnapshot(snapshot) {
+const check = validateSnapshot(snapshot);
+if (!check.ok) return false;
+return (
+snapshot.results.length === 0 &amp;&amp;
+snapshot.snapshotDate === &quot;&quot; &amp;&amp;
+(snapshot.sourceUrl || &quot;&quot;) === &quot;&quot; &amp;&amp;
+(!Array.isArray(snapshot.data_source_ids) || snapshot.data_source_ids.length === 0)
+);
+}
+function detectRuntimeMode({ initialSnapshot, runtimeMode } = {}) {
+if (runtimeMode === &quot;static&quot;) return &quot;static&quot;;
+if (runtimeMode === &quot;local&quot;) return &quot;local&quot;;
+return isEmptySnapshot(initialSnapshot) ? &quot;static&quot; : &quot;local&quot;;
+}
+function validateConnectionConfig(input) {
+const errors = [];
+if (!input || typeof input !== &quot;object&quot; || Array.isArray(input)) {
+return { ok: false, error: &quot;Connection configuration must be an object.&quot;, errors: [&quot;Connection configuration must be an object.&quot;] };
+}
+const rawToken = typeof input.token === &quot;string&quot; ? input.token : &quot;&quot;;
+if (!rawToken || CONTROL_OR_WHITESPACE_PATTERN.test(rawToken)) {
+errors.push(&quot;Notion token must not be empty or contain whitespace/control characters.&quot;);
+}
+const rawDataSourceId = typeof input.dataSourceId === &quot;string&quot; ? input.dataSourceId.trim() : &quot;&quot;;
+if (!UUID_PATTERN.test(rawDataSourceId)) {
+errors.push(&quot;Data source ID must be a valid UUID (8-4-4-4-12).&quot;);
+}
+if (errors.length &gt; 0) {
+return { ok: false, error: errors[0], errors };
+}
+return {
+ok: true,
+value: {
+token: rawToken,
+dataSourceId: rawDataSourceId.toLowerCase(),
+},
+};
+}
+return { EMPTY_SNAPSHOT: EMPTY_SNAPSHOT, UUID_PATTERN: UUID_PATTERN, createEmptySnapshot: createEmptySnapshot, validateSnapshot: validateSnapshot, isEmptySnapshot: isEmptySnapshot, detectRuntimeMode: detectRuntimeMode, validateConnectionConfig: validateConnectionConfig };
+})();
+const __wips_mod_1 = (() =&gt; {
+const { validateConnectionConfig, validateSnapshot } = __wips_mod_0;
+const OPFS_DIR_NAME = &quot;wips-office-private-v1&quot;;
+const CONNECTION_FILE = &quot;connection.json&quot;;
+const SNAPSHOT_CACHE_FILE = &quot;snapshot-cache.json&quot;;
+function defaultGetDirectory() {
+return globalThis.navigator?.storage?.getDirectory?.();
+}
+function isNotFoundError(error) {
+return error?.name === &quot;NotFoundError&quot;;
+}
+function deepEqualJson(left, right) {
+return JSON.stringify(left) === JSON.stringify(right);
+}
+function createOpfsStore({ getDirectory } = {}) {
+const resolveDirectory = getDirectory === undefined
+? () =&gt; defaultGetDirectory()
+: getDirectory;
+function isSupported() {
+if (typeof resolveDirectory !== &quot;function&quot;) return false;
+if (getDirectory === undefined) {
+return typeof globalThis.navigator?.storage?.getDirectory === &quot;function&quot;;
+}
+return true;
+}
+async function requireRootDirectory() {
+if (!isSupported()) {
+throw new Error(&quot;OPFS (Origin Private File System) is not supported in this browser.&quot;);
+}
+const root = await resolveDirectory();
+if (!root || typeof root.getDirectoryHandle !== &quot;function&quot;) {
+throw new Error(&quot;OPFS root directory handle is unavailable.&quot;);
+}
+return root;
+}
+async function getPrivateDir({ create = false } = {}) {
+const root = await requireRootDirectory();
+try {
+return await root.getDirectoryHandle(OPFS_DIR_NAME, { create });
+} catch (error) {
+if (!create &amp;&amp; isNotFoundError(error)) return null;
+throw error;
+}
+}
+async function writeVerifiedJson(fileName, payload) {
+const dir = await getPrivateDir({ create: true });
+const serialized = JSON.stringify(payload);
+const handle = await dir.getFileHandle(fileName, { create: true });
+const writable = await handle.createWritable();
+await writable.write(serialized);
+await writable.close();
+const file = await handle.getFile();
+const readbackText = await file.text();
+let parsedReadback;
+try {
+parsedReadback = JSON.parse(readbackText);
+} catch {
+throw new Error(`OPFS readback verification failed for ${fileName}: invalid JSON.`);
+}
+if (!deepEqualJson(parsedReadback, payload)) {
+throw new Error(`OPFS readback verification failed for ${fileName}: content mismatch.`);
+}
+return parsedReadback;
+}
+async function readJson(fileName) {
+const dir = await getPrivateDir({ create: false });
+if (!dir) return null;
+let handle;
+try {
+handle = await dir.getFileHandle(fileName, { create: false });
+} catch (error) {
+if (isNotFoundError(error)) return null;
+throw error;
+}
+const file = await handle.getFile();
+const text = await file.text();
+if (!text) return null;
+try {
+return JSON.parse(text);
+} catch {
+return null;
+}
+}
+return {
+isSupported,
+async saveConnection(config) {
+const check = validateConnectionConfig(config);
+if (!check.ok) {
+throw new Error(check.error);
+}
+return writeVerifiedJson(CONNECTION_FILE, check.value);
+},
+async loadConnection() {
+const stored = await readJson(CONNECTION_FILE);
+if (!stored) return null;
+const check = validateConnectionConfig(stored);
+if (!check.ok) return null;
+return check.value;
+},
+async saveSnapshot(snapshot) {
+const check = validateSnapshot(snapshot);
+if (!check.ok) {
+throw new Error(check.error);
+}
+return writeVerifiedJson(SNAPSHOT_CACHE_FILE, check.value);
+},
+async loadSnapshot() {
+const stored = await readJson(SNAPSHOT_CACHE_FILE);
+if (!stored) return null;
+const check = validateSnapshot(stored);
+if (!check.ok) return null;
+return check.value;
+},
+async clearAll() {
+const dir = await getPrivateDir({ create: false });
+if (!dir) return { cleared: true };
+for (const fileName of [CONNECTION_FILE, SNAPSHOT_CACHE_FILE]) {
+try {
+await dir.removeEntry(fileName);
+} catch (error) {
+if (!isNotFoundError(error)) throw error;
+}
+}
+return { cleared: true };
+},
+};
+}
+return { OPFS_DIR_NAME: OPFS_DIR_NAME, CONNECTION_FILE: CONNECTION_FILE, SNAPSHOT_CACHE_FILE: SNAPSHOT_CACHE_FILE, createOpfsStore: createOpfsStore };
+})();
+const __wips_mod_2 = (() =&gt; {
+const NOTION_VERSION = &quot;2026-03-11&quot;;
+const NOTION_API_ROOT = &quot;https://api.notion.com/v1&quot;;
+const MAX_RETRY_AFTER_MS = 10_000;
+const MAX_RETRIES = 2;
+const MAX_PAGES = 100;
+const REQUEST_TIMEOUT_MS = 10_000;
+const TOKEN_INVALID_PATTERN = /[\s\u0000-\u001F\u007F]/;
+const DATASOURCE_SAFE_PATTERN = /^[A-Za-z0-9_-]+$/;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SKIP_CHILD_BLOCK_TYPES = new Set([&quot;child_page&quot;, &quot;child_database&quot;]);
+class NotionApiError extends Error {
+constructor(message, { status = 502, code = &quot;NOTION_API_ERROR&quot;, cooldownMs = 0, upstreamStatus = null } = {}) {
+super(message);
+this.name = &quot;NotionApiError&quot;;
+this.status = status;
+this.code = code;
+this.cooldownMs = cooldownMs;
+this.upstreamStatus = upstreamStatus;
+}
+}
+function plainText(items) {
+if (!Array.isArray(items)) return null;
+const text = items.map((item) =&gt; {
+if (typeof item?.plain_text === &quot;string&quot;) return item.plain_text;
+if (typeof item?.text?.content === &quot;string&quot;) return item.text.content;
+return &quot;&quot;;
+}).join(&quot;&quot;);
+return text || null;
+}
+function selectName(value) {
+return typeof value?.name === &quot;string&quot; &amp;&amp; value.name.trim() ? value.name : null;
+}
+function mapNotionPage(page) {
+const properties = page?.properties || {};
+const taskDate = properties[&quot;목표일&quot;]?.date;
+return {
+id: typeof page?.id === &quot;string&quot; ? page.id : &quot;&quot;,
+url: typeof page?.url === &quot;string&quot; ? page.url : &quot;&quot;,
+title: plainText(properties[&quot;일감&quot;]?.title) || &quot;제목 없음&quot;,
+parentTaskIds: (properties[&quot;상위 일감&quot;]?.relation || [])
+.map((parent) =&gt; parent?.id)
+.filter((id) =&gt; typeof id === &quot;string&quot; &amp;&amp; id.length &gt; 0),
+subTaskIds: (properties[&quot;하위 일감&quot;]?.relation || [])
+.map((child) =&gt; child?.id)
+.filter((id) =&gt; typeof id === &quot;string&quot; &amp;&amp; id.length &gt; 0),
+checklist: [],
+owner: selectName(properties[&quot;담당자&quot;]?.select),
+status: selectName(properties[&quot;상태&quot;]?.status) || &quot;미지정&quot;,
+project: selectName(properties[&quot;프로젝트&quot;]?.select),
+priority: selectName(properties[&quot;우선순위&quot;]?.select),
+category: selectName(properties[&quot;구분&quot;]?.select),
+nextAction: plainText(properties[&quot;다음 조치&quot;]?.rich_text),
+doneCondition: plainText(properties[&quot;완료 조건&quot;]?.rich_text),
+startDate: typeof taskDate?.start === &quot;string&quot; ? taskDate.start : null,
+endDate: typeof taskDate?.end === &quot;string&quot; ? taskDate.end : null,
+checkDate: typeof properties[&quot;다음 확인일&quot;]?.date?.start === &quot;string&quot;
+? properties[&quot;다음 확인일&quot;].date.start
+: null,
+};
+}
+function todayInKorea(now) {
+const values = Object.fromEntries(new Intl.DateTimeFormat(&quot;en&quot;, {
+timeZone: &quot;Asia/Seoul&quot;,
+year: &quot;numeric&quot;,
+month: &quot;2-digit&quot;,
+day: &quot;2-digit&quot;,
+}).formatToParts(new Date(now())).filter((part) =&gt; part.type !== &quot;literal&quot;).map(({ type, value }) =&gt; [type, value]));
+return `${values.year}-${values.month}-${values.day}`;
+}
+function parseRetryAfter(value, now = Date.now()) {
+if (value == null || value === &quot;&quot;) return null;
+const seconds = Number(value);
+if (Number.isFinite(seconds) &amp;&amp; seconds &gt;= 0) return Math.ceil(seconds * 1000);
+const date = Date.parse(value);
+return Number.isFinite(date) ? Math.max(0, date - now) : null;
+}
+function wait(milliseconds, signal) {
+if (signal?.aborted) {
+return Promise.reject(new NotionApiError(&quot;Notion API request was cancelled.&quot;, {
+code: &quot;NOTION_ABORTED&quot;,
+status: 499,
+}));
+}
+return new Promise((resolve, reject) =&gt; {
+const onAbort = () =&gt; {
+clearTimeout(timer);
+reject(new NotionApiError(&quot;Notion API request was cancelled.&quot;, {
+code: &quot;NOTION_ABORTED&quot;,
+status: 499,
+}));
+};
+const timer = setTimeout(() =&gt; {
+signal?.removeEventListener(&quot;abort&quot;, onAbort);
+resolve();
+}, milliseconds);
+signal?.addEventListener(&quot;abort&quot;, onAbort, { once: true });
+});
+}
+async function fetchWithTimeout(fetchImpl, url, options, timeoutMs, externalSignal, onResponse) {
+if (externalSignal?.aborted) {
+throw new NotionApiError(&quot;Notion API request was cancelled.&quot;, { code: &quot;NOTION_ABORTED&quot;, status: 499 });
+}
+const controller = new AbortController();
+let timedOut = false;
+let cancelledExternally = false;
+const onExternalAbort = () =&gt; {
+cancelledExternally = true;
+controller.abort();
+};
+externalSignal?.addEventListener(&quot;abort&quot;, onExternalAbort, { once: true });
+const timeout = setTimeout(() =&gt; {
+timedOut = true;
+controller.abort();
+}, timeoutMs);
+try {
+const response = await fetchImpl(url, {
+...options,
+redirect: &quot;error&quot;,
+credentials: &quot;omit&quot;,
+cache: &quot;no-store&quot;,
+signal: controller.signal,
+});
+onResponse?.(response);
+if (response.status === 429 || !response.ok) {
+try {
+await response.body?.cancel();
+} catch (error) {
+if (controller.signal.aborted) throw error;
+}
+return { response, payload: null };
+}
+let payload;
+try {
+payload = await response.json();
+} catch (error) {
+if (controller.signal.aborted || error?.name === &quot;AbortError&quot;) throw error;
+throw new NotionApiError(&quot;Notion API returned an invalid JSON response.&quot;, { code: &quot;NOTION_INVALID_RESPONSE&quot; });
+}
+return { response, payload };
+} catch (error) {
+if (error instanceof NotionApiError) throw error;
+if (cancelledExternally || externalSignal?.aborted) {
+throw new NotionApiError(&quot;Notion API request was cancelled.&quot;, { code: &quot;NOTION_ABORTED&quot;, status: 499 });
+}
+if (timedOut || controller.signal.aborted || error?.name === &quot;AbortError&quot;) {
+throw new NotionApiError(&quot;Notion API request timed out.&quot;, { code: &quot;NOTION_TIMEOUT&quot;, status: 504 });
+}
+throw new NotionApiError(&quot;Could not reach the Notion API.&quot;, { code: &quot;NOTION_NETWORK_ERROR&quot;, status: 502 });
+} finally {
+clearTimeout(timeout);
+externalSignal?.removeEventListener(&quot;abort&quot;, onExternalAbort);
+}
+}
+async function fetchNotionWithRetry({
+fetchImpl,
+url,
+options,
+timeoutMs,
+sleep,
+now,
+signal,
+onRateLimit,
+}) {
+let retryCount = 0;
+while (true) {
+let receivedRetryDelay = null;
+const { response, payload } = await fetchWithTimeout(fetchImpl, url, options, timeoutMs, signal, (receivedResponse) =&gt; {
+if (receivedResponse.status !== 429) return;
+const retryAfter = parseRetryAfter(receivedResponse.headers.get(&quot;retry-after&quot;), now());
+receivedRetryDelay = retryAfter ?? Math.min(1000 * (2 ** retryCount), MAX_RETRY_AFTER_MS);
+onRateLimit?.(receivedRetryDelay);
+});
+if (response.status !== 429) return { response, payload };
+const retryDelay = receivedRetryDelay ?? Math.min(1000 * (2 ** retryCount), MAX_RETRY_AFTER_MS);
+if (retryDelay &gt; MAX_RETRY_AFTER_MS || retryCount &gt;= MAX_RETRIES) {
+throw new NotionApiError(&quot;Notion API rate limit reached.&quot;, {
+status: 429,
+code: &quot;NOTION_RATE_LIMIT&quot;,
+cooldownMs: retryDelay,
+upstreamStatus: 429,
+});
+}
+await sleep(retryDelay, signal);
+retryCount += 1;
+}
+}
+async function queryNotionPage({
+token,
+dataSourceId,
+cursor,
+fetchImpl,
+timeoutMs,
+sleep,
+now,
+apiRoot,
+signal,
+onRateLimit,
+}) {
+const url = `${apiRoot.replace(/\/$/, &quot;&quot;)}/data_sources/${encodeURIComponent(dataSourceId)}/query`;
+const body = { page_size: 100 };
+if (cursor) body.start_cursor = cursor;
+return fetchNotionWithRetry({
+fetchImpl,
+url,
+options: {
+method: &quot;POST&quot;,
+headers: {
+Authorization: `Bearer ${token}`,
+&quot;Content-Type&quot;: &quot;application/json&quot;,
+&quot;Notion-Version&quot;: NOTION_VERSION,
+},
+body: JSON.stringify(body),
+},
+timeoutMs,
+sleep,
+now,
+signal,
+onRateLimit,
+});
+}
+function validateBlockId(blockId) {
+if (typeof blockId !== &quot;string&quot; || !blockId.trim()) {
+throw new NotionApiError(&quot;Block ID is required.&quot;, {
+code: &quot;NOTION_INVALID_BLOCK&quot;,
+status: 400,
+});
+}
+const normalized = blockId.trim();
+if (!DATASOURCE_SAFE_PATTERN.test(normalized) &amp;&amp; !UUID_PATTERN.test(normalized)) {
+throw new NotionApiError(&quot;Block ID format is invalid.&quot;, {
+code: &quot;NOTION_INVALID_BLOCK&quot;,
+status: 400,
+});
+}
+return normalized;
+}
+function normalizeBlockKey(blockId) {
+return String(blockId || &quot;&quot;).trim().replaceAll(&quot;-&quot;, &quot;&quot;).toLowerCase();
+}
+async function fetchPageChecklistInternal({
+token,
+rootBlockId,
+apiRoot = NOTION_API_ROOT,
+fetchImpl = globalThis.fetch,
+timeoutMs = REQUEST_TIMEOUT_MS,
+sleep = wait,
+now = Date.now,
+signal,
+onRateLimit,
+maxDepth = 3,
+maxPages = 5,
+}) {
+const normalizedRoot = apiRoot.replace(/\/$/, &quot;&quot;);
+const items = [];
+const visited = new Set();
+async function collectFromBlock(safeBlockId, depth) {
+const blockKey = normalizeBlockKey(safeBlockId);
+if (blockKey &amp;&amp; visited.has(blockKey)) return;
+if (blockKey) visited.add(blockKey);
+let cursor;
+let pageCount = 0;
+while (pageCount &lt; maxPages) {
+const baseUrl = `${normalizedRoot}/blocks/${encodeURIComponent(safeBlockId)}/children?page_size=100`;
+const url = cursor ? `${baseUrl}&amp;start_cursor=${encodeURIComponent(cursor)}` : baseUrl;
+const { response, payload } = await fetchNotionWithRetry({
+fetchImpl,
+url,
+options: {
+method: &quot;GET&quot;,
+headers: {
+Authorization: `Bearer ${token}`,
+&quot;Notion-Version&quot;: NOTION_VERSION,
+},
+},
+timeoutMs,
+sleep,
+now,
+signal,
+onRateLimit,
+});
+if (!response.ok) {
+throw new NotionApiError(`Notion API returned HTTP ${response.status}.`, {
+status: response.status === 429 ? 429 : 502,
+code: response.status === 429 ? &quot;NOTION_RATE_LIMIT&quot; : &quot;NOTION_HTTP_ERROR&quot;,
+upstreamStatus: response.status,
+});
+}
+if (!Array.isArray(payload?.results)) {
+throw new NotionApiError(&quot;Notion API response did not contain a results list.&quot;, { code: &quot;NOTION_INVALID_RESPONSE&quot; });
+}
+for (const block of payload.results) {
+if (block?.type === &quot;to_do&quot;) {
+items.push({
+text: plainText(block.to_do?.rich_text) || &quot;항목 없음&quot;,
+done: Boolean(block.to_do?.checked),
+});
+}
+if (
+block?.has_children === true &amp;&amp;
+depth &lt; maxDepth &amp;&amp;
+!SKIP_CHILD_BLOCK_TYPES.has(block.type) &amp;&amp;
+typeof block.id === &quot;string&quot; &amp;&amp;
+block.id
+) {
+const childBlockId = validateBlockId(block.id);
+await collectFromBlock(childBlockId, depth + 1);
+}
+}
+pageCount += 1;
+if (!payload.has_more || typeof payload.next_cursor !== &quot;string&quot; || !payload.next_cursor) break;
+cursor = payload.next_cursor;
+}
+}
+await collectFromBlock(rootBlockId, 0);
+return items;
+}
+async function fetchPageChecklist({
+token,
+blockId,
+apiRoot = NOTION_API_ROOT,
+fetchImpl = globalThis.fetch,
+timeoutMs = REQUEST_TIMEOUT_MS,
+sleep = wait,
+now = Date.now,
+signal,
+onRateLimit,
+maxDepth = 3,
+maxPages = 5,
+} = {}) {
+validateToken(token);
+const rootBlockId = validateBlockId(blockId);
+return fetchPageChecklistInternal({
+token,
+rootBlockId,
+apiRoot,
+fetchImpl,
+timeoutMs,
+sleep,
+now,
+signal,
+onRateLimit,
+maxDepth,
+maxPages,
+});
+}
+async function runWithConcurrency(items, concurrency, worker) {
+const limit = Math.max(1, Math.floor(Number(concurrency) || 1));
+let nextIndex = 0;
+async function runWorker() {
+while (nextIndex &lt; items.length) {
+const index = nextIndex;
+nextIndex += 1;
+await worker(items[index], index);
+}
+}
+const workerCount = Math.min(limit, items.length);
+await Promise.all(Array.from({ length: workerCount }, () =&gt; runWorker()));
+}
+function validateToken(token) {
+if (!token) {
+throw new NotionApiError(&quot;NOTION_TOKEN is missing.&quot;, {
+code: &quot;NOTION_TOKEN_MISSING&quot;,
+status: 503,
+});
+}
+if (typeof token !== &quot;string&quot; || TOKEN_INVALID_PATTERN.test(token)) {
+throw new NotionApiError(&quot;Notion token contains invalid whitespace or control characters.&quot;, {
+code: &quot;NOTION_INVALID_TOKEN&quot;,
+status: 400,
+});
+}
+}
+function validateDataSourceId(dataSourceId, strictUuid) {
+if (typeof dataSourceId !== &quot;string&quot; || !dataSourceId.trim()) {
+throw new NotionApiError(&quot;Data source ID is required.&quot;, {
+code: &quot;NOTION_INVALID_DATASOURCE&quot;,
+status: 400,
+});
+}
+const normalized = dataSourceId.trim();
+const valid = strictUuid
+? UUID_PATTERN.test(normalized)
+: DATASOURCE_SAFE_PATTERN.test(normalized);
+if (!valid) {
+throw new NotionApiError(&quot;Data source ID format is invalid.&quot;, {
+code: &quot;NOTION_INVALID_DATASOURCE&quot;,
+status: 400,
+});
+}
+return normalized;
+}
+async function fetchNotionSnapshot({
+token,
+dataSourceId,
+sourceUrl = &quot;&quot;,
+apiRoot = NOTION_API_ROOT,
+strictUuid = false,
+fetchImpl = globalThis.fetch,
+timeoutMs = REQUEST_TIMEOUT_MS,
+sleep = wait,
+now = Date.now,
+maxPages = MAX_PAGES,
+includeChecklists = true,
+checklistConcurrency = 3,
+signal,
+onRateLimit,
+} = {}) {
+validateToken(token);
+const safeDataSourceId = validateDataSourceId(dataSourceId, strictUuid);
+const results = [];
+let cursor;
+let pageCount = 0;
+while (true) {
+if (pageCount &gt;= maxPages) {
+throw new NotionApiError(`Notion pagination exceeded the ${maxPages}-page safety limit.`, {
+code: &quot;NOTION_PAGE_LIMIT&quot;,
+status: 502,
+});
+}
+const queryResult = await queryNotionPage({
+token,
+dataSourceId: safeDataSourceId,
+cursor,
+fetchImpl,
+timeoutMs,
+sleep,
+now,
+apiRoot,
+signal,
+onRateLimit,
+});
+const { response, payload } = queryResult;
+if (!response.ok) {
+throw new NotionApiError(`Notion API returned HTTP ${response.status}.`, {
+status: response.status === 429 ? 429 : 502,
+code: response.status === 429 ? &quot;NOTION_RATE_LIMIT&quot; : &quot;NOTION_HTTP_ERROR&quot;,
+upstreamStatus: response.status,
+});
+}
+if (payload?.request_status?.type === &quot;incomplete&quot;) {
+throw new NotionApiError(&quot;Notion query returned an incomplete result.&quot;, {
+code: &quot;NOTION_INCOMPLETE_RESPONSE&quot;,
+});
+}
+if (!Array.isArray(payload.results)) {
+throw new NotionApiError(&quot;Notion API response did not contain a results list.&quot;, { code: &quot;NOTION_INVALID_RESPONSE&quot; });
+}
+results.push(...payload.results.map(mapNotionPage));
+pageCount += 1;
+if (!payload.has_more) break;
+if (typeof payload.next_cursor !== &quot;string&quot; || !payload.next_cursor) {
+throw new NotionApiError(&quot;Notion pagination response is missing next_cursor.&quot;, { code: &quot;NOTION_INVALID_RESPONSE&quot; });
+}
+cursor = payload.next_cursor;
+}
+if (includeChecklists) {
+const checklistTargets = results.filter((task) =&gt; task.status !== &quot;완료&quot; &amp;&amp; task.id);
+await runWithConcurrency(checklistTargets, checklistConcurrency, async (task) =&gt; {
+try {
+const rootBlockId = validateBlockId(task.id);
+task.checklist = await fetchPageChecklistInternal({
+token,
+rootBlockId,
+apiRoot,
+fetchImpl,
+timeoutMs,
+sleep,
+now,
+signal,
+onRateLimit,
+});
+} catch (error) {
+if (signal?.aborted || error?.code === &quot;NOTION_ABORTED&quot;) throw error;
+task.checklist = [];
+}
+});
+}
+return {
+snapshotDate: todayInKorea(now),
+timezone: &quot;Asia/Seoul&quot;,
+sourceUrl,
+results,
+has_more: false,
+data_source_ids: [safeDataSourceId],
+};
+}
+return { NOTION_VERSION: NOTION_VERSION, NOTION_API_ROOT: NOTION_API_ROOT, MAX_RETRY_AFTER_MS: MAX_RETRY_AFTER_MS, MAX_RETRIES: MAX_RETRIES, MAX_PAGES: MAX_PAGES, REQUEST_TIMEOUT_MS: REQUEST_TIMEOUT_MS, NotionApiError: NotionApiError, mapNotionPage: mapNotionPage, parseRetryAfter: parseRetryAfter, fetchPageChecklist: fetchPageChecklist, fetchNotionSnapshot: fetchNotionSnapshot };
+})();
+const { createEmptySnapshot, detectRuntimeMode, isEmptySnapshot, validateConnectionConfig } = __wips_mod_0;
+const { createOpfsStore } = __wips_mod_1;
+const { fetchNotionSnapshot } = __wips_mod_2;
+const STATUS_ORDER = [&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;, &quot;대기&quot;, &quot;예정&quot;, &quot;완료&quot;];
+const STATUS_RANK = new Map(STATUS_ORDER.map((status, index) =&gt; [status, index]));
+const KANBAN_LANES = [
+{ id: &quot;planned&quot;, title: &quot;예정 · 대기&quot;, dot: &quot;대기&quot;, statuses: [&quot;대기&quot;, &quot;예정&quot;] },
+{ id: &quot;progress&quot;, title: &quot;진행&quot;, dot: &quot;진행&quot;, statuses: [&quot;진행&quot;] },
+{ id: &quot;review&quot;, title: &quot;검증 · 테스트&quot;, dot: &quot;검증&quot;, statuses: [&quot;검증&quot;, &quot;장시간 테스트 중&quot;] },
+];
+const EMPLOYEES = [&quot;sb&quot;, &quot;이요원&quot;, &quot;여이전트&quot;, &quot;석규&quot;, &quot;UI&quot;];
+const SHARED_OWNER = &quot;공통&quot;;
+const ACTIVE_TICKER_STATUSES = new Set([&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;]);
+const NOTION_ICON_PATHS = [
+{ d: &quot;M3.5 4.8L16.8 3.5L20 6.1L6.7 7.4L3.5 4.8Z&quot;, fill: &quot;currentColor&quot;, &quot;fill-opacity&quot;: &quot;0.16&quot; },
+{ d: &quot;M3.5 4.8L6.7 7.4V20.6L3.5 18V4.8Z&quot;, fill: &quot;currentColor&quot;, &quot;fill-opacity&quot;: &quot;0.28&quot; },
+{ d: &quot;M3.5 4.8L16.8 3.5L20 6.1V19.3L6.7 20.6L3.5 18V4.8Z&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.5&quot;, &quot;stroke-linejoin&quot;: &quot;round&quot; },
+{ d: &quot;M3.5 4.8L6.7 7.4L20 6.1M6.7 7.4V20.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.5&quot;, &quot;stroke-linejoin&quot;: &quot;round&quot; },
+{ d: &quot;M9.1 9.6L11.9 9.4L15.1 14V9.7L14.3 9.8V9L17.5 8.7V9.5L16.8 9.6V17L15.2 17.1L11.7 12.1V16.6L12.5 16.5V17.3L9.1 17.6V16.8L10 16.7V10.4L9.1 10.5V9.6Z&quot;, fill: &quot;currentColor&quot; },
+];
+const ALL_STATUS = &quot;전체 상태&quot;;
+const ALL_PROJECTS = &quot;전체 프로젝트&quot;;
+const UNSPECIFIED_PROJECT = &quot;프로젝트 미지정&quot;;
+function isSharedOwner(owner) {
+return owner === null || owner === undefined || owner === &quot;&quot; || owner === SHARED_OWNER;
+}
+function todayKstIso() {
+try {
+return new Intl.DateTimeFormat(&quot;en-CA&quot;, { timeZone: &quot;Asia/Seoul&quot; }).format(new Date());
+} catch {
+return new Date().toISOString().slice(0, 10);
+}
+}
+function parseIsoDayMs(value) {
+if (typeof value !== &quot;string&quot;) return null;
+const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+if (!match) return null;
+return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+function formatMmDd(value) {
+if (typeof value !== &quot;string&quot;) return &quot;&quot;;
+const match = value.match(/^\d{4}-(\d{2})-(\d{2})$/);
+return match ? match[1] + &quot;/&quot; + match[2] : value;
+}
+function formatScheduleShort(task, includeTrailingTilde) {
+if (task.startDate &amp;&amp; task.endDate) {
+return formatMmDd(task.startDate) + &quot;~&quot; + formatMmDd(task.endDate);
+}
+if (task.startDate) {
+return formatMmDd(task.startDate) + (includeTrailingTilde ? &quot;~&quot; : &quot;&quot;);
+}
+if (task.endDate) return &quot;~&quot; + formatMmDd(task.endDate);
+return &quot;일정 미지정&quot;;
+}
+function projectLabel(task) {
+return task.project === null || task.project === undefined ? UNSPECIFIED_PROJECT : task.project;
+}
+function matches(task, filters) {
+const statusMatches = filters.status === ALL_STATUS || task.status === filters.status;
+const projectMatches = filters.project === ALL_PROJECTS || projectLabel(task) === filters.project;
+return statusMatches &amp;&amp; projectMatches;
+}
+function safeNotionUrl(value) {
+if (typeof value !== &quot;string&quot;) return &quot;&quot;;
+try {
+const parsed = new URL(value);
+const notionHosts = [&quot;app.notion.com&quot;, &quot;notion.so&quot;, &quot;www.notion.so&quot;];
+return parsed.protocol === &quot;https:&quot; &amp;&amp;
+notionHosts.includes(parsed.hostname) &amp;&amp;
+parsed.host === parsed.hostname &amp;&amp;
+parsed.username === &quot;&quot; &amp;&amp;
+parsed.password === &quot;&quot;
+? parsed.href
+: &quot;&quot;;
+} catch {
+return &quot;&quot;;
+}
+}
+function toNotionAppUrl(value) {
+const safeUrl = safeNotionUrl(value);
+return safeUrl ? safeUrl.replace(/^https:/, &quot;notion:&quot;) : &quot;&quot;;
+}
+function formatGoalDate(task) {
+if (task.startDate &amp;&amp; task.endDate) return task.startDate + &quot; — &quot; + task.endDate;
+if (task.startDate) return task.startDate + &quot; · 종료일 미지정&quot;;
+if (task.endDate) return &quot;시작일 미지정 · &quot; + task.endDate;
+return &quot;미지정&quot;;
+}
+function computeScheduleGauge(task, referenceDateIso) {
+const todayIso = referenceDateIso || todayKstIso();
+const todayMs = parseIsoDayMs(todayIso);
+const targetIso = task?.startDate || task?.endDate || null;
+const targetMs = parseIsoDayMs(targetIso);
+let dDayLabel = ACTIVE_TICKER_STATUSES.has(task?.status) ? &quot;수시&quot; : &quot;미정&quot;;
+let diffDays = null;
+if (todayMs !== null &amp;&amp; targetMs !== null) {
+diffDays = Math.round((targetMs - todayMs) / 86_400_000);
+if (diffDays &gt; 0) dDayLabel = &quot;D-&quot; + diffDays;
+else if (diffDays === 0) dDayLabel = &quot;D-DAY&quot;;
+else dDayLabel = &quot;D+&quot; + Math.abs(diffDays);
+}
+let progress = 20;
+if (diffDays !== null) {
+if (diffDays &lt;= 0) progress = 100;
+else if (diffDays &gt;= 14) progress = 10;
+else progress = Math.round(100 - (diffDays / 14) * 90);
+}
+let tone = &quot;slate&quot;;
+if (diffDays !== null) {
+if (diffDays &gt;= 2) {
+tone = &quot;green&quot;;
+} else if (diffDays === 1 || diffDays === 0) {
+tone = &quot;amber&quot;;
+} else if (Boolean(task?.startDate) &amp;&amp; ACTIVE_TICKER_STATUSES.has(task?.status)) {
+tone = &quot;green&quot;;
+} else {
+tone = &quot;red&quot;;
+}
+}
+return { dDayLabel, diffDays, progress, tone };
+}
+function normalizeTaskId(value) {
+if (typeof value !== &quot;string&quot;) return &quot;&quot;;
+return value.trim().toLowerCase().replace(/-/g, &quot;&quot;);
+}
+function extractTaskId(task) {
+const direct = normalizeTaskId(task?.id);
+if (direct) return direct;
+if (typeof task?.url !== &quot;string&quot; || !task.url) return &quot;&quot;;
+const pathOnly = task.url.split(/[?#]/)[0].replace(/\/+$/, &quot;&quot;);
+const match = pathOnly.match(/([0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+return match ? normalizeTaskId(match[1]) : &quot;&quot;;
+}
+function createOfficeModel(snapshot) {
+const tasks = Array.isArray(snapshot.results) ? snapshot.results.slice() : [];
+const statuses = STATUS_ORDER.concat([...new Set(tasks.map((task) =&gt; task.status).filter(Boolean))]
+.filter((status) =&gt; !STATUS_ORDER.includes(status)));
+const employees = EMPLOYEES.concat([...new Set(tasks.map((task) =&gt; task.owner).filter((owner) =&gt; owner &amp;&amp; !isSharedOwner(owner)))]
+.filter((owner) =&gt; !EMPLOYEES.includes(owner)));
+const projects = [&quot;2.3&quot;, &quot;2.2.1&quot;, &quot;기타&quot;].concat([...new Set(tasks.map((task) =&gt; task.project).filter(Boolean))]
+.filter((project) =&gt; ![&quot;2.3&quot;, &quot;2.2.1&quot;, &quot;기타&quot;].includes(project)));
+const tasksById = new Map();
+for (const task of tasks) {
+const id = extractTaskId(task);
+if (id &amp;&amp; !tasksById.has(id)) {
+tasksById.set(id, task);
+}
+}
+const childrenByParentId = new Map();
+const seenChildrenByParent = new Map();
+function addChildLink(parentId, childTask) {
+if (!parentId || !childTask) return;
+const childId = extractTaskId(childTask);
+if (childId &amp;&amp; childId === parentId) return;
+const childKey = childId || childTask;
+let seen = seenChildrenByParent.get(parentId);
+if (!seen) {
+seen = new Set();
+seenChildrenByParent.set(parentId, seen);
+}
+if (seen.has(childKey)) return;
+seen.add(childKey);
+let list = childrenByParentId.get(parentId);
+if (!list) {
+list = [];
+childrenByParentId.set(parentId, list);
+}
+list.push(childTask);
+}
+for (const task of tasks) {
+if (Array.isArray(task.parentTaskIds)) {
+for (const rawParentId of task.parentTaskIds) {
+addChildLink(normalizeTaskId(rawParentId), task);
+}
+}
+}
+for (const task of tasks) {
+const parentId = extractTaskId(task);
+if (!parentId || !Array.isArray(task.subTaskIds)) continue;
+for (const rawChildId of task.subTaskIds) {
+const childTask = tasksById.get(normalizeTaskId(rawChildId));
+if (childTask) addChildLink(parentId, childTask);
+}
+}
+function computeTaskProgress(task) {
+const rawChecklist = Array.isArray(task?.checklist) ? task.checklist : [];
+const checklistItems = rawChecklist
+.filter((item) =&gt; item &amp;&amp; typeof item === &quot;object&quot; &amp;&amp; typeof item.text === &quot;string&quot; &amp;&amp; item.text.trim())
+.map((item) =&gt; ({ text: item.text.trim(), done: Boolean(item.done) }));
+const checklist = checklistItems.length &gt; 0
+? {
+done: checklistItems.filter((item) =&gt; item.done).length,
+total: checklistItems.length,
+items: checklistItems,
+}
+: null;
+const taskId = extractTaskId(task);
+const linkedChildren = taskId ? (childrenByParentId.get(taskId) || []) : [];
+const subtaskItems = linkedChildren.map((child) =&gt; ({
+id: extractTaskId(child) || child.title || &quot;&quot;,
+title: child.title || &quot;제목 없음&quot;,
+status: child.status || &quot;미지정&quot;,
+owner: child.owner ?? null,
+done: child.status === &quot;완료&quot;,
+sourceUrl: safeNotionUrl(child.url),
+}));
+const subtasks = subtaskItems.length &gt; 0
+? {
+done: subtaskItems.filter((item) =&gt; item.done).length,
+total: subtaskItems.length,
+items: subtaskItems,
+}
+: null;
+return { checklist, subtasks };
+}
+function describeTask(task, referenceDateIso) {
+const gauge = computeScheduleGauge(task, referenceDateIso);
+const progressDetail = computeTaskProgress(task);
+return {
+taskKey: task.id || task.url || task.title || &quot;&quot;,
+title: task.title,
+status: task.status,
+project: projectLabel(task),
+priority: task.priority ?? &quot;미지정&quot;,
+goalDate: formatGoalDate(task),
+nextCheck: task.checkDate ?? &quot;미지정&quot;,
+nextAction: task.nextAction ?? &quot;미지정&quot;,
+doneCondition: task.doneCondition ?? &quot;미지정&quot;,
+sourceUrl: safeNotionUrl(task.url),
+dDayLabel: gauge.dDayLabel,
+progress: gauge.progress,
+tone: gauge.tone,
+checklist: progressDetail.checklist,
+subtasks: progressDetail.subtasks,
+};
+}
+function parseStateCandidate(candidate) {
+if (typeof candidate === &quot;string&quot;) {
+try { return JSON.parse(candidate); } catch { return null; }
+}
+return candidate &amp;&amp; typeof candidate === &quot;object&quot; ? candidate : null;
+}
+function stateFromHost(candidate) {
+const outer = parseStateCandidate(candidate);
+if (!outer) return null;
+const nested = parseStateCandidate(outer.privateContent) || parseStateCandidate(outer.modelContent);
+const saved = nested || outer;
+const selectedEmployee = employees.includes(saved.selectedEmployee) ? saved.selectedEmployee : &quot;sb&quot;;
+const status = [ALL_STATUS].concat(statuses).includes(saved.status) ? saved.status : ALL_STATUS;
+const projectOptions = [ALL_PROJECTS, ...projects, UNSPECIFIED_PROJECT];
+const project = projectOptions.includes(saved.project) ? saved.project : ALL_PROJECTS;
+return { selectedEmployee, status, project };
+}
+function restorePendingState(candidate, currentState, userChangedState) {
+if (userChangedState) return currentState;
+return stateFromHost(candidate) || currentState;
+}
+function filteredTasks(filters) {
+return tasks.filter((task) =&gt; matches(task, filters));
+}
+function summary(filters) {
+const shown = filteredTasks(filters);
+const statusCounts = Object.fromEntries(statuses.map((status) =&gt; [
+status,
+shown.filter((task) =&gt; task.status === status).length,
+]));
+return {
+total: shown.length,
+snapshotTotal: tasks.length,
+unassigned: shown.filter((task) =&gt; isSharedOwner(task.owner)).length,
+statuses: statusCounts,
+};
+}
+function employeeTasks(owner, filters) {
+return filteredTasks(filters).filter((task) =&gt; task.owner === owner &amp;&amp; task.status !== &quot;완료&quot;);
+}
+function unassignedTasks(filters) {
+return filteredTasks(filters).filter((task) =&gt; isSharedOwner(task.owner) &amp;&amp; task.status !== &quot;완료&quot;);
+}
+function billboardView(filters, referenceDateIso) {
+const todayIso = referenceDateIso || todayKstIso();
+const shared = unassignedTasks(filters);
+const scheduleTasks = shared
+.map((task, index) =&gt; ({
+task,
+index,
+targetIso: task.startDate || task.endDate || null,
+rank: STATUS_RANK.get(task.status) ?? STATUS_ORDER.length,
+}))
+.sort((left, right) =&gt; {
+const leftActiveUndated = !left.targetIso &amp;&amp; ACTIVE_TICKER_STATUSES.has(left.task.status);
+const rightActiveUndated = !right.targetIso &amp;&amp; ACTIVE_TICKER_STATUSES.has(right.task.status);
+if (leftActiveUndated !== rightActiveUndated) return leftActiveUndated ? -1 : 1;
+if (left.targetIso &amp;&amp; right.targetIso &amp;&amp; left.targetIso !== right.targetIso) {
+return left.targetIso.localeCompare(right.targetIso);
+}
+if (Boolean(left.targetIso) !== Boolean(right.targetIso)) return left.targetIso ? -1 : 1;
+return left.rank - right.rank || left.index - right.index;
+})
+.map(({ task }, idx) =&gt; {
+const gauge = computeScheduleGauge(task, todayIso);
+return {
+stepLabel: &quot;STEP &quot; + String(idx + 1).padStart(2, &quot;0&quot;),
+title: task.title,
+status: task.status || &quot;미정&quot;,
+dDayLabel: gauge.dDayLabel,
+shortDate: formatScheduleShort(task, false),
+progress: gauge.progress,
+tone: gauge.tone,
+task,
+};
+});
+const tickerTasks = filteredTasks(filters)
+.filter((task) =&gt; !isSharedOwner(task.owner) &amp;&amp; ACTIVE_TICKER_STATUSES.has(task.status))
+.map((task) =&gt; ({
+owner: task.owner,
+title: task.title,
+status: task.status,
+shortDate: formatScheduleShort(task, true),
+task,
+}));
+return {
+todayLabel: formatMmDd(todayIso),
+scheduleTasks,
+tickerTasks,
+};
+}
+function representativeTask(owner, filters) {
+const owned = employeeTasks(owner, filters).filter((task) =&gt; task.status !== &quot;완료&quot; &amp;&amp; !task.parentTaskIds?.length);
+if (owned.length === 0) return null;
+return owned
+.map((task, index) =&gt; ({ task, index }))
+.sort((left, right) =&gt; {
+const leftRank = STATUS_RANK.get(left.task.status) ?? STATUS_ORDER.length;
+const rightRank = STATUS_RANK.get(right.task.status) ?? STATUS_ORDER.length;
+return leftRank - rightRank || left.index - right.index;
+})[0].task;
+}
+function viewForEmployee(owner, filters) {
+const owned = employeeTasks(owner, filters);
+const topLevelCount = owned.filter((task) =&gt; task.status !== &quot;완료&quot; &amp;&amp; !task.parentTaskIds?.length).length;
+const representative = representativeTask(owner, filters);
+return {
+owner,
+tasks: owned,
+topLevelCount,
+representative,
+otherCount: representative ? topLevelCount - 1 : 0,
+empty: owned.length === 0,
+};
+}
+function normalizeSeating(saved) {
+const valid = Array.isArray(saved) ? saved.filter((owner) =&gt; employees.includes(owner)) : [];
+return [...new Set([...valid, ...employees])];
+}
+function swapSeats(saved, owner, target) {
+const order = normalizeSeating(saved);
+const from = order.indexOf(owner);
+const to = order.indexOf(target);
+if (from &gt;= 0 &amp;&amp; to &gt;= 0) [order[from], order[to]] = [order[to], order[from]];
+return order;
+}
+function focusEmployeeButton(buttons, owner) {
+const button = buttons.find((candidate) =&gt; candidate.dataset.owner === owner);
+if (!button || typeof button.focus !== &quot;function&quot;) return null;
+button.focus();
+return button;
+}
+function groupTasksByLane(tasks) {
+const byStatus = new Map();
+for (const lane of KANBAN_LANES) {
+for (const status of lane.statuses) byStatus.set(status, lane.id);
+}
+const buckets = new Map(KANBAN_LANES.map((lane) =&gt; [lane.id, []]));
+for (const task of Array.isArray(tasks) ? tasks : []) {
+const laneId = byStatus.get(task?.status) || KANBAN_LANES[0].id;
+buckets.get(laneId).push(task);
+}
+return KANBAN_LANES.map((lane) =&gt; ({
+id: lane.id,
+title: lane.title,
+dot: lane.dot,
+showExactStatus: lane.statuses.length &gt; 1,
+tasks: buckets.get(lane.id),
+}));
+}
+return {
+employees,
+statuses,
+projects,
+kanbanLanes: KANBAN_LANES,
+groupTasksByLane,
+stateFromHost,
+restorePendingState,
+filteredTasks,
+summary,
+employeeTasks,
+unassignedTasks,
+representativeTask,
+viewForEmployee,
+focusEmployeeButton,
+normalizeSeating,
+swapSeats,
+describeTask,
+billboardView,
+};
+}
+window.__wipsOfficeModel = createOfficeModel;
+const root = document.getElementById(&quot;wips-office-root&quot;);
+if (!root) return;
+const dataNode = document.getElementById(&quot;wips-office-data&quot;);
+let snapshot = JSON.parse(dataNode.textContent);
+let model = createOfficeModel(snapshot);
+const statusSelect = document.getElementById(&quot;wips-office-status&quot;);
+const projectSelect = document.getElementById(&quot;wips-office-project&quot;);
+const refreshButton = document.getElementById(&quot;wips-office-refresh&quot;);
+const syncStatus = document.getElementById(&quot;wips-office-sync-status&quot;);
+const summaryNode = document.getElementById(&quot;wips-office-summary&quot;);
+const countsNode = document.getElementById(&quot;wips-office-status-counts&quot;);
+const employeeNode = document.getElementById(&quot;wips-office-employees&quot;);
+const seatingEdit = document.getElementById(&quot;wips-office-edit-seating&quot;);
+const seatingReset = document.getElementById(&quot;wips-office-reset-seating&quot;);
+const seatingMessage = document.getElementById(&quot;wips-office-seating-message&quot;);
+const seatingKey = &quot;wips-office-seating-v1&quot;;
+let editingSeating = false;
+let draggingOwner = null;
+let suppressEmployeeClick = false;
+let savedSeating = [];
+try { savedSeating = JSON.parse(window.localStorage.getItem(seatingKey)); } catch {}
+let seatingOrder = model.normalizeSeating(savedSeating);
+function persistSeating(message) {
+try {
+window.localStorage.setItem(seatingKey, JSON.stringify(seatingOrder));
+seatingMessage.textContent = message + &quot; 이 브라우저에 저장했습니다.&quot;;
+} catch {
+seatingMessage.textContent = message + &quot; 저장할 수 없어 현재 화면에만 적용됩니다.&quot;;
+}
+}
+function canDropSeat(owner) {
+return editingSeating &amp;&amp; draggingOwner !== null &amp;&amp; draggingOwner !== owner &amp;&amp;
+model.employees.includes(draggingOwner) &amp;&amp; model.employees.includes(owner);
+}
+seatingEdit.addEventListener(&quot;click&quot;, () =&gt; {
+editingSeating = !editingSeating;
+seatingEdit.setAttribute(&quot;aria-pressed&quot;, String(editingSeating));
+seatingEdit.textContent = editingSeating ? &quot;배치 완료&quot; : &quot;자리 배치&quot;;
+seatingReset.hidden = !editingSeating;
+seatingMessage.textContent = editingSeating
+? &quot;요원을 다른 자리로 끌거나 아래 선택 메뉴에서 고르면 두 요원의 자리를 서로 바꿉니다. 변경 즉시 저장됩니다.&quot;
+: &quot;자리 배치는 이 브라우저에 저장됩니다.&quot;;
+render();
+});
+seatingReset.addEventListener(&quot;click&quot;, () =&gt; {
+seatingOrder = model.normalizeSeating([]);
+persistSeating(&quot;기본 배치로 되돌렸습니다.&quot;);
+render();
+});
+const selectedTitle = document.getElementById(&quot;wips-office-selected-title&quot;);
+const selectedNote = document.getElementById(&quot;wips-office-selected-note&quot;);
+const selectedEmpty = document.getElementById(&quot;wips-office-selected-empty&quot;);
+const selectedTasksNode = document.getElementById(&quot;wips-office-selected-tasks&quot;);
+const communalCount = document.getElementById(&quot;wips-office-communal-count&quot;);
+const communalEmpty = document.getElementById(&quot;wips-office-communal-empty&quot;);
+const communalTasksNode = document.getElementById(&quot;wips-office-communal-tasks&quot;);
+const communalTitleNode = document.getElementById(&quot;wips-office-communal-title&quot;);
+const billboardNode = document.getElementById(&quot;wips-office-billboard&quot;);
+const sourceNode = document.getElementById(&quot;wips-office-source&quot;);
+let pendingHostState = window.openai &amp;&amp; window.openai.widgetState;
+let hasLiveModel = false;
+let userChangedState = false;
+const initialState = model.stateFromHost(pendingHostState);
+const state = initialState || {
+selectedEmployee: &quot;sb&quot;,
+status: ALL_STATUS,
+project: ALL_PROJECTS,
+};
+const openProgressDrawers = new Set();
+statusSelect.value = state.status;
+projectSelect.value = state.project;
+function setSafeHref(anchor, url) {
+const appUrl = toNotionAppUrl(url);
+if (appUrl) {
+anchor.href = appUrl;
+anchor.removeAttribute(&quot;target&quot;);
+anchor.removeAttribute(&quot;rel&quot;);
+} else {
+anchor.removeAttribute(&quot;href&quot;);
+anchor.removeAttribute(&quot;target&quot;);
+anchor.removeAttribute(&quot;rel&quot;);
+}
+}
+function addText(parent, tag, className, text) {
+const node = document.createElement(tag);
+if (className) node.className = className;
+if (text !== undefined &amp;&amp; text !== null) node.textContent = String(text);
+parent.append(node);
+return node;
+}
+function createPersonArt(owner) {
+const art = document.createElement(&quot;span&quot;);
+art.className = &quot;person-art&quot;;
+art.dataset.employee = owner;
+art.dataset.agentStyle = owner === &quot;석규&quot; || owner === &quot;UI&quot; ? &quot;cyber&quot; : &quot;suit&quot;;
+let motionPhase = 0;
+for (const character of owner) motionPhase = (motionPhase * 31 + character.codePointAt(0)) % 5;
+art.dataset.motionPhase = String(motionPhase);
+art.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+return art;
+}
+function createWorkstation(owner, filters) {
+const view = model.viewForEmployee(owner, filters);
+const station = document.createElement(&quot;article&quot;);
+station.className = &quot;workstation&quot;;
+const isWorking = Boolean(view.representative &amp;&amp; ACTIVE_TICKER_STATUSES.has(view.representative.status));
+station.dataset.activity = isWorking ? &quot;working&quot; : &quot;idle&quot;;
+station.dataset.status = view.representative ? view.representative.status : &quot;idle&quot;;
+const bubble = document.createElement(&quot;div&quot;);
+bubble.className = &quot;speech-bubble&quot;;
+bubble.title = view.representative
+? view.representative.status + &quot; · &quot; + view.representative.title + &quot; (&quot; + view.topLevelCount + &quot;건)&quot;
+: &quot;할당된 활성 일감 없음&quot;;
+const STATUS_LABELS_EN = {
+진행: &quot;RUNNING&quot;,
+검증: &quot;TESTING&quot;,
+&quot;장시간 테스트 중&quot;: &quot;LONG TEST&quot;,
+대기: &quot;WAITING&quot;,
+예정: &quot;STANDBY&quot;,
+완료: &quot;DONE&quot;,
+};
+const rawStatus = view.representative ? view.representative.status : null;
+const statusEn = rawStatus ? (STATUS_LABELS_EN[rawStatus] || rawStatus) : &quot;IDLE&quot;;
+const taskCount = view.topLevelCount || 0;
+const taskCountLabel = taskCount + (taskCount === 1 ? &quot; TASK&quot; : &quot; TASKS&quot;);
+const hudStatusText = view.representative ? statusEn + &quot; · &quot; + taskCountLabel : &quot;IDLE · 0 TASKS&quot;;
+const hudHeader = document.createElement(&quot;div&quot;);
+hudHeader.className = &quot;hud-header&quot;;
+addText(hudHeader, &quot;span&quot;, &quot;hud-tag&quot;, &quot;[&quot; + owner + &quot;]&quot;);
+addText(hudHeader, &quot;span&quot;, &quot;hud-state&quot;, hudStatusText);
+bubble.append(hudHeader);
+const hudMeter = document.createElement(&quot;div&quot;);
+hudMeter.className = &quot;hud-meter&quot;;
+const hudMeterFill = document.createElement(&quot;span&quot;);
+hudMeterFill.className = &quot;hud-meter-fill&quot;;
+hudMeter.append(hudMeterFill);
+bubble.append(hudMeter);
+const button = document.createElement(&quot;button&quot;);
+button.type = &quot;button&quot;;
+button.className = &quot;employee-button&quot;;
+button.dataset.owner = owner;
+button.setAttribute(&quot;aria-label&quot;, owner + &quot;의 최상위 일감 &quot; + view.topLevelCount + &quot;개 보기&quot;);
+button.setAttribute(&quot;aria-pressed&quot;, String(state.selectedEmployee === owner));
+button.draggable = editingSeating;
+button.append(createPersonArt(owner));
+button.addEventListener(&quot;click&quot;, (event) =&gt; {
+if (suppressEmployeeClick) {
+event.preventDefault();
+event.stopPropagation();
+suppressEmployeeClick = false;
+return;
+}
+userChangedState = true;
+state.selectedEmployee = owner;
+render();
+model.focusEmployeeButton(Array.from(employeeNode.querySelectorAll(&quot;button&quot;)), owner);
+saveState();
+});
+button.addEventListener(&quot;dragstart&quot;, (event) =&gt; {
+if (!editingSeating) {
+event.preventDefault();
+return;
+}
+draggingOwner = owner;
+suppressEmployeeClick = true;
+button.classList.add(&quot;is-dragging&quot;);
+if (event.dataTransfer) {
+event.dataTransfer.effectAllowed = &quot;move&quot;;
+event.dataTransfer.setData(&quot;text/plain&quot;, owner);
+}
+});
+station.append(bubble, button);
+if (editingSeating) {
+station.addEventListener(&quot;dragover&quot;, (event) =&gt; {
+if (!canDropSeat(owner)) return;
+event.preventDefault();
+if (event.dataTransfer) event.dataTransfer.dropEffect = &quot;move&quot;;
+station.classList.add(&quot;is-drop-target&quot;);
+});
+station.addEventListener(&quot;dragleave&quot;, (event) =&gt; {
+if (station.contains(event.relatedTarget)) return;
+station.classList.remove(&quot;is-drop-target&quot;);
+});
+station.addEventListener(&quot;drop&quot;, (event) =&gt; {
+if (!canDropSeat(owner)) return;
+event.preventDefault();
+const source = draggingOwner;
+draggingOwner = null;
+seatingOrder = model.swapSeats(seatingOrder, source, owner);
+persistSeating(source + &quot;와 &quot; + owner + &quot;의 자리를 바꿨습니다.&quot;);
+render();
+});
+button.addEventListener(&quot;dragend&quot;, () =&gt; {
+draggingOwner = null;
+button.classList.remove(&quot;is-dragging&quot;);
+employeeNode.querySelectorAll(&quot;.workstation.is-drop-target&quot;).forEach((target) =&gt; {
+target.classList.remove(&quot;is-drop-target&quot;);
+});
+window.setTimeout(() =&gt; { suppressEmployeeClick = false; }, 0);
+});
+const label = document.createElement(&quot;label&quot;);
+label.className = &quot;seat-control&quot;;
+addText(label, &quot;span&quot;, &quot;&quot;, (seatingOrder.indexOf(owner) + 1) + &quot;번 자리 · &quot; + owner);
+const select = document.createElement(&quot;select&quot;);
+select.className = &quot;form-select&quot;;
+select.dataset.seatOwner = owner;
+select.setAttribute(&quot;aria-label&quot;, owner + &quot; 이동할 자리&quot;);
+seatingOrder.forEach((occupant, index) =&gt; {
+const option = document.createElement(&quot;option&quot;);
+option.value = occupant;
+option.textContent = (index + 1) + &quot;번 · &quot; + occupant + (occupant === owner ? &quot; (현재)&quot; : &quot;와 교환&quot;);
+select.append(option);
+});
+select.value = owner;
+select.addEventListener(&quot;change&quot;, () =&gt; {
+const target = select.value;
+seatingOrder = model.swapSeats(seatingOrder, owner, target);
+persistSeating(owner + &quot;와 &quot; + target + &quot;의 자리를 바꿨습니다.&quot;);
+render();
+Array.from(employeeNode.querySelectorAll(&quot;select&quot;)).find((node) =&gt; node.dataset.seatOwner === owner)?.focus();
+});
+label.append(select);
+station.append(label);
+}
+return station;
+}
+function renderTaskList(container, tasks) {
+container.replaceChildren(...tasks.map((task) =&gt; createKanbanCard(task, true)));
+}
+function createSvgNode(tag, attrs) {
+const node = document.createElementNS
+? document.createElementNS(&quot;http://www.w3.org/2000/svg&quot;, tag)
+: document.createElement(tag);
+Object.entries(attrs).forEach(([key, value]) =&gt; node.setAttribute(key, value));
+return node;
+}
+function createTaskProgressBox(details) {
+if (!details.checklist &amp;&amp; !details.subtasks) return null;
+const SEGMENT_LIMIT = 12;
+const box = document.createElement(&quot;details&quot;);
+box.className = &quot;kanban-progress-box&quot;;
+if (openProgressDrawers.has(details.taskKey)) {
+box.open = true;
+}
+box.addEventListener(&quot;toggle&quot;, () =&gt; {
+if (box.open) openProgressDrawers.add(details.taskKey);
+else openProgressDrawers.delete(details.taskKey);
+});
+const summary = document.createElement(&quot;summary&quot;);
+summary.className = &quot;kanban-progress-summary&quot;;
+const rows = document.createElement(&quot;div&quot;);
+rows.className = &quot;kanban-progress-rows&quot;;
+function createBar(done, total) {
+const complete = total &gt; 0 &amp;&amp; done === total;
+if (total &lt;= SEGMENT_LIMIT) {
+const segs = document.createElement(&quot;div&quot;);
+segs.className = &quot;kanban-progress-segs&quot;;
+segs.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+for (let idx = 0; idx &lt; total; idx += 1) {
+const seg = document.createElement(&quot;span&quot;);
+seg.className = idx &lt; done
+? (complete ? &quot;kanban-progress-seg is-done-all&quot; : &quot;kanban-progress-seg is-filled&quot;)
+: &quot;kanban-progress-seg&quot;;
+segs.append(seg);
+}
+return segs;
+}
+const track = document.createElement(&quot;div&quot;);
+track.className = &quot;kanban-progress-track&quot;;
+track.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+const fill = document.createElement(&quot;span&quot;);
+fill.className = &quot;kanban-progress-fill&quot;;
+if (complete) fill.dataset.complete = &quot;true&quot;;
+if (fill.style) fill.style.width = Math.round((done / total) * 100) + &quot;%&quot;;
+track.append(fill);
+return track;
+}
+function createRow(kind, labelText, iconNodes, done, total) {
+const row = document.createElement(&quot;div&quot;);
+row.className = &quot;kanban-progress-row&quot;;
+row.dataset.kind = kind;
+const kindNode = document.createElement(&quot;span&quot;);
+kindNode.className = &quot;kanban-progress-kind&quot;;
+const icon = createSvgNode(&quot;svg&quot;, {
+width: &quot;13&quot;,
+height: &quot;13&quot;,
+viewBox: &quot;0 0 16 16&quot;,
+fill: &quot;none&quot;,
+&quot;aria-hidden&quot;: &quot;true&quot;,
+});
+icon.append(...iconNodes);
+kindNode.append(icon);
+addText(kindNode, &quot;span&quot;, &quot;&quot;, labelText);
+row.append(kindNode);
+row.append(createBar(done, total));
+const count = addText(row, &quot;span&quot;, &quot;kanban-progress-count&quot;, done + &quot;/&quot; + total);
+if (total &gt; 0 &amp;&amp; done === total) {
+count.dataset.complete = &quot;true&quot;;
+}
+return row;
+}
+if (details.checklist) {
+rows.append(createRow(
+&quot;checklist&quot;,
+&quot;체크&quot;,
+[
+createSvgNode(&quot;rect&quot;, {
+x: &quot;2&quot;,
+y: &quot;2&quot;,
+width: &quot;12&quot;,
+height: &quot;12&quot;,
+rx: &quot;3&quot;,
+stroke: &quot;currentColor&quot;,
+&quot;stroke-width&quot;: &quot;1.4&quot;,
+}),
+createSvgNode(&quot;path&quot;, {
+d: &quot;M5.2 8.2L7.1 10.1L11 6.1&quot;,
+stroke: &quot;currentColor&quot;,
+&quot;stroke-width&quot;: &quot;1.5&quot;,
+&quot;stroke-linecap&quot;: &quot;round&quot;,
+&quot;stroke-linejoin&quot;: &quot;round&quot;,
+}),
+],
+details.checklist.done,
+details.checklist.total,
+));
+}
+if (details.subtasks) {
+rows.append(createRow(
+&quot;subtasks&quot;,
+&quot;하위&quot;,
+[
+createSvgNode(&quot;circle&quot;, { cx: &quot;4&quot;, cy: &quot;3.5&quot;, r: &quot;1.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.4&quot; }),
+createSvgNode(&quot;circle&quot;, { cx: &quot;11.5&quot;, cy: &quot;7.5&quot;, r: &quot;1.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.4&quot; }),
+createSvgNode(&quot;circle&quot;, { cx: &quot;11.5&quot;, cy: &quot;12.5&quot;, r: &quot;1.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.4&quot; }),
+createSvgNode(&quot;path&quot;, {
+d: &quot;M4 5.2V12.5H9.8M4 7.5H9.8&quot;,
+stroke: &quot;currentColor&quot;,
+&quot;stroke-width&quot;: &quot;1.4&quot;,
+&quot;stroke-linecap&quot;: &quot;round&quot;,
+&quot;stroke-linejoin&quot;: &quot;round&quot;,
+}),
+],
+details.subtasks.done,
+details.subtasks.total,
+));
+}
+const chevron = createSvgNode(&quot;svg&quot;, {
+class: &quot;kanban-progress-chevron&quot;,
+width: &quot;13&quot;,
+height: &quot;13&quot;,
+viewBox: &quot;0 0 16 16&quot;,
+fill: &quot;none&quot;,
+&quot;aria-hidden&quot;: &quot;true&quot;,
+});
+chevron.append(createSvgNode(&quot;path&quot;, {
+d: &quot;M4 6L8 10L12 6&quot;,
+stroke: &quot;currentColor&quot;,
+&quot;stroke-width&quot;: &quot;1.6&quot;,
+&quot;stroke-linecap&quot;: &quot;round&quot;,
+&quot;stroke-linejoin&quot;: &quot;round&quot;,
+}));
+summary.append(rows, chevron);
+box.append(summary);
+const drawer = document.createElement(&quot;div&quot;);
+drawer.className = &quot;kanban-progress-drawer&quot;;
+if (details.checklist) {
+const group = document.createElement(&quot;div&quot;);
+group.className = &quot;kanban-progress-group&quot;;
+group.dataset.group = &quot;checklist&quot;;
+addText(
+group,
+&quot;div&quot;,
+&quot;kanban-progress-group-title&quot;,
+&quot;체크리스트 (&quot; + details.checklist.done + &quot;/&quot; + details.checklist.total + &quot;)&quot;,
+);
+const list = document.createElement(&quot;ul&quot;);
+list.className = &quot;kanban-progress-list&quot;;
+details.checklist.items.forEach((item) =&gt; {
+const li = document.createElement(&quot;li&quot;);
+li.className = item.done ? &quot;kanban-progress-item is-done&quot; : &quot;kanban-progress-item&quot;;
+li.dataset.done = String(item.done);
+const mark = document.createElement(&quot;span&quot;);
+mark.className = &quot;kanban-check-mark&quot;;
+mark.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+const markSvg = createSvgNode(&quot;svg&quot;, {
+width: &quot;13&quot;,
+height: &quot;13&quot;,
+viewBox: &quot;0 0 16 16&quot;,
+fill: &quot;none&quot;,
+&quot;aria-hidden&quot;: &quot;true&quot;,
+});
+markSvg.append(createSvgNode(&quot;rect&quot;, {
+x: &quot;2&quot;,
+y: &quot;2&quot;,
+width: &quot;12&quot;,
+height: &quot;12&quot;,
+rx: &quot;3&quot;,
+stroke: &quot;currentColor&quot;,
+&quot;stroke-width&quot;: &quot;1.4&quot;,
+}));
+if (item.done) {
+markSvg.append(createSvgNode(&quot;path&quot;, {
+d: &quot;M5.2 8.2L7.1 10.1L11 6.1&quot;,
+stroke: &quot;currentColor&quot;,
+&quot;stroke-width&quot;: &quot;1.5&quot;,
+&quot;stroke-linecap&quot;: &quot;round&quot;,
+&quot;stroke-linejoin&quot;: &quot;round&quot;,
+}));
+}
+mark.append(markSvg);
+li.append(mark);
+addText(li, &quot;span&quot;, &quot;kanban-progress-item-text&quot;, item.text);
+list.append(li);
+});
+group.append(list);
+drawer.append(group);
+}
+if (details.subtasks) {
+const group = document.createElement(&quot;div&quot;);
+group.className = &quot;kanban-progress-group&quot;;
+group.dataset.group = &quot;subtasks&quot;;
+addText(
+group,
+&quot;div&quot;,
+&quot;kanban-progress-group-title&quot;,
+&quot;하위 일감 (&quot; + details.subtasks.done + &quot;/&quot; + details.subtasks.total + &quot;)&quot;,
+);
+const list = document.createElement(&quot;ul&quot;);
+list.className = &quot;kanban-progress-list&quot;;
+details.subtasks.items.forEach((item) =&gt; {
+const li = document.createElement(&quot;li&quot;);
+li.className = item.done ? &quot;kanban-progress-item is-done&quot; : &quot;kanban-progress-item&quot;;
+li.dataset.done = String(item.done);
+const dot = document.createElement(&quot;span&quot;);
+dot.className = &quot;status-dot&quot;;
+dot.dataset.status = item.status;
+dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+li.append(dot);
+if (item.sourceUrl) {
+const link = document.createElement(&quot;a&quot;);
+link.className = &quot;kanban-subtask-link&quot;;
+link.textContent = item.title;
+setSafeHref(link, item.sourceUrl);
+li.append(link);
+} else {
+addText(li, &quot;span&quot;, &quot;kanban-progress-item-text&quot;, item.title);
+}
+addText(li, &quot;span&quot;, &quot;kanban-subtask-status&quot;, item.status);
+list.append(li);
+});
+group.append(list);
+drawer.append(group);
+}
+box.append(drawer);
+return box;
+}
+function createKanbanCard(task, showExactStatus) {
+const details = model.describeTask(task);
+const card = document.createElement(&quot;article&quot;);
+card.className = &quot;kanban-card&quot;;
+card.dataset.taskTitle = details.title;
+const top = document.createElement(&quot;div&quot;);
+top.className = &quot;kanban-card-top&quot;;
+const badge = document.createElement(&quot;span&quot;);
+badge.className = &quot;kanban-badge&quot;;
+const dot = document.createElement(&quot;span&quot;);
+dot.className = &quot;status-dot&quot;;
+dot.dataset.status = details.status;
+dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+badge.append(dot);
+addText(badge, &quot;span&quot;, &quot;&quot;, showExactStatus ? details.status + &quot; · &quot; + details.project : details.project);
+top.append(badge);
+const tags = document.createElement(&quot;div&quot;);
+tags.className = &quot;kanban-card-tags&quot;;
+if (details.priority &amp;&amp; details.priority !== &quot;미지정&quot;) {
+addText(tags, &quot;span&quot;, &quot;kanban-priority&quot;, details.priority);
+}
+const dday = addText(tags, &quot;span&quot;, &quot;kanban-dday&quot;, details.dDayLabel);
+dday.dataset.tone = details.tone;
+if (details.sourceUrl) {
+const link = document.createElement(&quot;a&quot;);
+link.className = &quot;task-source&quot;;
+link.setAttribute(&quot;aria-label&quot;, &quot;Notion에서 보기&quot;);
+link.setAttribute(&quot;title&quot;, &quot;Notion에서 보기&quot;);
+setSafeHref(link, details.sourceUrl);
+const svg = createSvgNode(&quot;svg&quot;, {
+viewBox: &quot;0 0 24 24&quot;,
+fill: &quot;none&quot;,
+&quot;aria-hidden&quot;: &quot;true&quot;,
+});
+svg.append(...NOTION_ICON_PATHS.map((attrs) =&gt; createSvgNode(&quot;path&quot;, attrs)));
+link.append(svg);
+tags.append(link);
+}
+top.append(tags);
+card.append(top);
+addText(card, &quot;h3&quot;, &quot;&quot;, details.title);
+const metaParts = [&quot;일정 &quot; + details.goalDate];
+if (details.nextCheck &amp;&amp; details.nextCheck !== &quot;미지정&quot;) {
+metaParts.push(&quot;확인 &quot; + details.nextCheck);
+}
+const meta = document.createElement(&quot;div&quot;);
+meta.className = &quot;kanban-meta&quot;;
+addText(meta, &quot;span&quot;, &quot;&quot;, metaParts.join(&quot; · &quot;));
+const pct = addText(meta, &quot;span&quot;, &quot;kanban-progress-pct&quot;, details.progress + &quot;%&quot;);
+pct.dataset.tone = details.tone;
+card.append(meta);
+const bar = document.createElement(&quot;div&quot;);
+bar.className = &quot;kanban-bar&quot;;
+const fill = document.createElement(&quot;span&quot;);
+fill.className = &quot;kanban-bar-fill&quot;;
+fill.dataset.tone = details.tone;
+if (fill.style) fill.style.width = details.progress + &quot;%&quot;;
+bar.append(fill);
+card.append(bar);
+if (details.nextAction &amp;&amp; details.nextAction !== &quot;미지정&quot;) {
+const next = document.createElement(&quot;div&quot;);
+next.className = &quot;kanban-next&quot;;
+addText(next, &quot;span&quot;, &quot;kanban-next-label&quot;, &quot;다음&quot;);
+addText(next, &quot;span&quot;, &quot;&quot;, details.nextAction);
+card.append(next);
+}
+const progressBox = createTaskProgressBox(details);
+if (progressBox) card.append(progressBox);
+if (details.doneCondition &amp;&amp; details.doneCondition !== &quot;미지정&quot;) {
+const cond = document.createElement(&quot;details&quot;);
+cond.className = &quot;kanban-details&quot;;
+addText(cond, &quot;summary&quot;, &quot;&quot;, &quot;완료 조건 보기&quot;);
+addText(cond, &quot;p&quot;, &quot;&quot;, details.doneCondition);
+card.append(cond);
+}
+return card;
+}
+function renderKanbanBoard(container, tasks) {
+const lanes = model.groupTasksByLane(tasks);
+container.replaceChildren(...lanes.map((lane) =&gt; {
+const col = document.createElement(&quot;section&quot;);
+col.className = &quot;kanban-col&quot;;
+col.dataset.laneId = lane.id;
+const head = document.createElement(&quot;div&quot;);
+head.className = &quot;kanban-col-head&quot;;
+const title = document.createElement(&quot;span&quot;);
+title.className = &quot;kanban-col-title&quot;;
+const dot = document.createElement(&quot;span&quot;);
+dot.className = &quot;status-dot&quot;;
+dot.dataset.status = lane.dot;
+dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+title.append(dot);
+addText(title, &quot;span&quot;, &quot;&quot;, lane.title);
+head.append(title);
+addText(head, &quot;span&quot;, &quot;kanban-col-count&quot;, String(lane.tasks.length));
+col.append(head);
+const cardsWrap = document.createElement(&quot;div&quot;);
+cardsWrap.className = &quot;kanban-cards&quot;;
+if (lane.tasks.length === 0) {
+addText(cardsWrap, &quot;div&quot;, &quot;kanban-empty&quot;, &quot;해당 일감 없음&quot;);
+} else {
+cardsWrap.append(...lane.tasks.map((task) =&gt; createKanbanCard(task, lane.showExactStatus)));
+}
+col.append(cardsWrap);
+return col;
+}));
+}
+function renderStatusCounts(summary) {
+countsNode.replaceChildren();
+model.statuses.forEach((status) =&gt; {
+const item = document.createElement(&quot;span&quot;);
+item.className = &quot;status-count&quot;;
+const dot = document.createElement(&quot;span&quot;);
+dot.className = &quot;status-dot&quot;;
+dot.dataset.status = status;
+dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+item.append(dot);
+addText(item, &quot;span&quot;, &quot;&quot;, status);
+addText(item, &quot;strong&quot;, &quot;tabular-nums&quot;, summary.statuses[status]);
+countsNode.append(item);
+});
+}
+function createBillboardStep(item) {
+const button = document.createElement(&quot;button&quot;);
+button.type = &quot;button&quot;;
+button.className = &quot;hq-step-card&quot;;
+button.dataset.tone = item.tone;
+button.title = item.title + &quot; (&quot; + item.shortDate + &quot;)&quot;;
+const labelRow = document.createElement(&quot;div&quot;);
+labelRow.className = &quot;hq-step-label&quot;;
+addText(labelRow, &quot;span&quot;, &quot;&quot;, item.stepLabel);
+addText(labelRow, &quot;span&quot;, &quot;&quot;, item.status);
+button.append(labelRow);
+addText(button, &quot;div&quot;, &quot;hq-step-title&quot;, item.title);
+const bar = document.createElement(&quot;div&quot;);
+bar.className = &quot;hq-step-bar&quot;;
+const fill = document.createElement(&quot;span&quot;);
+fill.className = &quot;hq-step-bar-fill&quot;;
+if (fill.style) fill.style.width = item.progress + &quot;%&quot;;
+bar.append(fill);
+button.append(bar);
+const foot = document.createElement(&quot;div&quot;);
+foot.className = &quot;hq-step-foot&quot;;
+addText(foot, &quot;span&quot;, &quot;hq-step-dday&quot;, item.dDayLabel);
+addText(foot, &quot;span&quot;, &quot;hq-step-date&quot;, item.shortDate);
+button.append(foot);
+button.addEventListener(&quot;click&quot;, () =&gt; {
+const cards = Array.from(communalTasksNode.querySelectorAll(&quot;.kanban-card&quot;));
+cards.forEach((card) =&gt; card.classList.remove(&quot;is-billboard-highlight&quot;));
+const match = cards.find((card) =&gt; card.dataset.taskTitle === item.title);
+if (match) {
+match.classList.add(&quot;is-billboard-highlight&quot;);
+match.scrollIntoView?.({ behavior: &quot;smooth&quot;, block: &quot;center&quot; });
+} else {
+communalTitleNode?.scrollIntoView?.({ behavior: &quot;smooth&quot;, block: &quot;start&quot; });
+}
+});
+return button;
+}
+function createTickerButton(item) {
+const button = document.createElement(&quot;button&quot;);
+button.type = &quot;button&quot;;
+button.className = &quot;hq-ticker-item&quot;;
+button.title = &quot;[&quot; + item.owner + &quot;] &quot; + item.title + &quot; (&quot; + item.shortDate + &quot;)&quot;;
+addText(button, &quot;span&quot;, &quot;hq-ticker-owner&quot;, &quot;[&quot; + item.owner + &quot;]&quot;);
+addText(button, &quot;span&quot;, &quot;&quot;, item.title);
+addText(button, &quot;span&quot;, &quot;hq-ticker-date&quot;, &quot;(&quot; + item.shortDate + &quot;)&quot;);
+button.addEventListener(&quot;click&quot;, () =&gt; {
+userChangedState = true;
+state.selectedEmployee = item.owner;
+render();
+model.focusEmployeeButton(Array.from(employeeNode.querySelectorAll(&quot;button&quot;)), item.owner);
+saveState();
+});
+return button;
+}
+function renderBillboard(filters) {
+if (!billboardNode) return;
+const view = model.billboardView(filters);
+const head = document.createElement(&quot;div&quot;);
+head.className = &quot;hq-billboard-head&quot;;
+const titleWrap = document.createElement(&quot;span&quot;);
+titleWrap.className = &quot;hq-billboard-title&quot;;
+const dot = document.createElement(&quot;span&quot;);
+dot.className = &quot;hq-billboard-dot&quot;;
+dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+titleWrap.append(dot);
+const projectSuffix = filters.project !== ALL_PROJECTS ? &quot; · &quot; + filters.project : &quot;&quot;;
+addText(titleWrap, &quot;span&quot;, &quot;&quot;, &quot;SHARED SCHEDULE&quot; + projectSuffix);
+head.append(titleWrap);
+addText(
+head,
+&quot;span&quot;,
+&quot;hq-billboard-meta&quot;,
+&quot;TODAY &quot; + view.todayLabel + &quot; · 공통 &quot; + view.scheduleTasks.length + &quot; · 진행 &quot; + view.tickerTasks.length,
+);
+let upperNode;
+if (view.scheduleTasks.length === 0) {
+upperNode = document.createElement(&quot;div&quot;);
+upperNode.className = &quot;hq-billboard-empty&quot;;
+upperNode.textContent = &quot;표시할 공통 일정이 없습니다.&quot;;
+} else {
+upperNode = document.createElement(&quot;div&quot;);
+upperNode.className = &quot;hq-stepper&quot;;
+upperNode.append(...view.scheduleTasks.slice(0, 4).map(createBillboardStep));
+}
+const tickerBar = document.createElement(&quot;div&quot;);
+tickerBar.className = &quot;hq-ticker-bar&quot;;
+addText(tickerBar, &quot;span&quot;, &quot;hq-ticker-badge&quot;, &quot;LIVE&quot;);
+const viewport = document.createElement(&quot;div&quot;);
+viewport.className = &quot;hq-ticker-viewport&quot;;
+if (view.tickerTasks.length === 0) {
+addText(viewport, &quot;span&quot;, &quot;hq-ticker-empty&quot;, &quot;진행 중인 요원 일감이 없습니다.&quot;);
+} else {
+const track = document.createElement(&quot;div&quot;);
+track.className = &quot;hq-ticker-track&quot;;
+const sequence = view.tickerTasks.concat(view.tickerTasks);
+sequence.forEach((item, index) =&gt; {
+if (index &gt; 0) addText(track, &quot;span&quot;, &quot;hq-ticker-sep&quot;, &quot;·&quot;);
+track.append(createTickerButton(item));
+});
+viewport.append(track);
+}
+tickerBar.append(viewport);
+billboardNode.replaceChildren(head, upperNode, tickerBar);
+}
+function render() {
+const filters = { status: statusSelect.value, project: projectSelect.value };
+const summary = model.summary(filters);
+const view = model.viewForEmployee(state.selectedEmployee, filters);
+summaryNode.textContent = &quot;현재 표시 &quot; + summary.total + &quot; / &quot; + summary.snapshotTotal + &quot;개 · 미배정 &quot; + summary.unassigned + &quot;개&quot;;
+renderStatusCounts(summary);
+renderBillboard(filters);
+seatingOrder = model.normalizeSeating(seatingOrder);
+employeeNode.replaceChildren(...seatingOrder.map((owner) =&gt; createWorkstation(owner, filters)));
+selectedTitle.textContent = state.selectedEmployee + &quot;의 일감 · &quot; + view.tasks.length + &quot;개&quot;;
+selectedNote.textContent = view.empty ? &quot;선택한 직원은 유지되며, 조건에 맞는 일감이 없습니다.&quot; : &quot;대표 일감 외 &quot; + view.otherCount + &quot;개를 포함합니다.&quot;;
+selectedEmpty.hidden = !view.empty;
+selectedEmpty.textContent = &quot;현재 필터에 맞는 &quot; + state.selectedEmployee + &quot;의 일감이 없습니다.&quot;;
+if (view.empty) {
+selectedTasksNode.replaceChildren();
+} else {
+renderKanbanBoard(selectedTasksNode, view.tasks);
+}
+const unassigned = model.unassignedTasks(filters);
+communalCount.textContent = unassigned.length + &quot;개&quot;;
+communalEmpty.hidden = unassigned.length &gt; 0;
+communalEmpty.textContent = &quot;현재 조건에 맞는 미배정 일감이 없습니다.&quot;;
+renderTaskList(communalTasksNode, unassigned);
+}
+function setSelectOptions(select, values, selectedValue) {
+const options = [...new Set(values.concat(selectedValue ? [selectedValue] : []))];
+select.replaceChildren(...options.map((value) =&gt; {
+const option = document.createElement(&quot;option&quot;);
+option.value = value;
+option.textContent = value;
+return option;
+}));
+select.value = selectedValue;
+}
+function formatSuccessTime(value) {
+if (!value) return snapshot.snapshotDate || &quot;스냅샷&quot;;
+const date = new Date(value);
+if (Number.isNaN(date.getTime())) return String(value);
+return date.toLocaleTimeString(&quot;ko-KR&quot;, {
+timeZone: &quot;Asia/Seoul&quot;,
+hour: &quot;2-digit&quot;,
+minute: &quot;2-digit&quot;,
+hour12: false,
+});
+}
+function setSyncStatus(message, stateName) {
+syncStatus.textContent = message;
+syncStatus.dataset.state = stateName;
+}
+const connectToggleButton = document.getElementById(&quot;wips-office-connect-toggle&quot;);
+const logoutButton = document.getElementById(&quot;wips-office-logout&quot;);
+const offlineBanner = document.getElementById(&quot;wips-office-offline-banner&quot;);
+const connectionPanel = document.getElementById(&quot;wips-office-connection-panel&quot;);
+const connectionForm = document.getElementById(&quot;wips-office-connection-form&quot;);
+const tokenInput = document.getElementById(&quot;wips-office-token&quot;);
+const dataSourceIdInput = document.getElementById(&quot;wips-office-datasource-id&quot;);
+const connectSubmitButton = document.getElementById(&quot;wips-office-connect-submit&quot;);
+const connectCancelButton = document.getElementById(&quot;wips-office-connect-cancel&quot;);
+const connectionMessage = document.getElementById(&quot;wips-office-connection-message&quot;);
+const mainView = document.getElementById(&quot;wips-office-main-view&quot;);
+const IS_STATIC_MODE =
+detectRuntimeMode({ initialSnapshot: snapshot, runtimeMode: window.__WIPS_RUNTIME_MODE }) === &quot;static&quot;;
+let activeConnection = null;
+let activeFetchController = null;
+let pollTimerId = null;
+let sessionEpoch = 0;
+let isRefreshing = false;
+function validateStaticConnection(input) {
+const check = validateConnectionConfig(input);
+if (check.ok) return check;
+const first = check.errors?.[0] || check.error || &quot;&quot;;
+if (first.includes(&quot;token&quot;)) {
+return { ok: false, error: &quot;Notion 토큰은 공백이나 제어 문자 없이 입력해야 합니다.&quot; };
+}
+return { ok: false, error: &quot;데이터 소스 ID는 표준 UUID(8-4-4-4-12) 형식이어야 합니다.&quot; };
+}
+const opfsStore = createOpfsStore({
+getDirectory: typeof navigator !== &quot;undefined&quot; &amp;&amp; typeof navigator?.storage?.getDirectory === &quot;function&quot;
+? () =&gt; navigator.storage.getDirectory()
+: null,
+});
+function formatStaticNotionError(error) {
+if (error?.code === &quot;NOTION_ABORTED&quot;) return error;
+if (error?.code === &quot;NOTION_RATE_LIMIT&quot;) {
+return new Error(&quot;Notion 요청 한도(429)에 도달했습니다. 잠시 후 다시 시도하세요.&quot;);
+}
+if (error?.code === &quot;NOTION_TIMEOUT&quot;) {
+return new Error(&quot;Notion 조회 요청 시간이 초과되었습니다.&quot;);
+}
+if (error?.code === &quot;NOTION_NETWORK_ERROR&quot;) {
+return new Error(&quot;Notion API 또는 네트워크에 연결할 수 없습니다.&quot;);
+}
+if (error?.code === &quot;NOTION_INCOMPLETE_RESPONSE&quot;) {
+return new Error(&quot;Notion 조회 결과가 불완전(incomplete)하여 기존 데이터를 유지합니다.&quot;);
+}
+if (error?.code === &quot;NOTION_PAGE_LIMIT&quot;) {
+return new Error(&quot;Notion 페이지네이션 안전 한도(100)를 초과했습니다.&quot;);
+}
+if (error?.code === &quot;NOTION_INVALID_RESPONSE&quot;) {
+return new Error(&quot;Notion API가 유효한 JSON 응답을 반환하지 않았습니다.&quot;);
+}
+if (error?.code === &quot;NOTION_HTTP_ERROR&quot;) {
+const status = error.upstreamStatus;
+const msg = status === 401 || status === 403
+? &quot;인증 또는 권한 오류(HTTP &quot; + status + &quot;): Notion Integration의 Read content 권한과 단일 DB 연결, 토큰·데이터 소스 ID를 확인하세요.&quot;
+: &quot;Notion 조회가 실패했습니다 (HTTP &quot; + status + &quot;).&quot;;
+const wrapped = new Error(msg);
+wrapped.upstreamStatus = status;
+return wrapped;
+}
+return error instanceof Error ? error : new Error(String(error || &quot;Notion 조회에 실패했습니다.&quot;));
+}
+async function fetchNotionSnapshotStatic(connection, signal) {
+const valid = validateStaticConnection(connection);
+if (!valid.ok) throw new Error(valid.error);
+try {
+const snap = await fetchNotionSnapshot({
+token: valid.value.token,
+dataSourceId: valid.value.dataSourceId,
+strictUuid: true,
+signal,
+fetchImpl: typeof fetch === &quot;function&quot; ? fetch : globalThis.fetch,
+});
+return { ...snap, lastSuccessAt: new Date().toISOString() };
+} catch (error) {
+throw formatStaticNotionError(error);
+}
+}
+function setConnectionMessage(message, stateName) {
+if (!connectionMessage) return;
+connectionMessage.textContent = message;
+connectionMessage.dataset.state = stateName || &quot;idle&quot;;
+}
+function setOfflineBanner(message) {
+if (!offlineBanner) return;
+if (message) {
+offlineBanner.textContent = message;
+offlineBanner.hidden = false;
+} else {
+offlineBanner.textContent = &quot;&quot;;
+offlineBanner.hidden = true;
+}
+}
+function applySnapshot(nextSnapshot) {
+let selectedStatus = statusSelect.value;
+let selectedProject = projectSelect.value;
+snapshot = nextSnapshot;
+model = createOfficeModel(snapshot);
+if (!hasLiveModel) {
+const restored = model.restorePendingState(pendingHostState, {
+selectedEmployee: state.selectedEmployee,
+status: selectedStatus,
+project: selectedProject,
+}, userChangedState);
+state.selectedEmployee = restored.selectedEmployee;
+selectedStatus = restored.status;
+selectedProject = restored.project;
+pendingHostState = null;
+hasLiveModel = true;
+}
+dataNode.textContent = JSON.stringify(snapshot);
+setSelectOptions(statusSelect, [ALL_STATUS, ...model.statuses], selectedStatus);
+setSelectOptions(projectSelect, [ALL_PROJECTS, ...model.projects, UNSPECIFIED_PROJECT], selectedProject);
+if (snapshot.sourceUrl) {
+sourceNode.hidden = false;
+setSafeHref(sourceNode, snapshot.sourceUrl);
+} else {
+sourceNode.hidden = true;
+sourceNode.removeAttribute(&quot;href&quot;);
+}
+if (mainView) mainView.hidden = false;
+render();
+}
+function clearViewDom() {
+openProgressDrawers.clear();
+snapshot = createEmptySnapshot();
+model = createOfficeModel(snapshot);
+hasLiveModel = false;
+dataNode.textContent = JSON.stringify(snapshot);
+billboardNode?.replaceChildren();
+employeeNode.replaceChildren();
+selectedTasksNode.replaceChildren();
+communalTasksNode.replaceChildren();
+countsNode.replaceChildren();
+summaryNode.textContent = &quot;&quot;;
+selectedTitle.textContent = &quot;&quot;;
+selectedNote.textContent = &quot;&quot;;
+selectedEmpty.hidden = true;
+selectedEmpty.textContent = &quot;&quot;;
+communalCount.textContent = &quot;&quot;;
+communalEmpty.hidden = true;
+communalEmpty.textContent = &quot;&quot;;
+sourceNode.hidden = true;
+sourceNode.removeAttribute(&quot;href&quot;);
+if (mainView) mainView.hidden = true;
+setOfflineBanner(&quot;&quot;);
+}
+function stopStaticPolling() {
+if (pollTimerId !== null) {
+window.clearInterval(pollTimerId);
+pollTimerId = null;
+}
+}
+function startStaticPolling() {
+if (pollTimerId !== null) return;
+pollTimerId = window.setInterval(refreshData, 30_000);
+}
+async function refreshData() {
+if (isRefreshing || (IS_STATIC_MODE &amp;&amp; !activeConnection)) return;
+isRefreshing = true;
+refreshButton.disabled = true;
+const requestEpoch = sessionEpoch;
+setSyncStatus(&quot;갱신 중…&quot;, &quot;loading&quot;);
+let responseData = null;
+try {
+if (IS_STATIC_MODE) {
+activeFetchController?.abort();
+activeFetchController = new AbortController();
+const freshSnapshot = await fetchNotionSnapshotStatic(activeConnection, activeFetchController.signal);
+if (requestEpoch !== sessionEpoch) return;
+if (opfsStore.isSupported()) await opfsStore.saveSnapshot(freshSnapshot).catch(() =&gt; {});
+if (requestEpoch !== sessionEpoch) return;
+applySnapshot(freshSnapshot);
+setOfflineBanner(&quot;&quot;);
+setSyncStatus(formatSuccessTime(freshSnapshot.lastSuccessAt) + &quot; 갱신&quot;, &quot;success&quot;);
+return;
+}
+const response = await fetch(&quot;/api/tasks&quot;, {
+headers: { Accept: &quot;application/json&quot; },
+cache: &quot;no-store&quot;,
+});
+responseData = await response.json().catch(() =&gt; null);
+if (!response.ok) {
+const error = new Error(responseData?.error || &quot;Notion 데이터를 갱신하지 못했습니다.&quot;);
+error.responseData = responseData;
+throw error;
+}
+if (!responseData || !Array.isArray(responseData.results) || typeof responseData.snapshotDate !== &quot;string&quot;) {
+throw new Error(&quot;서버가 유효한 Notion 스냅샷을 반환하지 않았습니다.&quot;);
+}
+applySnapshot(responseData);
+setSyncStatus(formatSuccessTime(snapshot.lastSuccessAt) + &quot; 갱신&quot;, &quot;success&quot;);
+} catch (error) {
+if (requestEpoch !== sessionEpoch || error?.code === &quot;NOTION_ABORTED&quot;) return;
+const detail = error.responseData || responseData;
+const fallbackTime = IS_STATIC_MODE ? snapshot.lastSuccessAt : detail?.lastSuccessAt;
+const message = error.message || &quot;서버에 연결할 수 없습니다. 연결 상태를 확인하세요.&quot;;
+if (IS_STATIC_MODE &amp;&amp; navigator?.onLine === false &amp;&amp; snapshot.results.length &gt; 0) {
+setOfflineBanner(&quot;오프라인 상태입니다. 기기 OPFS에 저장된 마지막 조회 데이터를 표시합니다.&quot;);
+}
+setSyncStatus(message + (fallbackTime ? &quot; · &quot; + formatSuccessTime(fallbackTime) : &quot;&quot;), &quot;error&quot;);
+} finally {
+isRefreshing = false;
+if (requestEpoch === sessionEpoch) {
+refreshButton.disabled = IS_STATIC_MODE &amp;&amp; !activeConnection;
+}
+}
+}
+async function logoutSession() {
+sessionEpoch += 1;
+isRefreshing = false;
+activeFetchController?.abort();
+activeFetchController = null;
+stopStaticPolling();
+activeConnection = null;
+if (logoutButton) logoutButton.hidden = true;
+refreshButton.disabled = true;
+if (connectSubmitButton) connectSubmitButton.disabled = false;
+if (opfsStore.isSupported()) await opfsStore.clearAll().catch(() =&gt; {});
+if (typeof window.__wipsClearSwSession === &quot;function&quot;) {
+await window.__wipsClearSwSession().catch(() =&gt; {});
+}
+try {
+if (typeof CustomEvent === &quot;function&quot;) {
+window.dispatchEvent(new CustomEvent(&quot;wips:logout&quot;));
+}
+} catch {}
+try {
+if (window.parent &amp;&amp; window.parent !== window) {
+window.parent.postMessage({ type: &quot;wips:logout&quot; }, window.location.origin);
+}
+} catch {}
+clearViewDom();
+if (tokenInput) tokenInput.value = &quot;&quot;;
+if (dataSourceIdInput) dataSourceIdInput.value = &quot;&quot;;
+if (connectionPanel) connectionPanel.hidden = false;
+if (connectCancelButton) connectCancelButton.hidden = true;
+const msg = &quot;로그아웃되었습니다. 이 기기에서 토큰·연결 정보와 업무 데이터를 삭제했습니다.&quot;;
+setConnectionMessage(msg, &quot;info&quot;);
+setSyncStatus(&quot;로그아웃됨&quot;, &quot;idle&quot;);
+}
+function saveState() {
+try {
+if (!window.openai || typeof window.openai.setWidgetState !== &quot;function&quot;) return;
+const pending = window.openai.setWidgetState({
+modelContent: { selectedEmployee: state.selectedEmployee },
+privateContent: {
+selectedEmployee: state.selectedEmployee,
+status: statusSelect.value,
+project: projectSelect.value,
+},
+});
+if (pending &amp;&amp; typeof pending.catch === &quot;function&quot;) pending.catch(() =&gt; {});
+} catch {}
+}
+statusSelect.addEventListener(&quot;change&quot;, () =&gt; {
+userChangedState = true;
+state.status = statusSelect.value;
+render();
+saveState();
+});
+projectSelect.addEventListener(&quot;change&quot;, () =&gt; {
+userChangedState = true;
+state.project = projectSelect.value;
+render();
+saveState();
+});
+window.addEventListener?.(&quot;openai:set_globals&quot;, (event) =&gt; {
+const widgetState = event.detail &amp;&amp; event.detail.globals &amp;&amp; event.detail.globals.widgetState;
+if (!hasLiveModel) {
+pendingHostState = widgetState;
+if (userChangedState) return;
+}
+const incoming = model.stateFromHost(widgetState);
+if (!incoming) return;
+if (
+incoming.selectedEmployee === state.selectedEmployee &amp;&amp;
+incoming.status === statusSelect.value &amp;&amp;
+incoming.project === projectSelect.value
+) return;
+state.selectedEmployee = incoming.selectedEmployee;
+statusSelect.value = incoming.status;
+projectSelect.value = incoming.project;
+render();
+});
+async function initStaticMode() {
+const startEpoch = sessionEpoch;
+clearViewDom();
+if (connectToggleButton) connectToggleButton.hidden = false;
+if (logoutButton) logoutButton.hidden = true;
+refreshButton.disabled = true;
+if (connectionPanel) connectionPanel.hidden = false;
+if (connectCancelButton) connectCancelButton.hidden = true;
+if (!opfsStore.isSupported()) {
+setConnectionMessage(
+&quot;이 브라우저는 OPFS 격리 저장소를 지원하지 않습니다. 연결 정보는 현재 탭 세션 메모리에만 유지되며 새로고침 시 삭제됩니다.&quot;,
+&quot;info&quot;,
+);
+setSyncStatus(&quot;연결 필요 (OPFS 미지원)&quot;, &quot;idle&quot;);
+return;
+}
+let savedConnection = null;
+let savedSnapshot = null;
+try {
+savedConnection = await opfsStore.loadConnection();
+savedSnapshot = await opfsStore.loadSnapshot();
+} catch {
+savedConnection = null;
+savedSnapshot = null;
+}
+if (startEpoch !== sessionEpoch) return;
+if (!savedConnection) {
+if (opfsStore.isSupported()) await opfsStore.clearAll().catch(() =&gt; {});
+setSyncStatus(&quot;연결 필요&quot;, &quot;idle&quot;);
+return;
+}
+activeConnection = savedConnection;
+if (dataSourceIdInput) dataSourceIdInput.value = savedConnection.dataSourceId;
+if (logoutButton) logoutButton.hidden = false;
+refreshButton.disabled = false;
+if (connectionPanel) connectionPanel.hidden = true;
+if (savedSnapshot &amp;&amp; !isEmptySnapshot(savedSnapshot)) {
+applySnapshot(savedSnapshot);
+if (navigator?.onLine === false) {
+setOfflineBanner(&quot;오프라인 상태입니다. 기기 OPFS에 저장된 마지막 조회 데이터를 표시합니다.&quot;);
+setSyncStatus(&quot;오프라인 · &quot; + formatSuccessTime(savedSnapshot.lastSuccessAt), &quot;error&quot;);
+startStaticPolling();
+return;
+}
+}
+await refreshData();
+if (startEpoch === sessionEpoch &amp;&amp; activeConnection) {
+startStaticPolling();
+}
+}
+refreshButton.addEventListener(&quot;click&quot;, refreshData);
+connectToggleButton?.addEventListener(&quot;click&quot;, () =&gt; {
+if (!connectionPanel) return;
+connectionPanel.hidden = !connectionPanel.hidden;
+if (connectCancelButton) connectCancelButton.hidden = !activeConnection;
+if (!connectionPanel.hidden &amp;&amp; activeConnection) {
+if (dataSourceIdInput) dataSourceIdInput.value = activeConnection.dataSourceId;
+}
+});
+connectCancelButton?.addEventListener(&quot;click&quot;, () =&gt; {
+if (connectionPanel &amp;&amp; activeConnection) {
+connectionPanel.hidden = true;
+}
+});
+logoutButton?.addEventListener(&quot;click&quot;, () =&gt; {
+void logoutSession();
+});
+connectionForm?.addEventListener(&quot;submit&quot;, async (event) =&gt; {
+event.preventDefault();
+const validation = validateStaticConnection({
+token: tokenInput?.value || &quot;&quot;,
+dataSourceId: dataSourceIdInput?.value || &quot;&quot;,
+});
+if (!validation.ok) {
+setConnectionMessage(validation.error, &quot;error&quot;);
+return;
+}
+const submitEpoch = sessionEpoch;
+if (connectSubmitButton) connectSubmitButton.disabled = true;
+setConnectionMessage(&quot;Notion 연결 확인 및 데이터 조회 중…&quot;, &quot;loading&quot;);
+setSyncStatus(&quot;연결 확인 중…&quot;, &quot;loading&quot;);
+try {
+activeFetchController?.abort();
+activeFetchController = new AbortController();
+const freshSnapshot = await fetchNotionSnapshotStatic(validation.value, activeFetchController.signal);
+if (submitEpoch !== sessionEpoch) return;
+if (opfsStore.isSupported()) {
+await opfsStore.saveConnection(validation.value);
+await opfsStore.saveSnapshot(freshSnapshot);
+}
+if (submitEpoch !== sessionEpoch) return;
+activeConnection = validation.value;
+if (tokenInput) tokenInput.value = &quot;&quot;;
+if (connectionPanel) connectionPanel.hidden = true;
+if (logoutButton) logoutButton.hidden = false;
+refreshButton.disabled = false;
+applySnapshot(freshSnapshot);
+setOfflineBanner(&quot;&quot;);
+setConnectionMessage(&quot;연결이 저장되었습니다. OPFS에 격리 보관됩니다.&quot;, &quot;info&quot;);
+setSyncStatus(formatSuccessTime(freshSnapshot.lastSuccessAt) + &quot; 갱신&quot;, &quot;success&quot;);
+startStaticPolling();
+} catch (error) {
+if (submitEpoch !== sessionEpoch || error?.code === &quot;NOTION_ABORTED&quot;) return;
+const msg = error?.message || &quot;Notion 연결에 실패했습니다.&quot;;
+setConnectionMessage(msg, &quot;error&quot;);
+setSyncStatus(msg, &quot;error&quot;);
+} finally {
+if (connectSubmitButton &amp;&amp; submitEpoch === sessionEpoch) {
+connectSubmitButton.disabled = false;
+}
+}
+});
+if (IS_STATIC_MODE) {
+window.addEventListener?.(&quot;offline&quot;, () =&gt; {
+if (activeConnection &amp;&amp; snapshot.results.length &gt; 0) {
+setOfflineBanner(&quot;오프라인 상태입니다. 기기 OPFS에 저장된 마지막 조회 데이터를 표시합니다.&quot;);
+}
+});
+window.addEventListener?.(&quot;online&quot;, () =&gt; {
+if (activeConnection) {
+setOfflineBanner(&quot;&quot;);
+void refreshData();
+}
+});
+void initStaticMode();
+} else {
+setSafeHref(sourceNode, snapshot.sourceUrl);
+render();
+setSyncStatus(&quot;동기화 중…&quot;, &quot;loading&quot;);
+refreshData();
+window.setInterval(refreshData, 30_000);
+}
 })();
 &lt;/script&gt;
 
