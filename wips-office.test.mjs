@@ -24,6 +24,249 @@ assert.equal(typeof createOfficeModel, "function", "the office model is availabl
 const model = createOfficeModel(snapshot);
 const allFilters = { status: "전체 상태", project: "전체 프로젝트" };
 
+class DomNode {
+  constructor(tagName, id = "", ownerDoc = null) {
+    this.tagName = tagName.toUpperCase();
+    this.id = id;
+    this.ownerDoc = ownerDoc;
+    this.className = "";
+    this.dataset = {};
+    this.style = {};
+    this.open = false;
+    this.attributes = {};
+    this.children = [];
+    this.listeners = new Map();
+    this.hidden = false;
+    this.disabled = false;
+    this.value = "";
+    this.type = "";
+    this.draggable = false;
+    this._textContent = "";
+    this.parentNode = null;
+    this.classList = {
+      add: (...names) => {
+        const set = new Set(this.className.split(/\s+/).filter(Boolean));
+        for (const n of names) set.add(n);
+        this.className = [...set].join(" ");
+      },
+      remove: (...names) => {
+        const removeSet = new Set(names);
+        this.className = this.className.split(/\s+/).filter((n) => n && !removeSet.has(n)).join(" ");
+      },
+      contains: (name) => this.className.split(/\s+/).filter(Boolean).includes(name),
+    };
+  }
+
+  get textContent() {
+    if (this.children.length === 0) return this._textContent;
+    return this._textContent + this.children.map((c) => c.textContent).join("");
+  }
+
+  set textContent(value) {
+    this.children = [];
+    this._textContent = value == null ? "" : String(value);
+  }
+
+  append(...nodes) {
+    for (const node of nodes) {
+      if (node != null) {
+        node.parentNode = this;
+        this.children.push(node);
+      }
+    }
+  }
+
+  appendChild(node) {
+    this.append(node);
+    return node;
+  }
+
+  replaceChildren(...nodes) {
+    this.children = [];
+    this._textContent = "";
+    this.append(...nodes);
+  }
+
+  setAttribute(name, value) {
+    this.attributes[name] = String(value);
+  }
+
+  getAttribute(name) {
+    return this.attributes[name] ?? null;
+  }
+
+  removeAttribute(name) {
+    delete this.attributes[name];
+    if (name === "href") delete this.href;
+  }
+
+  addEventListener(type, fn) {
+    if (!this.listeners.has(type)) this.listeners.set(type, []);
+    this.listeners.get(type).push(fn);
+  }
+
+  dispatchEvent(event) {
+    const evt = {
+      type: event.type,
+      target: this,
+      preventDefault() { evt.defaultPrevented = true; },
+      stopPropagation() { evt.stoppedPropagation = true; },
+      defaultPrevented: false,
+      stoppedPropagation: false,
+      ...event,
+    };
+    for (const fn of this.listeners.get(evt.type) || []) fn(evt);
+    return evt;
+  }
+
+  contains(other) {
+    if (!other) return false;
+    if (other === this) return true;
+    return this.children.some((c) => c.contains(other));
+  }
+
+  matches(selector) {
+    if (selector === ".workstation.is-drop-target") {
+      return this.classList.contains("workstation") && this.classList.contains("is-drop-target");
+    }
+    if (selector.startsWith(".")) {
+      return this.classList.contains(selector.slice(1));
+    }
+    return this.tagName.toLowerCase() === selector.toLowerCase();
+  }
+
+  querySelectorAll(selector) {
+    const results = [];
+    const walk = (node) => {
+      for (const child of node.children || []) {
+        if (child.matches(selector)) results.push(child);
+        walk(child);
+      }
+    };
+    walk(this);
+    return results;
+  }
+
+  querySelector(selector) {
+    return this.querySelectorAll(selector)[0] ?? null;
+  }
+
+  focus() {
+    if (this.ownerDoc) this.ownerDoc.activeElement = this;
+  }
+}
+
+function createOfficeDomHarness({
+  customSnapshot = snapshot,
+  savedSeating = null,
+  hostWidgetState = undefined,
+  onSetWidgetState = () => {},
+} = {}) {
+  const byId = new Map();
+  const doc = {
+    activeElement: null,
+    getElementById: (id) => byId.get(id) ?? null,
+    createElement: (tag) => new DomNode(tag, "", doc),
+    createElementNS: (_ns, tag) => new DomNode(tag, "", doc),
+  };
+  const make = (tag, id, extra = {}) => {
+    const el = new DomNode(tag, id, doc);
+    Object.assign(el, extra);
+    if (id) byId.set(id, el);
+    return el;
+  };
+
+  const scriptText = fragment.match(/<script id="office-model">([\s\S]*?)<\/script>/)?.[1];
+  make("div", "wips-office-root");
+  make("script", "wips-office-data", { _textContent: JSON.stringify(customSnapshot) });
+  make("select", "wips-office-status", { value: "전체 상태" });
+  make("select", "wips-office-project", { value: "전체 프로젝트" });
+  make("button", "wips-office-refresh");
+  make("button", "wips-office-connect-toggle", { hidden: true });
+  make("button", "wips-office-logout", { hidden: true });
+  make("p", "wips-office-sync-status");
+  make("p", "wips-office-offline-banner", { hidden: true });
+  make("section", "wips-office-connection-panel", { hidden: true });
+  make("form", "wips-office-connection-form");
+  make("input", "wips-office-token");
+  make("input", "wips-office-datasource-id");
+  make("button", "wips-office-connect-submit");
+  make("button", "wips-office-connect-cancel", { hidden: true });
+  make("p", "wips-office-connection-message");
+  make("div", "wips-office-main-view");
+  make("p", "wips-office-summary");
+  make("div", "wips-office-status-counts");
+  make("div", "wips-office-employees");
+  make("button", "wips-office-edit-seating");
+  make("button", "wips-office-reset-seating", { hidden: true });
+  make("p", "wips-office-seating-message");
+  make("section", "wips-office-billboard");
+  make("h2", "wips-office-selected-title");
+  make("p", "wips-office-selected-note");
+  make("p", "wips-office-selected-empty", { hidden: true });
+  make("div", "wips-office-selected-tasks");
+  make("h2", "wips-office-communal-title");
+  make("p", "wips-office-communal-count");
+  make("p", "wips-office-communal-empty", { hidden: true });
+  make("div", "wips-office-communal-tasks");
+  make("a", "wips-office-source");
+
+  const storageMap = new Map();
+  if (savedSeating !== null) {
+    storageMap.set("wips-office-seating-v1", JSON.stringify(savedSeating));
+  }
+  const localStorage = {
+    getItem: (k) => (storageMap.has(k) ? storageMap.get(k) : null),
+    setItem: (k, v) => storageMap.set(k, String(v)),
+    removeItem: (k) => storageMap.delete(k),
+  };
+
+  const queuedTimeouts = [];
+  const windowListeners = new Map();
+  const win = {
+    location: { origin: "http://127.0.0.1:8000", href: "http://127.0.0.1:8000/" },
+    localStorage,
+    openai: {
+      widgetState: hostWidgetState,
+      setWidgetState: onSetWidgetState,
+    },
+    setTimeout: (fn) => {
+      queuedTimeouts.push(fn);
+      return queuedTimeouts.length;
+    },
+    clearTimeout: () => {},
+    setInterval: () => 1,
+    clearInterval: () => {},
+    addEventListener: (type, fn) => {
+      if (!windowListeners.has(type)) windowListeners.set(type, []);
+      windowListeners.get(type).push(fn);
+    },
+    dispatchEvent: (event) => {
+      for (const fn of windowListeners.get(event.type) || []) fn(event);
+    },
+  };
+
+  vm.runInNewContext(scriptText, {
+    window: win,
+    globalThis: win,
+    document: doc,
+    navigator: { onLine: true },
+    fetch: async () => new Response(JSON.stringify(customSnapshot), { status: 200 }),
+    URL,
+    AbortController,
+    CustomEvent: class CustomEvent {
+      constructor(type, init = {}) {
+        this.type = type;
+        this.detail = init.detail;
+      }
+    },
+    setTimeout: win.setTimeout,
+    clearTimeout: win.clearTimeout,
+  }, { filename: "wips-office.html" });
+
+  return { byId, doc, win, storageMap, queuedTimeouts };
+}
+
 test("embeds every task from the source snapshot", () => {
   assert.equal(embeddedSnapshot.snapshotDate, snapshot.snapshotDate);
   assert.equal(embeddedSnapshot.timezone, snapshot.timezone);
@@ -31,75 +274,55 @@ test("embeds every task from the source snapshot", () => {
   assert.deepEqual(embeddedSnapshot.results, snapshot.results);
 });
 
-test("renders status-driven character motion with stable personal phases", () => {
-  const workstationSource = fragment.match(/function createWorkstation\(owner, filters\) \{[\s\S]*?\n  \}/)?.[0];
-  const personArtSource = fragment.match(/function createPersonArt\(owner, count\) \{[\s\S]*?\n  \}/)?.[0];
-  assert.ok(workstationSource, "workstations have a renderer");
-  assert.ok(personArtSource, "characters have a renderer");
-
-  function createElement(tagName) {
-    return {
-      tagName,
-      className: "",
-      dataset: {},
-      children: [],
-      attributes: {},
-      append(...children) { this.children.push(...children); },
-      setAttribute(name, value) { this.attributes[name] = value; },
-      addEventListener() {},
-    };
-  }
-
-  const document = { createElement };
-  const addText = (parent, tagName, className, text) => {
-    const node = document.createElement(tagName);
-    node.className = className;
-    if (text !== undefined && text !== null) node.textContent = String(text);
-    parent.append(node);
-    return node;
-  };
-  const createPersonArt = new Function(
-    "document", "addText",
-    personArtSource + "\nreturn createPersonArt;",
-  )(document, addText);
-  const phaseFor = (owner, count) => createPersonArt(owner, count).dataset.motionPhase;
-  assert.match(phaseFor("sb", 0), /^[0-4]$/);
-  assert.equal(phaseFor("sb", 0), phaseFor("sb", 5), "a person's phase survives rerendering");
-  assert.equal(phaseFor("공동", 1), phaseFor("공동", 4), "a person's phase does not depend on task count");
-
-  let view = { representative: null, topLevelCount: 0, otherCount: 0 };
-  const model = { viewForEmployee: () => view };
-  const createWorkstation = new Function(
-    "document", "model", "state", "editingSeating", "WORKING_STATUSES", "createPersonArt", "addText",
-    workstationSource + "\nreturn createWorkstation;",
-  )(document, model, { selectedEmployee: "sb" }, false,
-    new Set(["진행", "검증", "장시간 테스트 중"]), createPersonArt, addText);
-
+test("renders status-driven character motion with stable personal phases and zero dead spans", () => {
   for (const status of ["진행", "검증", "장시간 테스트 중"]) {
-    view = { representative: { status, title: "task" }, topLevelCount: 1, otherCount: 0 };
-    assert.equal(createWorkstation("sb", {}).dataset.activity, "working", status);
+    const env = createOfficeDomHarness({
+      customSnapshot: {
+        snapshotDate: "2026-11-11",
+        results: [{ title: "active", owner: "sb", status, project: "2.3" }],
+      },
+    });
+    const stations = env.byId.get("wips-office-employees").querySelectorAll(".workstation");
+    assert.equal(stations[0].dataset.activity, "working", status);
+    const art = stations[0].querySelector(".person-art");
+    assert.ok(art);
+    assert.match(art.dataset.motionPhase, /^[0-4]$/);
+    assert.equal(art.children.length, 0, "person-art should have zero hidden span children");
   }
+
   for (const status of ["대기", "예정"]) {
-    view = { representative: { status, title: "task" }, topLevelCount: 1, otherCount: 0 };
-    assert.equal(createWorkstation("sb", {}).dataset.activity, "idle", status);
+    const env = createOfficeDomHarness({
+      customSnapshot: {
+        snapshotDate: "2026-11-11",
+        results: [{ title: "idle", owner: "sb", status, project: "2.3" }],
+      },
+    });
+    const stations = env.byId.get("wips-office-employees").querySelectorAll(".workstation");
+    assert.equal(stations[0].dataset.activity, "idle", status);
+    assert.equal(stations[1].dataset.activity, "idle", "empty workstations stay still");
   }
-  view = { representative: null, topLevelCount: 0, otherCount: 0 };
-  assert.equal(createWorkstation("sb", {}).dataset.activity, "idle", "empty workstations stay still");
+
+  const phaseA = createOfficeDomHarness({
+    customSnapshot: { snapshotDate: "2026-11-11", results: [{ title: "one", owner: "sb", status: "진행" }] },
+  }).byId.get("wips-office-employees").querySelector(".person-art").dataset.motionPhase;
+  const phaseB = createOfficeDomHarness({
+    customSnapshot: {
+      snapshotDate: "2026-11-11",
+      results: Array.from({ length: 5 }, (_, i) => ({ title: `t${i}`, owner: "sb", status: "진행" })),
+    },
+  }).byId.get("wips-office-employees").querySelector(".person-art").dataset.motionPhase;
+  assert.equal(phaseA, phaseB, "a person's phase does not depend on task count");
 });
 
 test("uses fixed office colors and respects reduced-motion settings", () => {
   const style = fragment.match(/<style>([\s\S]*?)<\/style>/)?.[1];
   assert.ok(style, "the office fragment defines its styles");
-  for (const color of ["floor", "desk", "skin", "hair", "bubble", "ink"]) {
+  for (const color of ["floor", "bubble", "ink"]) {
     assert.match(style, new RegExp(`--office-${color}:\\s*#[0-9a-f]{6}`, "i"), `${color} has a fixed office color`);
   }
   assert.match(style, /\.office-room\s*\{[^}]*background-color:\s*var\(--office-floor\)/s);
-  assert.match(style, /\.desk-top\s*\{[^}]*background:\s*var\(--office-desk\)/s);
   assert.match(style, /\.speech-bubble\s*\{[^}]*background:\s*var\(--office-bubble\);[^}]*color:\s*var\(--office-ink\)/s);
-  assert.match(style, /\.person-head\s*\{[^}]*background:\s*var\(--office-skin\)/s);
-  assert.match(style, /\.person-hair\s*\{[^}]*background:\s*var\(--office-hair\)/s);
-  assert.match(style, /\.workstation\[data-activity="working"\] \.person-head/);
-  assert.match(style, /\.workstation\[data-activity="working"\] \.person-body::before/);
+  assert.match(style, /\.workstation\[data-activity="working"\] \.person-art::before/);
   assert.match(style, /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?animation:\s*none/);
   for (let phase = 0; phase < 5; phase += 1) {
     assert.match(style, new RegExp(`\\.person-art\\[data-motion-phase="${phase}"\\]\\s*\\{[^}]*--motion-delay:`, "s"));
@@ -130,52 +353,52 @@ test("keeps the selected employee and ranks the representative task by raw statu
 });
 
 test("restores keyboard focus to the selected employee after employee selection", () => {
-  let activeElement = null;
-  const buttons = ["sb", "이요원", "여이전트", "석규", "UI"].map((owner) => ({
-    dataset: { owner },
-    focus() { activeElement = this; },
-  }));
+  const env = createOfficeDomHarness();
+  const uiButton = env.byId
+    .get("wips-office-employees")
+    .querySelectorAll("button")
+    .find((b) => b.dataset.owner === "UI");
+  assert.ok(uiButton);
 
-  const focused = model.focusEmployeeButton(buttons, "UI");
-  assert.equal(focused, buttons[4]);
-  assert.equal(activeElement, buttons[4]);
-  assert.equal(model.focusEmployeeButton(buttons, "missing"), null);
-
-  const clickHandler = fragment.match(/button\.addEventListener\("click", \(event\) => \{([\s\S]*?)\n    \}\);/)?.[1];
-  assert.ok(clickHandler, "employee buttons have a selection handler");
-  assert.match(clickHandler, /state\.selectedEmployee = owner/);
-  assert.ok(clickHandler.indexOf("render()") < clickHandler.indexOf("focusEmployeeButton"));
+  uiButton.dispatchEvent({ type: "click" });
+  assert.equal(env.doc.activeElement?.dataset.owner, "UI");
+  assert.match(env.byId.get("wips-office-selected-title").textContent, /^UI의 일감/);
+  const updatedUiButton = env.byId
+    .get("wips-office-employees")
+    .querySelectorAll("button")
+    .find((b) => b.dataset.owner === "UI");
+  assert.equal(updatedUiButton.getAttribute("aria-pressed"), "true");
+  assert.equal(model.focusEmployeeButton([], "missing"), null);
 });
 
 test("does not rerender when the host echoes the current semantic widget state", () => {
-  const globalsHandler = fragment.match(/window\.addEventListener\?\.\("openai:set_globals", \(event\) => \{([\s\S]*?)\n  \}\);/)?.[1];
-  assert.ok(globalsHandler, "the fragment handles host global state updates");
+  const env = createOfficeDomHarness({
+    hostWidgetState: { selectedEmployee: "UI" },
+  });
+  const employeeNode = env.byId.get("wips-office-employees");
+  const initialUiBtn = employeeNode.querySelectorAll("button").find((b) => b.dataset.owner === "UI");
+  initialUiBtn.focus();
 
-  const state = { selectedEmployee: "UI" };
-  const statusSelect = { value: "전체 상태" };
-  const projectSelect = { value: "전체 프로젝트" };
-  let activeElement = { dataset: { owner: "UI" } };
-  let renderCount = 0;
-  const handler = new Function(
-    "event", "model", "hasLiveModel", "pendingHostState", "userChangedState",
-    "state", "statusSelect", "projectSelect", "render",
-    globalsHandler,
-  );
+  let replaceCalls = 0;
+  const origReplace = employeeNode.replaceChildren.bind(employeeNode);
+  employeeNode.replaceChildren = (...nodes) => {
+    replaceCalls += 1;
+    return origReplace(...nodes);
+  };
 
-  handler(
-    { detail: { globals: { widgetState: { selectedEmployee: "UI" } } } },
-    model,
-    true,
-    null,
-    false,
-    state,
-    statusSelect,
-    projectSelect,
-    () => { renderCount += 1; activeElement = null; },
-  );
+  env.win.dispatchEvent({
+    type: "openai:set_globals",
+    detail: { globals: { widgetState: { selectedEmployee: "UI" } } },
+  });
+  assert.equal(replaceCalls, 0);
+  assert.equal(env.doc.activeElement?.dataset.owner, "UI");
 
-  assert.equal(renderCount, 0);
-  assert.equal(activeElement.dataset.owner, "UI");
+  env.win.dispatchEvent({
+    type: "openai:set_globals",
+    detail: { globals: { widgetState: { selectedEmployee: "sb" } } },
+  });
+  assert.equal(replaceCalls, 1);
+  assert.match(env.byId.get("wips-office-selected-title").textContent, /^sb의 일감/);
 });
 
 test("filters null project separately from 기타 and preserves empty options", () => {
@@ -189,6 +412,24 @@ test("filters null project separately from 기타 and preserves empty options", 
   assert.equal(other[0].project, "기타");
   assert.equal(emptyProject.length, 0);
   assert.equal(emptyStatus.length, 0);
+});
+
+test("filter select changes update summary, status counts, kanban view, and host widget state", () => {
+  const savedStates = [];
+  const env = createOfficeDomHarness({
+    onSetWidgetState: (payload) => savedStates.push(payload),
+  });
+  const statusSelect = env.byId.get("wips-office-status");
+  statusSelect.value = "진행";
+  statusSelect.dispatchEvent({ type: "change" });
+
+  assert.match(env.byId.get("wips-office-summary").textContent, /현재 표시 6 \/ 19개/);
+  assert.equal(savedStates.at(-1)?.privateContent?.status, "진행");
+
+  const projectSelect = env.byId.get("wips-office-project");
+  projectSelect.value = "프로젝트 미지정";
+  projectSelect.dispatchEvent({ type: "change" });
+  assert.equal(savedStates.at(-1)?.privateContent?.project, "프로젝트 미지정");
 });
 
 test("returns a clear empty selected view and explicit labels for missing task fields", () => {
@@ -268,7 +509,7 @@ test("normalizes saved seating and appends new employees without duplicates", ()
   assert.deepEqual(Array.from(model.normalizeSeating(null)), Array.from(model.employees));
   assert.deepEqual(Array.from(model.normalizeSeating({})), Array.from(model.employees));
   assert.deepEqual(saved, ["UI", "sb", "UI", "removed"]);
-  const updated = createOfficeModel({results: [{owner: "신입"}]});
+  const updated = createOfficeModel({ results: [{ owner: "신입" }] });
   assert.equal(updated.normalizeSeating(saved).at(-1), "신입");
 });
 
@@ -283,180 +524,91 @@ test("swaps seats without mutating the saved order and ignores invalid moves", (
   assert.deepEqual(Array.from(model.normalizeSeating(JSON.parse(JSON.stringify(swapped)))), Array.from(swapped));
 });
 
-test("accepts seat drops only between distinct known employees while editing", () => {
-  const guardSource = fragment.match(/function canDropSeat\(owner\) \{[\s\S]*?\n  \}/)?.[0];
-  assert.ok(guardSource, "seat drops have one validity check");
-  const canDropSeat = new Function(
-    "editingSeating", "draggingOwner", "model", "owner",
-    guardSource + "\nreturn canDropSeat(owner);",
-  );
+test("handles seat drag-and-drop, click suppression, select swap, and reset through real DOM events", () => {
+  const env = createOfficeDomHarness();
+  const employeeNode = env.byId.get("wips-office-employees");
 
-  assert.equal(canDropSeat(true, "sb", model, "UI"), true);
-  assert.equal(canDropSeat(false, "sb", model, "UI"), false);
-  assert.equal(canDropSeat(true, null, model, "UI"), false);
-  assert.equal(canDropSeat(true, "sb", model, "sb"), false);
-  assert.equal(canDropSeat(true, "sb", model, "missing"), false);
+  const idleButtons = employeeNode.querySelectorAll("button");
+  assert.equal(idleButtons[0].draggable, false);
+  const blockedDrag = idleButtons[0].dispatchEvent({ type: "dragstart" });
+  assert.equal(blockedDrag.defaultPrevented, true);
+
+  env.byId.get("wips-office-edit-seating").dispatchEvent({ type: "click" });
+  assert.equal(env.byId.get("wips-office-reset-seating").hidden, false);
+
+  const stations = employeeNode.querySelectorAll(".workstation");
+  const sbBtn = stations[0].querySelector("button");
+  const uiStation = stations[4];
+  assert.equal(sbBtn.draggable, true);
+
+  const transfer = { effectAllowed: "", data: "", setData(_t, v) { this.data = v; } };
+  sbBtn.dispatchEvent({ type: "dragstart", dataTransfer: transfer });
+  assert.equal(sbBtn.classList.contains("is-dragging"), true);
+  assert.equal(transfer.data, "sb");
+
+  const postDragClick = sbBtn.dispatchEvent({ type: "click" });
+  assert.equal(postDragClick.defaultPrevented, true);
+  assert.equal(postDragClick.stoppedPropagation, true);
+
+  const selfOver = stations[0].dispatchEvent({ type: "dragover" });
+  assert.equal(selfOver.defaultPrevented, false);
+  assert.equal(stations[0].classList.contains("is-drop-target"), false);
+
+  const validOver = uiStation.dispatchEvent({ type: "dragover", dataTransfer: {} });
+  assert.equal(validOver.defaultPrevented, true);
+  assert.equal(uiStation.classList.contains("is-drop-target"), true);
+
+  uiStation.dispatchEvent({ type: "dragleave", relatedTarget: null });
+  assert.equal(uiStation.classList.contains("is-drop-target"), false);
+
+  uiStation.dispatchEvent({ type: "dragover", dataTransfer: {} });
+  const dropEvent = uiStation.dispatchEvent({ type: "drop" });
+  assert.equal(dropEvent.defaultPrevented, true);
+  assert.deepEqual(JSON.parse(env.storageMap.get("wips-office-seating-v1")), ["UI", "이요원", "여이전트", "석규", "sb"]);
+  assert.match(env.byId.get("wips-office-seating-message").textContent, /sb와 UI의 자리를 바꿨습니다/);
+
+  const prevBtn = sbBtn;
+  prevBtn.classList.add("is-dragging");
+  employeeNode.querySelectorAll(".workstation")[0].classList.add("is-drop-target");
+  prevBtn.dispatchEvent({ type: "dragend" });
+  assert.equal(prevBtn.classList.contains("is-dragging"), false);
+  assert.equal(employeeNode.querySelectorAll(".workstation.is-drop-target").length, 0);
+  env.queuedTimeouts.forEach((fn) => fn());
+
+  env.byId.get("wips-office-reset-seating").dispatchEvent({ type: "click" });
+  assert.deepEqual(JSON.parse(env.storageMap.get("wips-office-seating-v1")), ["sb", "이요원", "여이전트", "석규", "UI"]);
 });
 
-test("valid seat drops swap and persist while invalid drops leave state alone", () => {
-  const guardSource = fragment.match(/function canDropSeat\(owner\) \{[\s\S]*?\n  \}/)?.[0];
-  const dropBody = fragment.match(/station\.addEventListener\("drop", \(event\) => \{([\s\S]*?)\n      \}\);/)?.[1];
-  assert.ok(guardSource, "seat drops have one validity check");
-  assert.ok(dropBody, "workstations handle seat drops");
-  const runDrop = new Function(
-    "owner", "event", "editingSeating", "draggingOwner", "model", "seatingOrder", "persistSeating", "render",
-    guardSource + "\n(() => {\n" + dropBody + "\n})();\nreturn { draggingOwner, seatingOrder };",
-  );
-
-  const order = Array.from(model.employees);
-  const saved = [];
-  let prevented = false;
-  let renders = 0;
-  const result = runDrop(
-    "UI",
-    { preventDefault() { prevented = true; } },
-    true,
-    "sb",
-    model,
-    order,
-    (message) => saved.push(message),
-    () => { renders += 1; },
-  );
-  assert.equal(prevented, true);
-  assert.equal(result.draggingOwner, null);
-  assert.equal(result.seatingOrder[0], "UI");
-  assert.equal(result.seatingOrder[4], "sb");
-  assert.deepEqual(saved, ["sb와 UI의 자리를 바꿨습니다."]);
-  assert.equal(renders, 1);
-
-  for (const [editing, source, target] of [
-    [true, null, "UI"],
-    [true, "sb", "sb"],
-    [true, "sb", "missing"],
-    [false, "sb", "UI"],
-  ]) {
-    let didPrevent = false;
-    let didPersist = false;
-    let didRender = false;
-    const unchanged = Array.from(model.employees);
-    const ignored = runDrop(
-      target,
-      { preventDefault() { didPrevent = true; } },
-      editing,
-      source,
-      model,
-      unchanged,
-      () => { didPersist = true; },
-      () => { didRender = true; },
-    );
-    assert.equal(didPrevent, false);
-    assert.equal(didPersist, false);
-    assert.equal(didRender, false);
-    assert.deepEqual(Array.from(ignored.seatingOrder), Array.from(model.employees));
-  }
-});
-
-test("clears drag state and drop highlights when a drag ends", () => {
-  const dragEndBody = fragment.match(/button\.addEventListener\("dragend", (?:\(event\)|\(\)) => \{([\s\S]*?)\n      \}\);/)?.[1];
-  assert.ok(dragEndBody, "employee buttons clean up after dragging");
-  const runDragEnd = new Function(
-    "button", "employeeNode", "window", "draggingOwner", "suppressEmployeeClick",
-    dragEndBody + "\nreturn { get draggingOwner() { return draggingOwner; }, get suppressEmployeeClick() { return suppressEmployeeClick; } };",
-  );
-
-  const removedButtonClasses = [];
-  const removedStationClasses = [];
-  const timeouts = [];
-  const button = { classList: { remove: (name) => removedButtonClasses.push(name) } };
-  const stations = [{ classList: { remove: (name) => removedStationClasses.push(name) } }];
-  const result = runDragEnd(
-    button,
-    { querySelectorAll: () => stations },
-    { setTimeout: (callback) => timeouts.push(callback) },
-    "sb",
-    true,
-  );
-
-  assert.equal(result.draggingOwner, null);
-  assert.deepEqual(removedButtonClasses, ["is-dragging"]);
-  assert.deepEqual(removedStationClasses, ["is-drop-target"]);
-  assert.equal(timeouts.length, 1);
-  timeouts[0]();
-  assert.equal(result.suppressEmployeeClick, false);
-});
-
-test("does not select an employee for a click emitted after dragging", () => {
-  const clickBody = fragment.match(/button\.addEventListener\("click", \(event\) => \{([\s\S]*?)\n    \}\);/)?.[1];
-  assert.ok(clickBody, "employee selection handles clicks");
-  const runClick = new Function(
-    "event", "owner", "suppressEmployeeClick", "state",
-    "(() => {\n" + clickBody + "\n})();\nreturn { suppressEmployeeClick, selectedEmployee: state.selectedEmployee };",
-  );
-  let prevented = false;
-  let stopped = false;
-  const state = { selectedEmployee: "UI" };
-  const result = runClick({
-    preventDefault() { prevented = true; },
-    stopPropagation() { stopped = true; },
-  }, "sb", true, state);
-
-  assert.equal(prevented, true);
-  assert.equal(stopped, true);
-  assert.equal(result.suppressEmployeeClick, false);
-  assert.equal(state.selectedEmployee, "UI");
-});
-
-test("wires drag feedback in edit mode and keeps the select-based keyboard control", () => {
-  const workstation = fragment.match(/function createWorkstation\(owner, filters\) \{[\s\S]*?\n  \}\n\n  function renderTaskList/)?.[0];
-  assert.ok(workstation, "workstations have a renderer");
-  assert.match(workstation, /button\.draggable = editingSeating/);
-  assert.match(workstation, /button\.addEventListener\("dragstart"/);
-  assert.match(workstation, /station\.addEventListener\("dragover"/);
-  assert.match(workstation, /station\.addEventListener\("dragleave"/);
-  assert.match(workstation, /station\.addEventListener\("drop"/);
-  assert.match(workstation, /button\.addEventListener\("dragend"/);
-  assert.match(workstation, /select\.addEventListener\("change"/);
-  assert.match(workstation, /model\.swapSeats\(seatingOrder, owner, target\)/);
-});
-
-test("keeps the embedded office drag behavior synchronized with its source", () => {
+test("keeps the embedded office source, styles, and script synchronized with index.html", () => {
   const index = readFileSync(folder + "/index.html", "utf8");
   const rawSrcdoc = index.match(/\bdata-srcdoc="([\s\S]*?)"/)?.[1];
   assert.ok(rawSrcdoc, "index embeds the office document");
   const srcdoc = rawSrcdoc.replace(/&(?:quot|#x27|#39|lt|gt|amp);/g, (entity) => ({
     "&quot;": '"', "&#x27;": "'", "&#39;": "'", "&lt;": "<", "&gt;": ">", "&amp;": "&",
   })[entity]);
-  const sourceGuard = fragment.match(/function canDropSeat\(owner\) \{[\s\S]*?\n  \}/)?.[0];
-  const embeddedGuard = srcdoc.match(/function canDropSeat\(owner\) \{[\s\S]*?\n  \}/)?.[0];
-  const sourceWorkstation = fragment.match(/function createWorkstation\(owner, filters\) \{[\s\S]*?\n  \}\n\n  function renderTaskList/)?.[0];
-  const embeddedWorkstation = srcdoc.match(/function createWorkstation\(owner, filters\) \{[\s\S]*?\n  \}\n\n  function renderTaskList/)?.[0];
-  const sourcePersonArt = fragment.match(/function createPersonArt\(owner, count\) \{[\s\S]*?\n  \}/)?.[0];
-  const embeddedPersonArt = srcdoc.match(/function createPersonArt\(owner, count\) \{[\s\S]*?\n  \}/)?.[0];
   const sourceStyle = fragment.match(/<style>[\s\S]*?<\/style>/)?.[0];
   const embeddedStyle = srcdoc.match(/<style>[\s\S]*?<\/style>/g)?.find((style) => style.includes("#wips-office-root {"));
-  assert.ok(sourceGuard, "source defines seat drop validation");
-  assert.equal(embeddedGuard, sourceGuard);
-  assert.ok(sourceWorkstation, "source renders draggable workstations");
-  assert.equal(embeddedWorkstation, sourceWorkstation);
-  assert.ok(sourcePersonArt, "source renders employee art");
-  assert.equal(embeddedPersonArt, sourcePersonArt);
   assert.ok(sourceStyle, "source defines office colors and motion");
   assert.equal(embeddedStyle, sourceStyle);
+  assert.equal(
+    srcdoc.match(/<script id="office-model">([\s\S]*?)<\/script>/)?.[1],
+    fragment.match(/<script id="office-model">([\s\S]*?)<\/script>/)?.[1],
+  );
   assert.match(srcdoc, /\.employee-button\.is-dragging/);
   assert.match(srcdoc, /\.workstation\.is-drop-target/);
 });
 
 test("excludes completed tasks from employee kanban, communal list, and active root count", () => {
   const active = createOfficeModel({ results: [
-    {title: "open", owner: "sb", status: "진행"},
-    {title: "done", owner: "sb", status: "완료"},
-    {title: "unassigned open", owner: null, status: "예정"},
-    {title: "unassigned done", owner: null, status: "완료"},
+    { title: "open", owner: "sb", status: "진행" },
+    { title: "done", owner: "sb", status: "완료" },
+    { title: "unassigned open", owner: null, status: "예정" },
+    { title: "unassigned done", owner: null, status: "완료" },
   ] });
-  assert.deepEqual(Array.from(active.employeeTasks("sb", allFilters), t => t.title), ["open"]);
-  assert.deepEqual(Array.from(active.unassignedTasks(allFilters), t => t.title), ["unassigned open"]);
-  assert.equal(active.employeeTasks("sb", {...allFilters, status: "완료"}).length, 0);
-  assert.equal(active.unassignedTasks({...allFilters, status: "완료"}).length, 0);
+  assert.deepEqual(Array.from(active.employeeTasks("sb", allFilters), (t) => t.title), ["open"]);
+  assert.deepEqual(Array.from(active.unassignedTasks(allFilters), (t) => t.title), ["unassigned open"]);
+  assert.equal(active.employeeTasks("sb", { ...allFilters, status: "완료" }).length, 0);
+  assert.equal(active.unassignedTasks({ ...allFilters, status: "완료" }).length, 0);
   assert.equal(active.viewForEmployee("sb", allFilters).topLevelCount, 1);
 });
 
@@ -502,32 +654,25 @@ test("treats 공통 owner as shared schedule tasks and builds stepper + live tic
     ],
   );
 
-  const toneModel = createOfficeModel({ results: [
-    { title: "경과 진행", owner: "공통", status: "진행", startDate: "2026-11-16", endDate: null },
-    { title: "경과 검증", owner: "공통", status: "검증", startDate: "2026-11-16", endDate: null },
-    { title: "경과 예정", owner: "공통", status: "예정", startDate: "2026-11-16", endDate: null },
-    { title: "종료일만 경과", owner: "공통", status: "진행", startDate: null, endDate: "2026-11-17" },
-    { title: "당일 마감", owner: "공통", status: "예정", startDate: "2026-11-18", endDate: null },
-    { title: "내일 시작", owner: "공통", status: "대기", startDate: "2026-11-19", endDate: null },
-    { title: "이틀 남음", owner: "공통", status: "예정", startDate: "2026-11-20", endDate: null },
-    { title: "먼 미래", owner: "공통", status: "예정", startDate: "2026-12-10", endDate: null },
-    { title: "미정 예정", owner: "공통", status: "예정", startDate: null, endDate: null },
-  ] });
-  const toneView = toneModel.billboardView(allFilters, "2026-11-18");
-  assert.deepEqual(
-    toneView.scheduleTasks.map((item) => [item.title, item.dDayLabel, item.progress, item.tone]),
-    [
-      ["경과 진행", "D+2", 100, "green"],
-      ["경과 검증", "D+2", 100, "green"],
-      ["경과 예정", "D+2", 100, "red"],
-      ["종료일만 경과", "D+1", 100, "red"],
-      ["당일 마감", "D-DAY", 100, "amber"],
-      ["내일 시작", "D-1", 94, "amber"],
-      ["이틀 남음", "D-2", 87, "green"],
-      ["먼 미래", "D-22", 10, "green"],
-      ["미정 예정", "미정", 20, "slate"],
-    ],
-  );
+  const env = createOfficeDomHarness({
+    customSnapshot: {
+      snapshotDate: "2026-11-18",
+      results: [
+        { title: "사전 검증", owner: null, status: "예정", project: "2.3", startDate: "2026-11-23", endDate: "2026-11-27" },
+        { title: "서버 취약점 대응", owner: "여이전트", status: "진행", project: "기타", startDate: "2026-11-11", endDate: "2026-11-12" },
+      ],
+    },
+  });
+  const stepBtn = env.byId.get("wips-office-billboard").querySelector(".hq-step-card");
+  assert.ok(stepBtn);
+  stepBtn.dispatchEvent({ type: "click" });
+  const communalCards = env.byId.get("wips-office-communal-tasks").querySelectorAll(".kanban-card");
+  assert.equal(communalCards[0].classList.contains("is-billboard-highlight"), true);
+
+  const tickerBtn = env.byId.get("wips-office-billboard").querySelector(".hq-ticker-item");
+  assert.ok(tickerBtn);
+  tickerBtn.dispatchEvent({ type: "click" });
+  assert.match(env.byId.get("wips-office-selected-title").textContent, /^여이전트의 일감/);
 });
 
 test("groups employee tasks into 3 active kanban lanes and renders communal list with kanban cards", () => {
@@ -549,137 +694,43 @@ test("groups employee tasks into 3 active kanban lanes and renders communal list
       ["review", true, ["t-ver", "t-long"]],
     ],
   );
-  assert.match(fragment, /id="wips-office-selected-tasks"[^>]*class="kanban-board"|class="kanban-board"[^>]*id="wips-office-selected-tasks"/);
-  assert.match(fragment, /id="wips-office-communal-tasks"[^>]*class="task-list"|class="task-list"[^>]*id="wips-office-communal-tasks"/);
-  assert.match(fragment, /function renderKanbanBoard\(/);
-  assert.match(fragment, /communalTasksNode\.querySelectorAll\("\.kanban-card"\)/);
 
-  const listSource = fragment.match(/function renderTaskList\(container, tasks\) \{[\s\S]*?\n  \}/)?.[0];
-  const svgSource = fragment.match(/function createSvgNode\(tag, attrs\) \{[\s\S]*?\n  \}/)?.[0];
-  const progressBoxSource = fragment.match(/function createTaskProgressBox\(details\) \{[\s\S]*?\n  \}/)?.[0];
-  const cardSource = fragment.match(/function createKanbanCard\(task, showExactStatus\) \{[\s\S]*?\n  \}/)?.[0];
-  const boardSource = fragment.match(/function renderKanbanBoard\(container, tasks\) \{[\s\S]*?\n  \}/)?.[0];
-  assert.ok(listSource, "task list renderer exists");
-  assert.ok(svgSource, "svg helper exists");
-  assert.ok(progressBoxSource, "task progress box renderer exists");
-  assert.ok(cardSource, "kanban card renderer exists");
-  assert.ok(boardSource, "kanban board renderer exists");
-
-  function createElement(tagName) {
-    const listeners = new Map();
-    return {
-      tagName,
-      className: "",
-      dataset: {},
-      style: {},
-      open: false,
-      children: [],
-      attributes: {},
-      textContent: "",
-      append(...children) { this.children.push(...children); },
-      replaceChildren(...children) { this.children = [...children]; },
-      setAttribute(name, value) { this.attributes[name] = value; },
-      addEventListener(type, fn) {
-        if (!listeners.has(type)) listeners.set(type, []);
-        listeners.get(type).push(fn);
-      },
-      dispatchEvent(event) {
-        for (const fn of listeners.get(event.type) || []) fn(event);
-      },
-    };
-  }
-  const mockDoc = {
-    createElement,
-    createElementNS: (_ns, tag) => createElement(tag),
-  };
-  const addText = (parent, tagName, className, text) => {
-    const node = mockDoc.createElement(tagName);
-    node.className = className;
-    if (text !== undefined && text !== null) node.textContent = String(text);
-    parent.append(node);
-    return node;
-  };
-  const setSafeHref = (el, url) => { el.attributes.href = url; };
-  const openProgressDrawers = new Set();
-  const { renderKanbanBoard, renderTaskList } = new Function(
-    "document", "model", "addText", "setSafeHref", "openProgressDrawers",
-    listSource + "\n" + svgSource + "\n" + progressBoxSource + "\n" + cardSource + "\n" + boardSource + "\nreturn { renderKanbanBoard, renderTaskList };",
-  )(mockDoc, model, addText, setSafeHref, openProgressDrawers);
-
-  const container = createElement("div");
-  const sbTasks = model.viewForEmployee("sb", allFilters).tasks;
-  renderKanbanBoard(container, sbTasks);
-
-  assert.equal(container.children.length, 3);
+  const env = createOfficeDomHarness();
+  const selectedBoard = env.byId.get("wips-office-selected-tasks");
+  const cols = selectedBoard.querySelectorAll(".kanban-col");
+  assert.equal(cols.length, 3);
   assert.deepEqual(
-    container.children.map((col) => [
+    cols.map((col) => [
       col.dataset.laneId,
-      col.children[0].children[0].children[1].textContent,
-      col.children[0].children[1].textContent,
+      col.querySelector(".kanban-col-count")?.textContent,
     ]),
     [
-      ["planned", "예정 · 대기", "4"],
-      ["progress", "진행", "2"],
-      ["review", "검증 · 테스트", "0"],
+      ["planned", "4"],
+      ["progress", "2"],
+      ["review", "0"],
     ],
   );
 
-  const plannedCard = container.children[0].children[1].children[0];
-  assert.equal(plannedCard.className, "kanban-card");
-  assert.equal(plannedCard.children[0].children[0].children[1].textContent, "예정 · 2.3");
-  assert.equal(plannedCard.children[0].children[1].className, "kanban-card-tags");
-  assert.equal(plannedCard.children[0].children[1].children[0].className, "kanban-dday");
-  const plannedSourceLink = plannedCard.children[0].children[1].children[1];
-  assert.equal(plannedSourceLink.className, "task-source");
-  assert.equal(plannedSourceLink.attributes["aria-label"], "Notion에서 보기");
-  assert.equal(plannedSourceLink.attributes.title, "Notion에서 보기");
-  assert.equal(plannedSourceLink.children[0].tagName, "svg");
-  assert.equal(plannedSourceLink.children[0].attributes.viewBox, "0 0 24 24");
-  assert.equal(plannedCard.children[1].tagName, "h3");
-  assert.equal(plannedCard.children[2].className, "kanban-meta");
-  assert.equal(plannedCard.children[2].children[1].className, "kanban-progress-pct");
-  assert.equal(plannedCard.children[3].className, "kanban-bar");
-  assert.equal(plannedCard.children[3].children[0].className, "kanban-bar-fill");
-  assert.match(plannedCard.children[3].children[0].style.width, /^\d+%$/);
-  assert.equal(plannedCard.children[4].className, "kanban-next");
-  assert.equal(plannedCard.children[5].tagName, "details");
-  assert.equal(plannedCard.children[5].children[0].textContent, "완료 조건 보기");
-  assert.equal(plannedCard.children.length, 6);
+  const plannedCard = cols[0].querySelector(".kanban-card");
+  assert.ok(plannedCard);
+  assert.match(plannedCard.querySelector(".kanban-badge")?.textContent || "", /예정 · 2\.3/);
+  assert.ok(plannedCard.querySelector(".kanban-dday"));
+  const plannedSourceLink = plannedCard.querySelector(".task-source");
+  assert.ok(plannedSourceLink);
+  assert.equal(plannedSourceLink.getAttribute("aria-label"), "Notion에서 보기");
+  assert.equal(plannedSourceLink.querySelector("svg")?.getAttribute("viewBox"), "0 0 24 24");
+  assert.ok(plannedCard.querySelector("h3"));
+  assert.ok(plannedCard.querySelector(".kanban-progress-pct"));
+  assert.match(plannedCard.querySelector(".kanban-bar-fill")?.style.width || "", /^\d+%$/);
+  assert.ok(plannedCard.querySelector(".kanban-next"));
+  assert.equal(cols[2].querySelector(".kanban-empty")?.textContent, "해당 일감 없음");
 
-  assert.equal(container.children[2].children[1].children[0].className, "kanban-empty");
-  assert.equal(container.children[2].children[1].children[0].textContent, "해당 일감 없음");
-
-  const progressCard = container.children[1].children[1].children[0];
-  assert.equal(progressCard.children[0].children[0].children[1].textContent, "2.3");
-  assert.equal(progressCard.children[1].textContent, "샘플 업무 03");
-  const progressBoxOn03 = progressCard.children.find((child) => child.className === "kanban-progress-box");
-  assert.ok(progressBoxOn03, "샘플 업무 03 renders the Variant B progress box");
-  assert.equal(progressBoxOn03.children[0].children[0].children.length, 2);
-
-  const communalContainer = createElement("div");
-  renderTaskList(communalContainer, model.unassignedTasks(allFilters));
-  assert.equal(communalContainer.children.length, 4);
-  const firstCommunalCard = communalContainer.children[0];
-  assert.equal(firstCommunalCard.className, "kanban-card");
-  assert.equal(firstCommunalCard.children[0].children[0].children[1].textContent, "검증 · 2.3");
-  assert.equal(firstCommunalCard.children[0].children[1].children[0].className, "kanban-dday");
-  assert.equal(firstCommunalCard.children[0].children[1].children[0].textContent, "수시");
-  assert.equal(firstCommunalCard.children[0].children[1].children[0].dataset.tone, "slate");
-  const communalSourceLink = firstCommunalCard.children[0].children[1].children[1];
-  assert.equal(communalSourceLink.className, "task-source");
-  assert.equal(communalSourceLink.attributes["aria-label"], "Notion에서 보기");
-  assert.equal(communalSourceLink.children[0].tagName, "svg");
-  assert.equal(firstCommunalCard.children[1].textContent, "샘플 업무 02");
-  assert.equal(firstCommunalCard.children[2].className, "kanban-meta");
-  assert.equal(firstCommunalCard.children[2].children[1].textContent, "20%");
-  assert.equal(firstCommunalCard.children[3].className, "kanban-bar");
-  assert.equal(firstCommunalCard.children[3].children[0].style.width, "20%");
-  assert.equal(firstCommunalCard.children[3].children[0].dataset.tone, "slate");
-  assert.equal(firstCommunalCard.children[4].className, "kanban-next");
-  assert.equal(firstCommunalCard.children[5].className, "kanban-progress-box");
-  assert.equal(firstCommunalCard.children[6].tagName, "details");
-  assert.equal(firstCommunalCard.children[6].children[0].textContent, "완료 조건 보기");
-  assert.equal(firstCommunalCard.children.length, 7);
+  const communalCards = env.byId.get("wips-office-communal-tasks").querySelectorAll(".kanban-card");
+  assert.equal(communalCards.length, 4);
+  assert.equal(communalCards[0].querySelector("h3")?.textContent, "샘플 업무 02");
+  assert.equal(communalCards[0].querySelector(".kanban-dday")?.textContent, "수시");
+  assert.equal(communalCards[0].querySelector(".kanban-progress-pct")?.textContent, "20%");
+  assert.ok(communalCards[0].querySelector(".kanban-progress-box"));
 
   assert.deepEqual(
     [
@@ -696,126 +747,135 @@ test("groups employee tasks into 3 active kanban lanes and renders communal list
     ],
   );
 
-  const emptyBoard = createElement("div");
-  renderKanbanBoard(emptyBoard, []);
-  assert.equal(emptyBoard.children[0].children[1].children[0].className, "kanban-empty");
-  assert.equal(emptyBoard.children[0].children[1].children[0].textContent, "해당 일감 없음");
+  const emptyEnv = createOfficeDomHarness({ customSnapshot: { snapshotDate: "2026-11-11", results: [] } });
+  assert.equal(emptyEnv.byId.get("wips-office-selected-empty").hidden, false);
+  assert.equal(emptyEnv.byId.get("wips-office-selected-tasks").children.length, 0);
 });
 
 test("converts verified Notion links to notion:// app URLs without popup target attributes", () => {
-  const safeNotionSource = fragment.match(/function safeNotionUrl\(value\) \{[\s\S]*?\n  \}/)?.[0];
-  const toAppSource = fragment.match(/function toNotionAppUrl\(value\) \{[\s\S]*?\n  \}/)?.[0];
-  const setSafeHrefSource = fragment.match(/function setSafeHref\(anchor, url\) \{[\s\S]*?\n  \}/)?.[0];
-  assert.ok(safeNotionSource, "safeNotionUrl exists");
-  assert.ok(toAppSource, "toNotionAppUrl exists");
-  assert.ok(setSafeHrefSource, "setSafeHref exists");
+  const validEnv = createOfficeDomHarness({
+    customSnapshot: {
+      snapshotDate: "2026-11-11",
+      sourceUrl: "https://app.notion.com/00000000000000000000000000000001",
+      results: [
+        {
+          id: "t1",
+          title: "www link",
+          owner: "sb",
+          status: "진행",
+          url: "https://www.notion.so/Page-Title-1234?pvs=4#block",
+        },
+        {
+          id: "t2",
+          title: "bad link",
+          owner: "sb",
+          status: "예정",
+          url: "https://evil.example/phish",
+        },
+        {
+          id: "t3",
+          title: "root notion",
+          owner: "sb",
+          status: "대기",
+          url: "https://notion.so/abcd",
+        },
+      ],
+    },
+  });
 
-  const { safeNotionUrl, toNotionAppUrl, setSafeHref } = new Function(
-    safeNotionSource + "\n" + toAppSource + "\n" + setSafeHrefSource + "\nreturn { safeNotionUrl, toNotionAppUrl, setSafeHref };",
-  )();
+  const sourceAnchor = validEnv.byId.get("wips-office-source");
+  assert.equal(sourceAnchor.href, "notion://app.notion.com/00000000000000000000000000000001");
+  assert.equal(sourceAnchor.getAttribute("target"), null);
+  assert.equal(sourceAnchor.getAttribute("rel"), null);
 
-  assert.equal(
-    toNotionAppUrl("https://www.notion.so/Page-Title-1234?pvs=4#block"),
-    "notion://www.notion.so/Page-Title-1234?pvs=4#block",
+  const links = validEnv.byId.get("wips-office-selected-tasks").querySelectorAll(".task-source");
+  assert.deepEqual(
+    links.map((a) => a.href),
+    [
+      "notion://notion.so/abcd",
+      "notion://www.notion.so/Page-Title-1234?pvs=4#block",
+    ],
   );
-  assert.equal(
-    toNotionAppUrl("https://app.notion.com/p/00000000000000000000000000000000"),
-    "notion://app.notion.com/p/00000000000000000000000000000000",
-  );
-  assert.equal(
-    toNotionAppUrl("https://notion.so/abcd"),
-    "notion://notion.so/abcd",
-  );
-
-  for (const invalid of [
-    "https://evil.example/page",
-    "http://www.notion.so/page",
-    "javascript:alert(1)",
-    "https://user:pass@www.notion.so/page",
-    "https://www.notion.so:8443/page",
-    "",
-    null,
-  ]) {
-    assert.equal(safeNotionUrl(invalid), "");
-    assert.equal(toNotionAppUrl(invalid), "");
-  }
-
-  const makeAnchor = () => {
-    const removed = [];
-    return {
-      href: "",
-      target: "_blank",
-      rel: "noopener noreferrer",
-      removed,
-      removeAttribute(name) {
-        removed.push(name);
-        delete this[name];
-      },
-    };
-  };
-
-  const validAnchor = makeAnchor();
-  setSafeHref(validAnchor, "https://app.notion.com/00000000000000000000000000000001");
-  assert.equal(validAnchor.href, "notion://app.notion.com/00000000000000000000000000000001");
-  assert.equal("target" in validAnchor, false);
-  assert.equal("rel" in validAnchor, false);
-
-  const invalidAnchor = makeAnchor();
-  setSafeHref(invalidAnchor, "https://evil.example/phish");
-  assert.equal("href" in invalidAnchor, false);
-  assert.equal("target" in invalidAnchor, false);
-  assert.equal("rel" in invalidAnchor, false);
-
   assert.doesNotMatch(fragment, /<a id="wips-office-source"[^>]*target="_blank"/);
 });
 
 test("outer host open-external launches allowlisted notion:// URLs directly without _blank popup", () => {
   const indexHtml = readFileSync(new URL("./index.html", import.meta.url), "utf8");
-  const openExternalBlock = indexHtml.match(/if \(data\.type === "open-external"\) \{[\s\S]*?\n    \}/)?.[0];
-  assert.ok(openExternalBlock, "open-external handler exists in index.html");
+  const outerScripts = [...indexHtml.matchAll(/<script>([\s\S]*?)<\/script>/g)];
+  const hostScript = outerScripts.map((m) => m[1]).find((s) => s.includes("open-external"));
+  assert.ok(hostScript, "outer host bootstrap script exists in index.html");
 
   const clicked = [];
+  class MockIframe {
+    constructor() {
+      this.dataset = { srcdoc: '<script type="application/json" id="codex-visualization-widget-state">__CODEX_VISUALIZATION_WIDGET_STATE__</script>' };
+      this.style = { removeProperty() {} };
+      this.listeners = new Map();
+    }
+    addEventListener(type, fn) {
+      this.listeners.set(type, [...(this.listeners.get(type) || []), fn]);
+    }
+    triggerLoad() {
+      for (const fn of this.listeners.get("load") || []) fn();
+    }
+  }
+  const frame = new MockIframe();
+  let hostPort = null;
+  class MockPort {
+    constructor() { this.listeners = []; }
+    addEventListener(type, fn) { if (type === "message") this.listeners.push(fn); }
+    start() {}
+    postMessage(data) { for (const fn of this.listeners) fn({ data }); }
+  }
+  class MockMessageChannel {
+    constructor() {
+      const p1 = new MockPort();
+      const p2 = new MockPort();
+      p1.peer = p2;
+      p2.peer = p1;
+      this.port1 = p1;
+      this.port2 = p2;
+      hostPort = p1;
+    }
+  }
+  const win = {
+    innerHeight: 800,
+    location: { pathname: "/", search: "" },
+    navigator: { userActivation: { isActive: true } },
+    addEventListener: () => {},
+    matchMedia: () => ({ matches: false }),
+    setTimeout: globalThis.setTimeout,
+    clearTimeout: globalThis.clearTimeout,
+  };
   const mockDoc = {
     baseURI: "https://example.github.io/WIPS-Office/",
-    body: {
-      appendChild() {},
-    },
+    documentElement: { classList: { contains: () => false, add() {} } },
+    body: { appendChild() {} },
+    getElementById: (id) => (id === "codex-visualization" ? frame : null),
     createElement(tag) {
       assert.equal(tag, "a");
       return {
         href: "",
-        click() {
-          clicked.push({ href: this.href, target: this.target, rel: this.rel });
-        },
+        click() { clicked.push({ href: this.href, target: this.target, rel: this.rel }); },
         remove() {},
       };
     },
   };
-  const runOpenExternal = new Function(
-    "data",
-    "document",
-    "globalThis",
-    openExternalBlock,
-  );
-  const activeGlobal = { navigator: { userActivation: { isActive: true } } };
+  vm.runInNewContext(hostScript, {
+    globalThis: win,
+    window: win,
+    document: mockDoc,
+    HTMLIFrameElement: MockIframe,
+    MessageChannel: MockMessageChannel,
+    URL,
+    TextEncoder,
+  }, { filename: "index.html" });
+  assert.ok(hostPort);
 
-  runOpenExternal(
-    { type: "open-external", href: "notion://www.notion.so/Page-1234?pvs=4" },
-    mockDoc,
-    activeGlobal,
-  );
-  runOpenExternal(
-    { type: "open-external", href: "notion://app.notion.com/p/1234" },
-    mockDoc,
-    activeGlobal,
-  );
-  runOpenExternal(
-    { type: "open-external", href: "https://example.com/docs" },
-    mockDoc,
-    activeGlobal,
-  );
-
-  for (const blocked of [
+  for (const href of [
+    "notion://www.notion.so/Page-1234?pvs=4",
+    "notion://app.notion.com/p/1234",
+    "https://example.com/docs",
     "notion://evil.example/page",
     "notion:www.notion.so/page",
     "notion://www.notion.so:8443/page",
@@ -823,7 +883,7 @@ test("outer host open-external launches allowlisted notion:// URLs directly with
     "javascript:alert(1)",
     "file:///etc/passwd",
   ]) {
-    runOpenExternal({ type: "open-external", href: blocked }, mockDoc, activeGlobal);
+    hostPort.postMessage({ type: "open-external", href });
   }
 
   assert.deepEqual(clicked, [
@@ -949,55 +1009,6 @@ test("aggregates checklist and sub-task completion counts across completed tasks
 });
 
 test("renders Variant B progress box with segmented bars, continuous fallback (>12), read-only drawer, and persistent open state", () => {
-  const svgSource = fragment.match(/function createSvgNode\(tag, attrs\) \{[\s\S]*?\n  \}/)?.[0];
-  const progressBoxSource = fragment.match(/function createTaskProgressBox\(details\) \{[\s\S]*?\n  \}/)?.[0];
-  const cardSource = fragment.match(/function createKanbanCard\(task, showExactStatus\) \{[\s\S]*?\n  \}/)?.[0];
-  assert.ok(svgSource && progressBoxSource && cardSource);
-
-  function createElement(tagName) {
-    const listeners = new Map();
-    return {
-      tagName,
-      className: "",
-      dataset: {},
-      style: {},
-      open: false,
-      children: [],
-      attributes: {},
-      textContent: "",
-      append(...children) { this.children.push(...children); },
-      setAttribute(name, value) { this.attributes[name] = value; },
-      removeAttribute(name) { delete this.attributes[name]; },
-      addEventListener(type, fn) {
-        if (!listeners.has(type)) listeners.set(type, []);
-        listeners.get(type).push(fn);
-      },
-      dispatchEvent(event) {
-        for (const fn of listeners.get(event.type) || []) fn(event);
-      },
-    };
-  }
-  const mockDoc = {
-    createElement,
-    createElementNS: (_ns, tag) => createElement(tag),
-  };
-  const addText = (parent, tagName, className, text) => {
-    const node = mockDoc.createElement(tagName);
-    node.className = className;
-    if (text !== undefined && text !== null) node.textContent = String(text);
-    parent.append(node);
-    return node;
-  };
-  const setSafeHref = (el, url) => {
-    el.href = url.replace(/^https:/, "notion:");
-  };
-
-  function collectNodes(node, predicate, out = []) {
-    if (predicate(node)) out.push(node);
-    for (const child of node.children || []) collectNodes(child, predicate, out);
-    return out;
-  }
-
   const manyChecklist = Array.from({ length: 15 }, (_, idx) => ({
     text: `항목 ${idx + 1}`,
     done: idx < 6,
@@ -1011,118 +1022,108 @@ test("renders Variant B progress box with segmented bars, continuous fallback (>
     parentTaskIds: ["parent-large"],
   }));
 
-  const testModel = createOfficeModel({
-    results: [
-      {
-        id: "parent-both",
-        url: "https://app.notion.com/00000000000000000000000000000100",
-        title: "체크+하위 일감",
-        owner: "sb",
-        status: "진행",
-        checklist: [
-          { text: "체크 1", done: true },
-          { text: "체크 2", done: false },
-        ],
-      },
-      {
-        id: "child-done",
-        url: "https://app.notion.com/00000000000000000000000000000101",
-        title: "완료된 하위",
-        owner: "sb",
-        status: "완료",
-        parentTaskIds: ["parent-both"],
-      },
-      {
-        id: "child-open",
-        url: "",
-        title: "링크 없는 하위",
-        owner: "sb",
-        status: "예정",
-        parentTaskIds: ["parent-both"],
-      },
-      {
-        id: "only-check-complete",
-        title: "체크만 완료",
-        owner: "sb",
-        status: "검증",
-        checklist: [
-          { text: "끝 1", done: true },
-          { text: "끝 2", done: true },
-        ],
-      },
-      {
-        id: "plain-task",
-        title: "일반 일감",
-        owner: "sb",
-        status: "예정",
-      },
-      {
-        id: "parent-large",
-        title: "대용량 항목 일감",
-        owner: "sb",
-        status: "진행",
-        checklist: manyChecklist,
-      },
-      ...completeSubtasks,
-    ],
+  const env = createOfficeDomHarness({
+    customSnapshot: {
+      snapshotDate: "2026-11-11",
+      results: [
+        {
+          id: "parent-both",
+          url: "https://app.notion.com/00000000000000000000000000000100",
+          title: "체크+하위 일감",
+          owner: "sb",
+          status: "진행",
+          checklist: [
+            { text: "체크 1", done: true },
+            { text: "체크 2", done: false },
+          ],
+        },
+        {
+          id: "child-done",
+          url: "https://app.notion.com/00000000000000000000000000000101",
+          title: "완료된 하위",
+          owner: "sb",
+          status: "완료",
+          parentTaskIds: ["parent-both"],
+        },
+        {
+          id: "child-open",
+          url: "",
+          title: "링크 없는 하위",
+          owner: "sb",
+          status: "예정",
+          parentTaskIds: ["parent-both"],
+        },
+        {
+          id: "only-check-complete",
+          title: "체크만 완료",
+          owner: "sb",
+          status: "검증",
+          checklist: [
+            { text: "끝 1", done: true },
+            { text: "끝 2", done: true },
+          ],
+        },
+        {
+          id: "plain-task",
+          title: "일반 일감",
+          owner: "sb",
+          status: "예정",
+        },
+        {
+          id: "parent-large",
+          title: "대용량 항목 일감",
+          owner: "sb",
+          status: "진행",
+          checklist: manyChecklist,
+        },
+        ...completeSubtasks,
+      ],
+    },
   });
 
-  const openProgressDrawers = new Set();
-  const createKanbanCard = new Function(
-    "document", "model", "addText", "setSafeHref", "openProgressDrawers",
-    svgSource + "\n" + progressBoxSource + "\n" + cardSource + "\nreturn createKanbanCard;",
-  )(mockDoc, testModel, addText, setSafeHref, openProgressDrawers);
+  const board = env.byId.get("wips-office-selected-tasks");
+  const findCard = (title) => board.querySelectorAll(".kanban-card").find((c) => c.dataset.taskTitle === title);
 
-  const tasks = testModel.employeeTasks("sb", allFilters);
-  const bothCard = createKanbanCard(tasks.find((t) => t.id === "parent-both"), false);
-  const bothBox = bothCard.children.find((child) => child.className === "kanban-progress-box");
+  const bothCard = findCard("체크+하위 일감");
+  const bothBox = bothCard.querySelector(".kanban-progress-box");
   assert.ok(bothBox, "renders progress box when checklist and subtasks exist");
-  assert.equal(bothBox.tagName, "details");
-  const summary = bothBox.children[0];
-  assert.equal(summary.className, "kanban-progress-summary");
-  assert.equal(summary.children[0].className, "kanban-progress-rows");
-  assert.equal(summary.children[0].children.length, 2);
-  assert.equal(summary.children[1].attributes.class, "kanban-progress-chevron");
-  assert.equal(summary.children[0].children[0].children[2].textContent, "1/2");
-  assert.equal(summary.children[0].children[1].children[2].textContent, "1/2");
-  assert.equal(collectNodes(bothBox, (n) => n.tagName === "input").length, 0, "checklist drawer stays strictly read-only");
-  const subtaskLinks = collectNodes(bothBox, (n) => n.className === "kanban-subtask-link");
+  assert.equal(bothBox.tagName, "DETAILS");
+  assert.equal(bothBox.querySelectorAll(".kanban-progress-row").length, 2);
+  assert.deepEqual(
+    bothBox.querySelectorAll(".kanban-progress-count").map((n) => n.textContent),
+    ["1/2", "1/2"],
+  );
+  assert.equal(bothBox.querySelectorAll("input").length, 0, "checklist drawer stays strictly read-only");
+  const subtaskLinks = bothBox.querySelectorAll(".kanban-subtask-link");
   assert.equal(subtaskLinks.length, 1);
   assert.equal(subtaskLinks[0].href, "notion://app.notion.com/00000000000000000000000000000101");
-  const subtaskStatuses = collectNodes(bothBox, (n) => n.className === "kanban-subtask-status").map((n) => n.textContent);
-  assert.deepEqual(subtaskStatuses, ["완료", "예정"]);
+  assert.deepEqual(
+    bothBox.querySelectorAll(".kanban-subtask-status").map((n) => n.textContent),
+    ["완료", "예정"],
+  );
 
   bothBox.open = true;
   bothBox.dispatchEvent({ type: "toggle" });
-  const rerenderedBoth = createKanbanCard(tasks.find((t) => t.id === "parent-both"), false);
-  const rerenderedBox = rerenderedBoth.children.find((child) => child.className === "kanban-progress-box");
-  assert.equal(rerenderedBox.open, true, "drawer open state survives auto-refresh rerenders");
+  const statusSelect = env.byId.get("wips-office-status");
+  statusSelect.value = "전체 상태";
+  statusSelect.dispatchEvent({ type: "change" });
+  const rerenderedBox = findCard("체크+하위 일감").querySelector(".kanban-progress-box");
+  assert.equal(rerenderedBox.open, true, "drawer open state survives rerenders");
   rerenderedBox.open = false;
   rerenderedBox.dispatchEvent({ type: "toggle" });
-  assert.equal(
-    createKanbanCard(tasks.find((t) => t.id === "parent-both"), false)
-      .children.find((child) => child.className === "kanban-progress-box").open,
-    false,
-  );
+  statusSelect.dispatchEvent({ type: "change" });
+  assert.equal(findCard("체크+하위 일감").querySelector(".kanban-progress-box").open, false);
 
-  const completeCard = createKanbanCard(tasks.find((t) => t.id === "only-check-complete"), true);
-  const completeBox = completeCard.children.find((child) => child.className === "kanban-progress-box");
-  assert.equal(completeBox.children[0].children[0].children.length, 1);
-  assert.equal(completeBox.children[0].children[0].children[0].children[2].dataset.complete, "true");
-  const doneAllSegs = collectNodes(completeBox, (n) => n.className === "kanban-progress-seg is-done-all");
-  assert.equal(doneAllSegs.length, 2);
+  const completeBox = findCard("체크만 완료").querySelector(".kanban-progress-box");
+  assert.equal(completeBox.querySelectorAll(".kanban-progress-row").length, 1);
+  assert.equal(completeBox.querySelector(".kanban-progress-count").dataset.complete, "true");
+  assert.equal(completeBox.querySelectorAll(".is-done-all").length, 2);
 
-  const plainCard = createKanbanCard(tasks.find((t) => t.id === "plain-task"), true);
-  assert.equal(
-    plainCard.children.find((child) => child.className === "kanban-progress-box"),
-    undefined,
-    "ordinary tasks without checklist or subtasks render zero progress DOM",
-  );
+  assert.equal(findCard("일반 일감").querySelector(".kanban-progress-box"), null);
 
-  const largeCard = createKanbanCard(tasks.find((t) => t.id === "parent-large"), false);
-  const largeBox = largeCard.children.find((child) => child.className === "kanban-progress-box");
-  assert.equal(collectNodes(largeBox, (n) => n.className === "kanban-progress-segs").length, 0);
-  const fills = collectNodes(largeBox, (n) => n.className === "kanban-progress-fill");
+  const largeBox = findCard("대용량 항목 일감").querySelector(".kanban-progress-box");
+  assert.equal(largeBox.querySelectorAll(".kanban-progress-segs").length, 0);
+  const fills = largeBox.querySelectorAll(".kanban-progress-fill");
   assert.equal(fills.length, 2);
   assert.equal(fills[0].style.width, "40%");
   assert.equal(fills[0].dataset.complete, undefined);

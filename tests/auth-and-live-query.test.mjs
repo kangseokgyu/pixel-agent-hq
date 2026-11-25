@@ -215,7 +215,6 @@ function createDomEnvironment(html, { opfs, fetchImpl, onLine = true } = {}) {
   make("p", "wips-office-communal-count");
   make("p", "wips-office-communal-empty", { hidden: true });
   make("div", "wips-office-communal-tasks");
-  make("span", "wips-office-snapshot");
   make("a", "wips-office-source");
 
   const localStore = new Map();
@@ -566,4 +565,83 @@ test("static checklist fetcher recurses into nested blocks, skips child_page/com
   assert.match(boardText, /1\/2/);
   assert.match(boardText, /완료된 하위 일감/);
   assert.match(boardText, /1\/1/);
+});
+
+test("local mode retains snapshot on refresh failure and deduplicates overlapping refresh clicks", async () => {
+  let resolveSecondFetch;
+  let fetchCount = 0;
+  const env = createDomEnvironment(officeHtml, {
+    fetchImpl: async () => {
+      fetchCount += 1;
+      if (fetchCount === 1) {
+        return new Response(JSON.stringify({
+          snapshotDate: "2026-11-14",
+          timezone: "Asia/Seoul",
+          sourceUrl: "https://app.notion.com/p/local",
+          results: [{ title: "유지될 로컬 일감", owner: "sb", status: "진행", project: "2.3", parentTaskIds: [] }],
+          lastSuccessAt: "2026-11-14T03:00:00.000Z",
+        }), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      if (fetchCount === 2) {
+        return new Promise((resolve) => {
+          resolveSecondFetch = resolve;
+        });
+      }
+      throw new Error("unexpected fetch");
+    },
+  });
+  await flushMicrotasks();
+  assert.equal(fetchCount, 1);
+  assert.match(env.byId.get("wips-office-selected-tasks").textContent, /유지될 로컬 일감/);
+
+  const refreshBtn = env.byId.get("wips-office-refresh");
+  const p1 = refreshBtn.dispatchEvent({ type: "click" });
+  const p2 = refreshBtn.dispatchEvent({ type: "click" });
+  assert.equal(fetchCount, 2);
+
+  resolveSecondFetch(new Response(JSON.stringify({ error: "Notion 일시 오류" }), { status: 502 }));
+  await Promise.all([p1, p2]);
+  await flushMicrotasks();
+
+  assert.equal(fetchCount, 2);
+  assert.equal(env.byId.get("wips-office-sync-status").dataset.state, "error");
+  assert.match(env.byId.get("wips-office-sync-status").textContent, /Notion 일시 오류/);
+  assert.match(env.byId.get("wips-office-selected-tasks").textContent, /유지될 로컬 일감/);
+});
+
+test("logout aborts in-flight static fetch and discards late response via sessionEpoch", async () => {
+  const staticHtml = injectEmptySnapshot(officeHtml, emptySnapshot);
+  const opfs = createMockOpfsStore();
+  let capturedSignal = null;
+  let resolveFetch = null;
+
+  const env = createDomEnvironment(staticHtml, {
+    opfs,
+    fetchImpl: async (_url, options) => {
+      capturedSignal = options?.signal;
+      return new Promise((resolve) => {
+        resolveFetch = resolve;
+      });
+    },
+  });
+  await flushMicrotasks();
+
+  env.byId.get("wips-office-token").value = "demo_readonly_token_123";
+  env.byId.get("wips-office-datasource-id").value = "11111111-2222-4333-8444-555555555555";
+  const submitPromise = env.byId.get("wips-office-connection-form").dispatchEvent({ type: "submit" });
+  await flushMicrotasks();
+
+  assert.ok(capturedSignal);
+  assert.equal(capturedSignal.aborted, false);
+
+  await env.byId.get("wips-office-logout").dispatchEvent({ type: "click" });
+  assert.equal(capturedSignal.aborted, true);
+
+  resolveFetch(makeNotionResponse("늦게 도착한 일감", "sb"));
+  await submitPromise;
+  await flushMicrotasks();
+
+  assert.equal(env.byId.get("wips-office-main-view").hidden, true);
+  assert.equal(env.byId.get("wips-office-selected-tasks").children.length, 0);
+  assert.equal(env.byId.get("wips-office-connection-panel").hidden, false);
 });
