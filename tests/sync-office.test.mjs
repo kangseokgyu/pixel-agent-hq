@@ -61,13 +61,13 @@ test("strips all task titles, real DATA_SOURCE_ID, and SOURCE_URL in empty stati
   }
 });
 
-test("syncOfficeHtml check reports drift when wips-office.html differs from source bundle", async () => {
+test("syncOfficeHtml check reports drift when generated HTML or source CSS differs", async () => {
   const { mkdtempSync, cpSync, readFileSync, rmSync, writeFileSync } = await import("node:fs");
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
   const tempRoot = mkdtempSync(join(tmpdir(), "wips-sync-check-"));
   try {
-    for (const rel of ["index.html", "wips-office.html"]) {
+    for (const rel of ["index.html", "wips-office.html", "wips-data.json"]) {
       cpSync(join(rootDir, rel), join(tempRoot, rel));
     }
     cpSync(join(rootDir, "fixtures"), join(tempRoot, "fixtures"), { recursive: true });
@@ -75,12 +75,36 @@ test("syncOfficeHtml check reports drift when wips-office.html differs from sour
     cpSync(join(rootDir, "src"), join(tempRoot, "src"), { recursive: true });
 
     assert.equal(syncOfficeHtml({ rootDir: tempRoot, check: true }).ok, true);
+
     const stale = readFileSync(join(tempRoot, "wips-office.html"), "utf8").replace("window.__wipsOfficeModel", "window.__stale");
     writeFileSync(join(tempRoot, "wips-office.html"), stale);
     const drifted = syncOfficeHtml({ rootDir: tempRoot, check: true });
     assert.equal(drifted.ok, false);
     assert.ok(drifted.drifted.includes("wips-office.html"));
+
+    syncOfficeHtml({ rootDir: tempRoot });
+    assert.equal(syncOfficeHtml({ rootDir: tempRoot, check: true }).ok, true);
+
+    const codexCssPath = join(tempRoot, "src/shell/codex-host.css");
+    writeFileSync(codexCssPath, `${readFileSync(codexCssPath, "utf8")}\n/* drift */\n`);
+    const cssDrifted = syncOfficeHtml({ rootDir: tempRoot, check: true });
+    assert.equal(cssDrifted.ok, false);
+    assert.ok(cssDrifted.drifted.includes("index.html"));
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
   }
+});
+
+test("dist zero-data bundle stays within REF-5 byte budget after shell CSS pruning", () => {
+  const built = syncOfficeHtml({ rootDir, outPath: "dist/index.html", empty: true, check: true });
+  assert.ok(built.bytes <= 380_246, `Expected dist/index.html <= 380246 bytes, got ${built.bytes}`);
+});
+
+test("srcdoc places inner host bridge after body opening tag so ResizeObserver observes document.body", () => {
+  const currentIndex = readFileSync(`${rootDir}index.html`, "utf8");
+  const rawSrcdoc = currentIndex.match(/\bdata-srcdoc="([\s\S]*?)"/)?.[1];
+  const srcdoc = unescapeHtmlAttr(rawSrcdoc);
+  const bodyIdx = srcdoc.indexOf("<body>");
+  const observerIdx = srcdoc.indexOf("ResizeObserver");
+  assert.ok(bodyIdx !== -1 && observerIdx !== -1 && bodyIdx < observerIdx);
 });

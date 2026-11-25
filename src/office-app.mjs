@@ -343,12 +343,22 @@ connectCancelButton?.addEventListener("click", () => {
 logoutButton?.addEventListener("click", () => {
   void sessionController.logout();
 });
+const submitConnection = () => sessionController.connect({
+  token: tokenInput?.value || "",
+  dataSourceId: dataSourceIdInput?.value || "",
+});
 connectionForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
-  await sessionController.connect({
-    token: tokenInput?.value || "",
-    dataSourceId: dataSourceIdInput?.value || "",
-  });
+  await submitConnection();
+});
+connectSubmitButton?.addEventListener("click", () => {
+  void submitConnection();
+});
+connectionForm?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    void submitConnection();
+  }
 });
 
 if (sessionController.isStaticMode()) {

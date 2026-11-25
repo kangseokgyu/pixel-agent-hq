@@ -82,10 +82,11 @@ Notion 조회가 실패하면 현재 화면의 데이터를 유지하고 오류�
 ## 파일
 
 - `server.mjs`: 로컬 정적 서버, Notion API 조회·매핑·페이지네이션·제한 시간 처리
-- `index.html`, `wips-office.html`: 사무실 UI 및 iframe 실행본
+- `src/`: `office-app.mjs`, `office-model.mjs`, `office-renderer.mjs`, `progress-drawer.mjs`, `seating-store.mjs`, `session-controller.mjs` (도메인 UI 모듈), `office/` (`office.template.html`, `office.css`, `sprites.css`), `shell/` (`index.template.html`, `codex-host.css`, `host-bridge.js`)
+- `index.html`, `wips-office.html`: `src/`·`lib/`·`wips-data.json`에서 생성되는 사무실 UI 및 iframe 실행본 (`node scripts/sync-office.mjs`로 동기화)
 - `manifest.webmanifest`, `pwa-register.js`, `sw.js`, `icons/`: 서브패스 상대 경로 PWA 메타데이터, Service Worker 앱 셸 캐시, 아이콘
-- `lib/`: `notion-client.mjs` (읽기 전용 조회), `opfs-store.mjs` (OPFS 저장/파기), `snapshot-schema.mjs` (빈 스냅샷 및 입력 검증)
-- `scripts/`: `sync-office.mjs` (CSP/DOM 동기화), `build-pages.mjs` (`dist/` 패키징), `verify-dist.mjs` (보안·Zero-Data 검증)
+- `lib/`: `app-assets.mjs` (PWA/서버 단일 자산 목록), `notion-client.mjs` (읽기 전용 조회), `opfs-store.mjs` (OPFS 저장/파기), `snapshot-schema.mjs` (빈 스냅샷 및 입력 검증)
+- `scripts/`: `bundle-office.mjs` (무의존 ES 모듈 번들러), `sync-office.mjs` (HTML/CSS/JS·CSP 동기화 및 `--check`), `build-pages.mjs` (`dist/` 패키징), `verify-dist.mjs` (보안·Zero-Data 검증)
 - `.github/workflows/deploy-pages.yml`: GitHub Pages 빌드·보안 감사·배포 워크플로우
 - `fixtures/`: `empty-snapshot.json`, `sample-snapshot.json`
 - `wips-data.json`: 로컬 서버 실행 시 사용하는 캐시 스냅샷 (`dist/`에는 포함되지 않음)
@@ -94,6 +95,7 @@ Notion 조회가 실패하면 현재 화면의 데이터를 유지하고 오류�
 ## 검증
 
 ```bash
+node scripts/sync-office.mjs --check
 node --test
 node scripts/build-pages.mjs && node scripts/verify-dist.mjs
 ```

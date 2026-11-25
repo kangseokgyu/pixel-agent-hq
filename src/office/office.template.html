@@ -1,0 +1,133 @@
+<div id="wips-office-root">
+<!--__WIPS_OFFICE_DATA__-->
+<style>
+/*__WIPS_OFFICE_SPRITES_CSS__*/
+/*__WIPS_OFFICE_CSS__*/
+</style>
+<section aria-labelledby="wips-office-title">
+  <header class="office-header">
+    <div class="office-header-top">
+      <h1 id="wips-office-title">Pixel Agent HQ<span class="title-sub"> · 쿼터뷰</span></h1>
+      <div class="sync-controls">
+        <button class="sync-button sync-button--icon" id="wips-office-refresh" type="button" aria-label="지금 갱신" title="지금 갱신">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M13.2 8A5.2 5.2 0 1 1 11.7 4.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M11.7 2.1V4.3H9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+        <button class="sync-button sync-button--icon" id="wips-office-connect-toggle" type="button" aria-label="연결 설정" title="연결 설정" hidden>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M6.8 5.2H4.8A2.8 2.8 0 0 0 4.8 10.8H6.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M9.2 5.2H11.2A2.8 2.8 0 0 1 11.2 10.8H9.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M5.8 8H10.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+        <button class="sync-button sync-button--icon sync-button--danger" id="wips-office-logout" type="button" aria-label="로그아웃" title="로그아웃" hidden>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M6.5 2.5H4.2A1.7 1.7 0 0 0 2.5 4.2V11.8A1.7 1.7 0 0 0 4.2 13.5H6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M6.5 8H13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M10.8 5.2L13.5 8L10.8 10.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="header-meta">
+      <p class="sync-status" id="wips-office-sync-status" role="status" aria-live="polite"></p>
+      <a id="wips-office-source">Notion 원본</a>
+    </div>
+  </header>
+  <p class="offline-banner" id="wips-office-offline-banner" role="status" aria-live="polite" hidden></p>
+  <section class="connection-panel" id="wips-office-connection-panel" aria-labelledby="wips-office-connection-title" hidden>
+    <div class="connection-header">
+      <h2 id="wips-office-connection-title">Notion 실시간 연결 설정</h2>
+      <p class="section-note">개인 기기의 비공개 OPFS(wips-office-private-v1)에만 보관되며 localStorage에는 저장되지 않습니다.</p>
+    </div>
+    <ul class="security-checklist" aria-label="보안 체크리스트">
+      <li>Notion Integration에서 <strong>Read content</strong> 권한만 허용</li>
+      <li>대상 DB 페이지 하나에만 연결</li>
+      <li>공용 PC에서 입력 금지 (사용 후 상단 로그아웃으로 즉시 삭제)</li>
+    </ul>
+    <form class="connection-form" id="wips-office-connection-form">
+      <label class="connection-field">
+        <span class="form-label">Notion 토큰 (Read content 전용)</span>
+        <input class="form-input" id="wips-office-token" type="password" autocomplete="off" spellcheck="false" required placeholder="ntn_... 또는 secret_...">
+      </label>
+      <label class="connection-field">
+        <span class="form-label">데이터 소스 ID (UUID)</span>
+        <input class="form-input" id="wips-office-datasource-id" type="text" autocomplete="off" spellcheck="false" required placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+      </label>
+      <div class="connection-actions">
+        <button class="sync-button" id="wips-office-connect-submit" type="button">연결하고 조회</button>
+        <button class="sync-button" id="wips-office-connect-cancel" type="button" hidden>닫기</button>
+      </div>
+      <p class="connection-message" id="wips-office-connection-message" role="status" aria-live="polite"></p>
+    </form>
+  </section>
+  <div id="wips-office-main-view">
+  <div class="viz-controls" aria-label="업무 필터">
+    <label class="filter-field">
+      <span class="form-label">상태</span>
+      <select class="form-select" id="wips-office-status">
+        <option>전체 상태</option>
+        <option>진행</option>
+        <option>검증</option>
+        <option>장시간 테스트 중</option>
+        <option>대기</option>
+        <option>예정</option>
+        <option>완료</option>
+      </select>
+    </label>
+    <label class="filter-field">
+      <span class="form-label">프로젝트</span>
+      <select class="form-select" id="wips-office-project">
+        <option>전체 프로젝트</option>
+        <option>2.3</option>
+        <option>2.2.1</option>
+        <option>기타</option>
+        <option>프로젝트 미지정</option>
+      </select>
+    </label>
+  </div>
+  <p class="count-line" id="wips-office-summary" aria-live="polite"></p>
+  <div class="status-counts" id="wips-office-status-counts" aria-label="필터 결과 상태별 건수"></div>
+
+  <div class="seating-toolbar">
+    <button type="button" class="btn" id="wips-office-edit-seating" aria-pressed="false">자리 배치</button>
+    <button type="button" class="btn" id="wips-office-reset-seating" hidden>기본 배치로</button>
+    <p id="wips-office-seating-message" aria-live="polite">자리 배치는 이 브라우저에 저장됩니다.</p>
+  </div>
+  <section class="office-room" aria-label="쿼터뷰 에이전트 본부 배치도">
+    <div class="room-dressing" aria-hidden="true">
+      <div class="hq-scene-cat hq-scene-cat--sofa"><span class="pixel-badge">!</span></div>
+      <div class="hq-scene-cat hq-scene-cat--rug"></div>
+    </div>
+    <section class="hq-billboard" id="wips-office-billboard" aria-label="프로젝트 공통 일정 전광판"></section>
+    <div class="office-grid" id="wips-office-employees"></div>
+  </section>
+
+  <section class="selected-work" aria-labelledby="wips-office-selected-title">
+    <div class="section-heading">
+      <div>
+        <h2 id="wips-office-selected-title"></h2>
+        <p class="section-note" id="wips-office-selected-note"></p>
+      </div>
+    </div>
+    <p class="empty-note" id="wips-office-selected-empty" hidden></p>
+    <div class="kanban-board" id="wips-office-selected-tasks" aria-live="polite"></div>
+  </section>
+
+  <section class="communal-board" aria-labelledby="wips-office-communal-title">
+    <div class="section-heading">
+      <div>
+        <h2 id="wips-office-communal-title">공용 업무 게시판</h2>
+        <p class="section-note">담당자가 공통이거나 지정되지 않은 일감</p>
+      </div>
+      <p class="section-note" id="wips-office-communal-count"></p>
+    </div>
+    <p class="empty-note" id="wips-office-communal-empty" hidden></p>
+    <div class="task-list" id="wips-office-communal-tasks" aria-live="polite"></div>
+  </section>
+  </div>
+</section>
+</div>
+<!--__WIPS_OFFICE_SCRIPT__-->
