@@ -112,7 +112,6 @@ test("swaps seats via select control, persists in localStorage, and handles bloc
     make("p", "wips-office-communal-count");
     make("p", "wips-office-communal-empty", { hidden: true });
     make("div", "wips-office-communal-tasks");
-    make("span", "wips-office-snapshot");
     make("a", "wips-office-source");
 
     const win = {

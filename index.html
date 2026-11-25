@@ -2221,14 +2221,6 @@ html&gt;body{padding:0}&lt;/style&gt;
   --office-wall: #182232;
   --office-wall-trim: #2b3b52;
   --office-floor: #263447;
-  --office-desk: #6b533b;
-  --office-desk-front: #4d3a28;
-  --office-chair: #2b394a;
-  --office-skin: #efc9aa;
-  --office-skin-line: #b97b58;
-  --office-hair: #231c18;
-  --office-hair-highlight: #5a4638;
-  --office-screen: #11362a;
   --office-bubble: #0f172a;
   --office-ink: #e2f1ff;
   --office-muted: #9fb6d1;
@@ -2400,11 +2392,6 @@ html&gt;body{padding:0}&lt;/style&gt;
   image-rendering: pixelated;
   filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.65));
 }
-#wips-office-root .person-art &gt; span {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
 #wips-office-root .person-art[data-employee=&quot;sb&quot;] { --agent-sprite: var(--agent-sprite-sb); }
 #wips-office-root .person-art[data-employee=&quot;sb&quot;]::before { width: 4.215cqw; height: 5.233cqw; }
 #wips-office-root .person-art[data-employee=&quot;이요원&quot;] { --agent-sprite: var(--agent-sprite-lee); }
@@ -2477,11 +2464,6 @@ html&gt;body{padding:0}&lt;/style&gt;
   aspect-ratio: 688 / 384;
   pointer-events: none;
   z-index: 2;
-}
-#wips-office-root .window-frame,
-#wips-office-root .wall-clock,
-#wips-office-root .room-floor {
-  display: none;
 }
 #wips-office-root .hq-scene-cat {
   position: absolute;
@@ -2633,39 +2615,13 @@ html&gt;body{padding:0}&lt;/style&gt;
 #wips-office-root .workstation[data-status=&quot;예정&quot;] .hud-meter-fill {
   width: 24%; background: #64748b;
 }
-#wips-office-root .speech-status { display: flex; align-items: center; flex-wrap: wrap; gap: 3px; font-size: 10px; color: #cbd5e1; }
-#wips-office-root .speech-title { font-weight: 600; font-size: 11px; line-height: 1.25; overflow-wrap: anywhere; color: #f8fafc; }
-#wips-office-root .speech-other { color: var(--office-muted); font-size: 10px; }
 @keyframes office-focus-bob {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-2px); }
 }
-@keyframes office-type-left {
-  0%, 100% { transform: rotate(-18deg); }
-  50% { transform: rotate(-10deg); }
-}
-@keyframes office-type-right {
-  0%, 100% { transform: rotate(18deg); }
-  50% { transform: rotate(10deg); }
-}
 #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-art::before {
   animation: office-focus-bob 1.1s steps(2, end) infinite;
   animation-delay: var(--motion-delay);
-}
-#wips-office-root .workstation[data-activity=&quot;working&quot;] .person-head,
-#wips-office-root .workstation[data-activity=&quot;working&quot;] .person-hair {
-  animation: office-focus-bob 1.7s ease-in-out infinite;
-  animation-delay: var(--motion-delay);
-}
-#wips-office-root .workstation[data-activity=&quot;working&quot;] .person-body::before {
-  animation: office-type-left 0.52s ease-in-out infinite;
-  animation-delay: var(--motion-delay);
-  transform-origin: 50% 0;
-}
-#wips-office-root .workstation[data-activity=&quot;working&quot;] .person-body::after {
-  animation: office-type-right 0.52s ease-in-out infinite;
-  animation-delay: calc(var(--motion-delay) - 0.18s);
-  transform-origin: 50% 0;
 }
 @keyframes office-billboard-ticker {
   0% { transform: translateX(0%); }
@@ -2901,17 +2857,12 @@ html&gt;body{padding:0}&lt;/style&gt;
   color: #9fb6d1;
   white-space: nowrap;
 }
-#wips-office-root .task-card.is-billboard-highlight,
 #wips-office-root .kanban-card.is-billboard-highlight {
   outline: 2px solid #38bdf8;
   box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
 }
 @media (prefers-reduced-motion: reduce) {
   #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-art::before,
-  #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-head,
-  #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-hair,
-  #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-body::before,
-  #wips-office-root .workstation[data-activity=&quot;working&quot;] .person-body::after,
   #wips-office-root .hq-ticker-track {
     animation: none;
   }
@@ -2923,9 +2874,6 @@ html&gt;body{padding:0}&lt;/style&gt;
     transition: none;
   }
 }
-#wips-office-root .desk-top { background: var(--office-desk); }
-#wips-office-root .person-head { background: var(--office-skin); }
-#wips-office-root .person-hair { background: var(--office-hair); }
 @media (max-width: 620px) {
   #wips-office-root .office-room {
     display: flex;
@@ -3706,7 +3654,6 @@ html&gt;body{padding:0}&lt;/style&gt;
       &lt;/div&gt;
     &lt;/div&gt;
     &lt;div class=&quot;header-meta&quot;&gt;
-      &lt;span id=&quot;wips-office-snapshot&quot; hidden&gt;&lt;/span&gt;
       &lt;p class=&quot;sync-status&quot; id=&quot;wips-office-sync-status&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;&lt;/p&gt;
       &lt;a id=&quot;wips-office-source&quot;&gt;Notion 원본&lt;/a&gt;
     &lt;/div&gt;
@@ -3773,14 +3720,11 @@ html&gt;body{padding:0}&lt;/style&gt;
   &lt;/div&gt;
   &lt;section class=&quot;office-room&quot; aria-label=&quot;쿼터뷰 에이전트 본부 배치도&quot;&gt;
     &lt;div class=&quot;room-dressing&quot; aria-hidden=&quot;true&quot;&gt;
-      &lt;div class=&quot;window-frame&quot;&gt;&lt;/div&gt;
-      &lt;div class=&quot;wall-clock&quot;&gt;&lt;/div&gt;
       &lt;div class=&quot;hq-scene-cat hq-scene-cat--sofa&quot;&gt;&lt;span class=&quot;pixel-badge&quot;&gt;!&lt;/span&gt;&lt;/div&gt;
       &lt;div class=&quot;hq-scene-cat hq-scene-cat--rug&quot;&gt;&lt;/div&gt;
     &lt;/div&gt;
     &lt;section class=&quot;hq-billboard&quot; id=&quot;wips-office-billboard&quot; aria-label=&quot;프로젝트 공통 일정 전광판&quot;&gt;&lt;/section&gt;
     &lt;div class=&quot;office-grid&quot; id=&quot;wips-office-employees&quot;&gt;&lt;/div&gt;
-    &lt;div class=&quot;room-floor&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;
   &lt;/section&gt;
 
   &lt;section class=&quot;selected-work&quot; aria-labelledby=&quot;wips-office-selected-title&quot;&gt;
@@ -3820,6 +3764,13 @@ html&gt;body{padding:0}&lt;/style&gt;
   const EMPLOYEES = [&quot;sb&quot;, &quot;이요원&quot;, &quot;여이전트&quot;, &quot;석규&quot;, &quot;UI&quot;];
   const SHARED_OWNER = &quot;공통&quot;;
   const ACTIVE_TICKER_STATUSES = new Set([&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;]);
+  const NOTION_ICON_PATHS = [
+    { d: &quot;M3.5 4.8L16.8 3.5L20 6.1L6.7 7.4L3.5 4.8Z&quot;, fill: &quot;currentColor&quot;, &quot;fill-opacity&quot;: &quot;0.16&quot; },
+    { d: &quot;M3.5 4.8L6.7 7.4V20.6L3.5 18V4.8Z&quot;, fill: &quot;currentColor&quot;, &quot;fill-opacity&quot;: &quot;0.28&quot; },
+    { d: &quot;M3.5 4.8L16.8 3.5L20 6.1V19.3L6.7 20.6L3.5 18V4.8Z&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.5&quot;, &quot;stroke-linejoin&quot;: &quot;round&quot; },
+    { d: &quot;M3.5 4.8L6.7 7.4L20 6.1M6.7 7.4V20.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.5&quot;, &quot;stroke-linejoin&quot;: &quot;round&quot; },
+    { d: &quot;M9.1 9.6L11.9 9.4L15.1 14V9.7L14.3 9.8V9L17.5 8.7V9.5L16.8 9.6V17L15.2 17.1L11.7 12.1V16.6L12.5 16.5V17.3L9.1 17.6V16.8L10 16.7V10.4L9.1 10.5V9.6Z&quot;, fill: &quot;currentColor&quot; },
+  ];
   const ALL_STATUS = &quot;전체 상태&quot;;
   const ALL_PROJECTS = &quot;전체 프로젝트&quot;;
   const UNSPECIFIED_PROJECT = &quot;프로젝트 미지정&quot;;
@@ -4314,7 +4265,6 @@ html&gt;body{padding:0}&lt;/style&gt;
   const communalTasksNode = document.getElementById(&quot;wips-office-communal-tasks&quot;);
   const communalTitleNode = document.getElementById(&quot;wips-office-communal-title&quot;);
   const billboardNode = document.getElementById(&quot;wips-office-billboard&quot;);
-  const snapshotNode = document.getElementById(&quot;wips-office-snapshot&quot;);
   const sourceNode = document.getElementById(&quot;wips-office-source&quot;);
   let pendingHostState = window.openai &amp;&amp; window.openai.widgetState;
   let hasLiveModel = false;
@@ -4325,7 +4275,6 @@ html&gt;body{padding:0}&lt;/style&gt;
     status: ALL_STATUS,
     project: ALL_PROJECTS,
   };
-  const WORKING_STATUSES = new Set([&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;]);
   const openProgressDrawers = new Set();
   statusSelect.value = state.status;
   projectSelect.value = state.project;
@@ -4351,7 +4300,7 @@ html&gt;body{padding:0}&lt;/style&gt;
     return node;
   }
 
-  function createPersonArt(owner, count) {
+  function createPersonArt(owner) {
     const art = document.createElement(&quot;span&quot;);
     art.className = &quot;person-art&quot;;
     art.dataset.employee = owner;
@@ -4360,34 +4309,6 @@ html&gt;body{padding:0}&lt;/style&gt;
     for (const character of owner) motionPhase = (motionPhase * 31 + character.codePointAt(0)) % 5;
     art.dataset.motionPhase = String(motionPhase);
     art.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-    const shapeClasses = [
-      &quot;desk-rug&quot;,
-      &quot;desk-cable&quot;,
-      &quot;chair-back&quot;,
-      &quot;chair-stem&quot;,
-      &quot;chair-base&quot;,
-      &quot;person-body&quot;,
-      &quot;agent-tie&quot;,
-      &quot;person-head&quot;,
-      &quot;person-hair&quot;,
-      &quot;agent-glasses&quot;,
-      &quot;agent-headset&quot;,
-      &quot;desk-top&quot;,
-      &quot;desk-front&quot;,
-      &quot;pc-tower&quot;,
-      &quot;monitor-screen&quot;,
-      &quot;monitor-dual&quot;,
-      &quot;monitor-stand&quot;,
-      &quot;keyboard&quot;,
-      &quot;desk-mug&quot;,
-      &quot;desk-leg desk-leg-left&quot;,
-      &quot;desk-leg desk-leg-right&quot;,
-    ];
-    shapeClasses.forEach((classNames) =&gt; {
-      const shape = document.createElement(&quot;span&quot;);
-      shape.className = classNames;
-      art.append(shape);
-    });
     return art;
   }
 
@@ -4395,7 +4316,7 @@ html&gt;body{padding:0}&lt;/style&gt;
     const view = model.viewForEmployee(owner, filters);
     const station = document.createElement(&quot;article&quot;);
     station.className = &quot;workstation&quot;;
-    const isWorking = Boolean(view.representative &amp;&amp; WORKING_STATUSES.has(view.representative.status));
+    const isWorking = Boolean(view.representative &amp;&amp; ACTIVE_TICKER_STATUSES.has(view.representative.status));
     station.dataset.activity = isWorking ? &quot;working&quot; : &quot;idle&quot;;
     station.dataset.status = view.representative ? view.representative.status : &quot;idle&quot;;
 
@@ -4436,7 +4357,7 @@ html&gt;body{padding:0}&lt;/style&gt;
     button.setAttribute(&quot;aria-label&quot;, owner + &quot;의 최상위 일감 &quot; + view.topLevelCount + &quot;개 보기&quot;);
     button.setAttribute(&quot;aria-pressed&quot;, String(state.selectedEmployee === owner));
     button.draggable = editingSeating;
-    button.append(createPersonArt(owner, view.topLevelCount));
+    button.append(createPersonArt(owner));
     button.addEventListener(&quot;click&quot;, (event) =&gt; {
       if (suppressEmployeeClick) {
         event.preventDefault();
@@ -4805,13 +4726,6 @@ html&gt;body{padding:0}&lt;/style&gt;
         fill: &quot;none&quot;,
         &quot;aria-hidden&quot;: &quot;true&quot;,
       });
-      const NOTION_ICON_PATHS = [
-        { d: &quot;M3.5 4.8L16.8 3.5L20 6.1L6.7 7.4L3.5 4.8Z&quot;, fill: &quot;currentColor&quot;, &quot;fill-opacity&quot;: &quot;0.16&quot; },
-        { d: &quot;M3.5 4.8L6.7 7.4V20.6L3.5 18V4.8Z&quot;, fill: &quot;currentColor&quot;, &quot;fill-opacity&quot;: &quot;0.28&quot; },
-        { d: &quot;M3.5 4.8L16.8 3.5L20 6.1V19.3L6.7 20.6L3.5 18V4.8Z&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.5&quot;, &quot;stroke-linejoin&quot;: &quot;round&quot; },
-        { d: &quot;M3.5 4.8L6.7 7.4L20 6.1M6.7 7.4V20.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.5&quot;, &quot;stroke-linejoin&quot;: &quot;round&quot; },
-        { d: &quot;M9.1 9.6L11.9 9.4L15.1 14V9.7L14.3 9.8V9L17.5 8.7V9.5L16.8 9.6V17L15.2 17.1L11.7 12.1V16.6L12.5 16.5V17.3L9.1 17.6V16.8L10 16.7V10.4L9.1 10.5V9.6Z&quot;, fill: &quot;currentColor&quot; },
-      ];
       svg.append(...NOTION_ICON_PATHS.map((attrs) =&gt; createSvgNode(&quot;path&quot;, attrs)));
       link.append(svg);
       tags.append(link);
@@ -5281,16 +5195,6 @@ html&gt;body{padding:0}&lt;/style&gt;
     };
   }
 
-  function staticTodayInKorea() {
-    const values = Object.fromEntries(new Intl.DateTimeFormat(&quot;en&quot;, {
-      timeZone: &quot;Asia/Seoul&quot;,
-      year: &quot;numeric&quot;,
-      month: &quot;2-digit&quot;,
-      day: &quot;2-digit&quot;,
-    }).formatToParts(new Date()).filter((part) =&gt; part.type !== &quot;literal&quot;).map(({ type, value }) =&gt; [type, value]));
-    return values.year + &quot;-&quot; + values.month + &quot;-&quot; + values.day;
-  }
-
   function staticParseRetryAfter(value) {
     if (value == null || value === &quot;&quot;) return null;
     const seconds = Number(value);
@@ -5517,7 +5421,7 @@ html&gt;body{padding:0}&lt;/style&gt;
     }));
 
     return {
-      snapshotDate: staticTodayInKorea(),
+      snapshotDate: todayKstIso(),
       timezone: &quot;Asia/Seoul&quot;,
       sourceUrl: &quot;&quot;,
       results,
@@ -5564,8 +5468,6 @@ html&gt;body{padding:0}&lt;/style&gt;
     dataNode.textContent = JSON.stringify(snapshot);
     setSelectOptions(statusSelect, [ALL_STATUS, ...model.statuses], selectedStatus);
     setSelectOptions(projectSelect, [ALL_PROJECTS, ...model.projects, UNSPECIFIED_PROJECT], selectedProject);
-    snapshotNode.textContent = &quot;&quot;;
-    snapshotNode.hidden = true;
     if (snapshot.sourceUrl) {
       sourceNode.hidden = false;
       setSafeHref(sourceNode, snapshot.sourceUrl);
@@ -5596,8 +5498,6 @@ html&gt;body{padding:0}&lt;/style&gt;
     communalCount.textContent = &quot;&quot;;
     communalEmpty.hidden = true;
     communalEmpty.textContent = &quot;&quot;;
-    snapshotNode.textContent = &quot;&quot;;
-    snapshotNode.hidden = true;
     sourceNode.hidden = true;
     sourceNode.removeAttribute(&quot;href&quot;);
     if (mainView) mainView.hidden = true;
@@ -5889,8 +5789,6 @@ html&gt;body{padding:0}&lt;/style&gt;
     });
     void initStaticMode();
   } else {
-    snapshotNode.textContent = &quot;&quot;;
-    snapshotNode.hidden = true;
     setSafeHref(sourceNode, snapshot.sourceUrl);
     render();
     setSyncStatus(&quot;동기화 중…&quot;, &quot;loading&quot;);
