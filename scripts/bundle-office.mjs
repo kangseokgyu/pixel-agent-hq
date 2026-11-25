@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PROJECT_DIR = fileURLToPath(new URL("..", import.meta.url));
-export const DEFAULT_OFFICE_ENTRY = "src/office-entry.mjs";
+export const DEFAULT_OFFICE_ENTRY = "src/office-app.mjs";
 
 const IMPORT_PATTERN =
   /^import\s+(?:\*\s+as\s+([A-Za-z_$][A-Za-z0-9_$]*)|\{([\s\S]*?)\})\s+from\s+["']([^"']+)["'];?\r?\n?/gm;

@@ -3755,6 +3755,1090 @@ html&gt;body{padding:0}&lt;/style&gt;
 &lt;script id=&quot;office-model&quot;&gt;
 (() =&gt; {
 const __wips_mod_0 = (() =&gt; {
+const SEATING_STORAGE_KEY = &quot;wips-office-seating-v1&quot;;
+function createSeatingStore({
+storage,
+normalizeSeating,
+swapSeats,
+onMessage,
+} = {}) {
+const seatingKey = SEATING_STORAGE_KEY;
+const resolvedStorage = storage === undefined
+? (typeof window !== &quot;undefined&quot; ? window.localStorage : null)
+: storage;
+let editing = false;
+let draggingOwner = null;
+let suppressClick = false;
+let saved = [];
+try {
+saved = JSON.parse(resolvedStorage?.getItem(seatingKey) ?? &quot;[]&quot;);
+} catch {
+saved = [];
+}
+let order = normalizeSeating(saved);
+function persist(message) {
+try {
+resolvedStorage?.setItem(seatingKey, JSON.stringify(order));
+onMessage?.(message + &quot; 이 브라우저에 저장했습니다.&quot;);
+} catch {
+onMessage?.(message + &quot; 저장할 수 없어 현재 화면에만 적용됩니다.&quot;);
+}
+}
+return {
+isEditing() {
+return editing;
+},
+getOrder() {
+return order;
+},
+getDraggingOwner() {
+return draggingOwner;
+},
+syncEmployees(employees) {
+order = normalizeSeating(order);
+return order;
+},
+toggleEdit() {
+editing = !editing;
+return editing;
+},
+reset() {
+order = normalizeSeating([]);
+persist(&quot;기본 배치로 되돌렸습니다.&quot;);
+return order;
+},
+canDrop(owner, employees) {
+return editing &amp;&amp; draggingOwner !== null &amp;&amp; draggingOwner !== owner &amp;&amp;
+employees.includes(draggingOwner) &amp;&amp; employees.includes(owner);
+},
+startDrag(owner) {
+draggingOwner = owner;
+suppressClick = true;
+},
+endDrag() {
+draggingOwner = null;
+},
+clearClickSuppression() {
+suppressClick = false;
+},
+consumeClickSuppression() {
+if (!suppressClick) return false;
+suppressClick = false;
+return true;
+},
+dropOn(targetOwner) {
+const source = draggingOwner;
+draggingOwner = null;
+order = swapSeats(order, source, targetOwner);
+persist(source + &quot;와 &quot; + targetOwner + &quot;의 자리를 바꿨습니다.&quot;);
+return order;
+},
+swapWith(owner, target) {
+order = swapSeats(order, owner, target);
+persist(owner + &quot;와 &quot; + target + &quot;의 자리를 바꿨습니다.&quot;);
+return order;
+},
+};
+}
+return { SEATING_STORAGE_KEY: SEATING_STORAGE_KEY, createSeatingStore: createSeatingStore };
+})();
+const __wips_mod_1 = (() =&gt; {
+const STATUS_ORDER = [&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;, &quot;대기&quot;, &quot;예정&quot;, &quot;완료&quot;];
+const STATUS_RANK = new Map(STATUS_ORDER.map((status, index) =&gt; [status, index]));
+const KANBAN_LANES = [
+{ id: &quot;planned&quot;, title: &quot;예정 · 대기&quot;, dot: &quot;대기&quot;, statuses: [&quot;대기&quot;, &quot;예정&quot;] },
+{ id: &quot;progress&quot;, title: &quot;진행&quot;, dot: &quot;진행&quot;, statuses: [&quot;진행&quot;] },
+{ id: &quot;review&quot;, title: &quot;검증 · 테스트&quot;, dot: &quot;검증&quot;, statuses: [&quot;검증&quot;, &quot;장시간 테스트 중&quot;] },
+];
+const EMPLOYEES = [&quot;sb&quot;, &quot;이요원&quot;, &quot;여이전트&quot;, &quot;석규&quot;, &quot;UI&quot;];
+const SHARED_OWNER = &quot;공통&quot;;
+const ACTIVE_TICKER_STATUSES = new Set([&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;]);
+const ALL_STATUS = &quot;전체 상태&quot;;
+const ALL_PROJECTS = &quot;전체 프로젝트&quot;;
+const UNSPECIFIED_PROJECT = &quot;프로젝트 미지정&quot;;
+function isSharedOwner(owner) {
+return owner === null || owner === undefined || owner === &quot;&quot; || owner === SHARED_OWNER;
+}
+function todayKstIso() {
+try {
+return new Intl.DateTimeFormat(&quot;en-CA&quot;, { timeZone: &quot;Asia/Seoul&quot; }).format(new Date());
+} catch {
+return new Date().toISOString().slice(0, 10);
+}
+}
+function parseIsoDayMs(value) {
+if (typeof value !== &quot;string&quot;) return null;
+const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+if (!match) return null;
+return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+function formatMmDd(value) {
+if (typeof value !== &quot;string&quot;) return &quot;&quot;;
+const match = value.match(/^\d{4}-(\d{2})-(\d{2})$/);
+return match ? match[1] + &quot;/&quot; + match[2] : value;
+}
+function formatScheduleShort(task, includeTrailingTilde) {
+if (task.startDate &amp;&amp; task.endDate) {
+return formatMmDd(task.startDate) + &quot;~&quot; + formatMmDd(task.endDate);
+}
+if (task.startDate) {
+return formatMmDd(task.startDate) + (includeTrailingTilde ? &quot;~&quot; : &quot;&quot;);
+}
+if (task.endDate) return &quot;~&quot; + formatMmDd(task.endDate);
+return &quot;일정 미지정&quot;;
+}
+function projectLabel(task) {
+return task.project === null || task.project === undefined ? UNSPECIFIED_PROJECT : task.project;
+}
+function matches(task, filters) {
+const statusOk = filters.status === ALL_STATUS || task.status === filters.status;
+const projectOk = filters.project === ALL_PROJECTS || projectLabel(task) === filters.project;
+return statusOk &amp;&amp; projectOk;
+}
+function safeNotionUrl(value) {
+if (typeof value !== &quot;string&quot; || !value.trim()) return &quot;&quot;;
+try {
+const parsed = new URL(value);
+const allowedHost = parsed.hostname === &quot;app.notion.com&quot; || parsed.hostname === &quot;notion.so&quot; || parsed.hostname.endsWith(&quot;.notion.so&quot;);
+const hasNoCredentials = parsed.username === &quot;&quot; &amp;&amp; parsed.password === &quot;&quot;;
+const usesDefaultHttpsPort = parsed.port === &quot;&quot;;
+return parsed.protocol === &quot;https:&quot; &amp;&amp; allowedHost &amp;&amp; hasNoCredentials &amp;&amp; usesDefaultHttpsPort ? parsed.href : &quot;&quot;;
+} catch {
+return &quot;&quot;;
+}
+}
+function toNotionAppUrl(value) {
+const safe = safeNotionUrl(value);
+return safe ? safe.replace(/^https:/, &quot;notion:&quot;) : &quot;&quot;;
+}
+function formatGoalDate(task) {
+if (task.startDate &amp;&amp; task.endDate) return task.startDate + &quot; — &quot; + task.endDate;
+if (task.startDate) return task.startDate;
+if (task.endDate) return &quot;~ &quot; + task.endDate;
+return &quot;미지정&quot;;
+}
+function computeScheduleGauge(task, referenceDateIso) {
+const todayIso = referenceDateIso || todayKstIso();
+const todayMs = parseIsoDayMs(todayIso);
+const targetIso = task?.startDate || task?.endDate || null;
+const targetMs = parseIsoDayMs(targetIso);
+let dDayLabel = ACTIVE_TICKER_STATUSES.has(task?.status) ? &quot;수시&quot; : &quot;미정&quot;;
+let diffDays = null;
+if (todayMs !== null &amp;&amp; targetMs !== null) {
+diffDays = Math.round((targetMs - todayMs) / 86_400_000);
+if (diffDays &gt; 0) dDayLabel = &quot;D-&quot; + diffDays;
+else if (diffDays === 0) dDayLabel = &quot;D-DAY&quot;;
+else dDayLabel = &quot;D+&quot; + Math.abs(diffDays);
+}
+let progress = 20;
+if (diffDays !== null) {
+if (diffDays &lt;= 0) progress = 100;
+else if (diffDays &gt;= 14) progress = 10;
+else progress = Math.round(100 - (diffDays / 14) * 90);
+}
+let tone = &quot;slate&quot;;
+if (diffDays !== null) {
+if (diffDays &gt;= 2) {
+tone = &quot;green&quot;;
+} else if (diffDays === 1 || diffDays === 0) {
+tone = &quot;amber&quot;;
+} else if (Boolean(task?.startDate) &amp;&amp; ACTIVE_TICKER_STATUSES.has(task?.status)) {
+tone = &quot;green&quot;;
+} else {
+tone = &quot;red&quot;;
+}
+}
+return { dDayLabel, diffDays, progress, tone };
+}
+function normalizeTaskId(value) {
+if (typeof value !== &quot;string&quot;) return &quot;&quot;;
+return value.trim().toLowerCase().replace(/-/g, &quot;&quot;);
+}
+function extractTaskId(task) {
+const direct = normalizeTaskId(task?.id);
+if (direct) return direct;
+if (typeof task?.url !== &quot;string&quot; || !task.url) return &quot;&quot;;
+const pathOnly = task.url.split(/[?#]/)[0].replace(/\/+$/, &quot;&quot;);
+const match = pathOnly.match(/([0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+return match ? normalizeTaskId(match[1]) : &quot;&quot;;
+}
+function createOfficeModel(snapshot) {
+const tasks = Array.isArray(snapshot.results) ? snapshot.results.slice() : [];
+const statuses = STATUS_ORDER.concat([...new Set(tasks.map((task) =&gt; task.status).filter(Boolean))]
+.filter((status) =&gt; !STATUS_ORDER.includes(status)));
+const employees = EMPLOYEES.concat([...new Set(tasks.map((task) =&gt; task.owner).filter((owner) =&gt; owner &amp;&amp; !isSharedOwner(owner)))]
+.filter((owner) =&gt; !EMPLOYEES.includes(owner)));
+const projects = [&quot;2.3&quot;, &quot;2.2.1&quot;, &quot;기타&quot;].concat([...new Set(tasks.map((task) =&gt; task.project).filter(Boolean))]
+.filter((project) =&gt; ![&quot;2.3&quot;, &quot;2.2.1&quot;, &quot;기타&quot;].includes(project)));
+const allTasksById = new Map();
+for (const task of tasks) {
+const id = extractTaskId(task);
+if (id &amp;&amp; !allTasksById.has(id)) {
+allTasksById.set(id, task);
+}
+}
+const childrenByParentId = new Map();
+const seenChildrenByParent = new Map();
+function addChildLink(parentId, childTask) {
+if (!parentId || !childTask) return;
+const childId = extractTaskId(childTask);
+if (childId &amp;&amp; childId === parentId) return;
+const childKey = childId || childTask;
+let seen = seenChildrenByParent.get(parentId);
+if (!seen) {
+seen = new Set();
+seenChildrenByParent.set(parentId, seen);
+}
+if (seen.has(childKey)) return;
+seen.add(childKey);
+let list = childrenByParentId.get(parentId);
+if (!list) {
+list = [];
+childrenByParentId.set(parentId, list);
+}
+list.push(childTask);
+}
+for (const task of tasks) {
+if (Array.isArray(task.parentTaskIds)) {
+for (const rawParentId of task.parentTaskIds) {
+addChildLink(normalizeTaskId(rawParentId), task);
+}
+}
+}
+for (const task of tasks) {
+const parentId = extractTaskId(task);
+if (!parentId || !Array.isArray(task.subTaskIds)) continue;
+for (const rawChildId of task.subTaskIds) {
+const childTask = allTasksById.get(normalizeTaskId(rawChildId));
+if (childTask) addChildLink(parentId, childTask);
+}
+}
+function computeTaskProgress(task) {
+const rawChecklist = Array.isArray(task?.checklist) ? task.checklist : [];
+const checklistItems = rawChecklist
+.filter((item) =&gt; item &amp;&amp; typeof item === &quot;object&quot; &amp;&amp; typeof item.text === &quot;string&quot; &amp;&amp; item.text.trim())
+.map((item) =&gt; ({ text: item.text.trim(), done: Boolean(item.done) }));
+const checklist = checklistItems.length &gt; 0
+? {
+done: checklistItems.filter((item) =&gt; item.done).length,
+total: checklistItems.length,
+items: checklistItems,
+}
+: null;
+const taskId = extractTaskId(task);
+const linkedChildren = taskId ? (childrenByParentId.get(taskId) || []) : [];
+const subtaskItems = linkedChildren.map((child) =&gt; ({
+id: extractTaskId(child) || child.title || &quot;&quot;,
+title: child.title || &quot;제목 없음&quot;,
+status: child.status || &quot;미지정&quot;,
+owner: child.owner ?? null,
+done: child.status === &quot;완료&quot;,
+sourceUrl: safeNotionUrl(child.url),
+}));
+const subtasks = subtaskItems.length &gt; 0
+? {
+done: subtaskItems.filter((item) =&gt; item.done).length,
+total: subtaskItems.length,
+items: subtaskItems,
+}
+: null;
+return { checklist, subtasks };
+}
+function describeTask(task, referenceDateIso) {
+const gauge = computeScheduleGauge(task, referenceDateIso);
+const progressDetail = computeTaskProgress(task);
+return {
+taskKey: task.id || task.url || task.title || &quot;&quot;,
+title: task.title,
+status: task.status,
+project: projectLabel(task),
+priority: task.priority ?? &quot;미지정&quot;,
+goalDate: formatGoalDate(task),
+nextCheck: task.checkDate ?? &quot;미지정&quot;,
+nextAction: task.nextAction ?? &quot;미지정&quot;,
+doneCondition: task.doneCondition ?? &quot;미지정&quot;,
+sourceUrl: safeNotionUrl(task.url),
+dDayLabel: gauge.dDayLabel,
+progress: gauge.progress,
+tone: gauge.tone,
+checklist: progressDetail.checklist,
+subtasks: progressDetail.subtasks,
+};
+}
+function parseStateCandidate(candidate) {
+if (typeof candidate === &quot;string&quot;) {
+try { return JSON.parse(candidate); } catch { return null; }
+}
+return candidate &amp;&amp; typeof candidate === &quot;object&quot; ? candidate : null;
+}
+function stateFromHost(candidate) {
+const outer = parseStateCandidate(candidate);
+if (!outer) return null;
+const nested = parseStateCandidate(outer.privateContent) || parseStateCandidate(outer.modelContent);
+const saved = nested || outer;
+const selectedEmployee = employees.includes(saved.selectedEmployee) ? saved.selectedEmployee : &quot;sb&quot;;
+const status = [ALL_STATUS].concat(statuses).includes(saved.status) ? saved.status : ALL_STATUS;
+const projectOptions = [ALL_PROJECTS, ...projects, UNSPECIFIED_PROJECT];
+const project = projectOptions.includes(saved.project) ? saved.project : ALL_PROJECTS;
+return { selectedEmployee, status, project };
+}
+function restorePendingState(candidate, currentState, userChangedState) {
+if (userChangedState) return currentState;
+return stateFromHost(candidate) || currentState;
+}
+function filteredTasks(filters) {
+return tasks.filter((task) =&gt; matches(task, filters));
+}
+function summary(filters) {
+const shown = filteredTasks(filters);
+const statusCounts = Object.fromEntries(statuses.map((status) =&gt; [
+status,
+shown.filter((task) =&gt; task.status === status).length,
+]));
+return {
+total: shown.length,
+snapshotTotal: tasks.length,
+unassigned: shown.filter((task) =&gt; isSharedOwner(task.owner)).length,
+statuses: statusCounts,
+};
+}
+function employeeTasks(owner, filters) {
+return filteredTasks(filters).filter((task) =&gt; task.owner === owner &amp;&amp; task.status !== &quot;완료&quot;);
+}
+function unassignedTasks(filters) {
+return filteredTasks(filters).filter((task) =&gt; isSharedOwner(task.owner) &amp;&amp; task.status !== &quot;완료&quot;);
+}
+function billboardView(filters, referenceDateIso) {
+const todayIso = referenceDateIso || todayKstIso();
+const shared = unassignedTasks(filters);
+const scheduleTasks = shared
+.map((task, index) =&gt; ({
+task,
+index,
+targetIso: task.startDate || task.endDate || null,
+rank: STATUS_RANK.get(task.status) ?? STATUS_ORDER.length,
+}))
+.sort((left, right) =&gt; {
+const leftActiveUndated = !left.targetIso &amp;&amp; ACTIVE_TICKER_STATUSES.has(left.task.status);
+const rightActiveUndated = !right.targetIso &amp;&amp; ACTIVE_TICKER_STATUSES.has(right.task.status);
+if (leftActiveUndated !== rightActiveUndated) return leftActiveUndated ? -1 : 1;
+if (left.targetIso &amp;&amp; right.targetIso &amp;&amp; left.targetIso !== right.targetIso) {
+return left.targetIso.localeCompare(right.targetIso);
+}
+if (Boolean(left.targetIso) !== Boolean(right.targetIso)) return left.targetIso ? -1 : 1;
+return left.rank - right.rank || left.index - right.index;
+})
+.map(({ task }, idx) =&gt; {
+const gauge = computeScheduleGauge(task, todayIso);
+return {
+stepLabel: &quot;STEP &quot; + String(idx + 1).padStart(2, &quot;0&quot;),
+title: task.title,
+status: task.status || &quot;미정&quot;,
+dDayLabel: gauge.dDayLabel,
+shortDate: formatScheduleShort(task, false),
+progress: gauge.progress,
+tone: gauge.tone,
+task,
+};
+});
+const tickerTasks = filteredTasks(filters)
+.filter((task) =&gt; !isSharedOwner(task.owner) &amp;&amp; ACTIVE_TICKER_STATUSES.has(task.status))
+.map((task) =&gt; ({
+owner: task.owner,
+title: task.title,
+status: task.status,
+shortDate: formatScheduleShort(task, true),
+task,
+}));
+return {
+todayLabel: formatMmDd(todayIso),
+scheduleTasks,
+tickerTasks,
+};
+}
+function representativeTask(owner, filters) {
+const owned = employeeTasks(owner, filters).filter((task) =&gt; task.status !== &quot;완료&quot; &amp;&amp; !task.parentTaskIds?.length);
+if (owned.length === 0) return null;
+return owned
+.map((task, index) =&gt; ({ task, index }))
+.sort((left, right) =&gt; {
+const leftRank = STATUS_RANK.get(left.task.status) ?? STATUS_ORDER.length;
+const rightRank = STATUS_RANK.get(right.task.status) ?? STATUS_ORDER.length;
+return leftRank - rightRank || left.index - right.index;
+})[0].task;
+}
+function viewForEmployee(owner, filters) {
+const owned = employeeTasks(owner, filters);
+const topLevelCount = owned.filter((task) =&gt; task.status !== &quot;완료&quot; &amp;&amp; !task.parentTaskIds?.length).length;
+const representative = representativeTask(owner, filters);
+return {
+owner,
+tasks: owned,
+topLevelCount,
+representative,
+otherCount: representative ? topLevelCount - 1 : 0,
+empty: owned.length === 0,
+};
+}
+function normalizeSeating(saved) {
+const valid = Array.isArray(saved) ? saved.filter((owner) =&gt; employees.includes(owner)) : [];
+return [...new Set([...valid, ...employees])];
+}
+function swapSeats(saved, owner, target) {
+const order = normalizeSeating(saved);
+const from = order.indexOf(owner);
+const to = order.indexOf(target);
+if (from &gt;= 0 &amp;&amp; to &gt;= 0) [order[from], order[to]] = [order[to], order[from]];
+return order;
+}
+function focusEmployeeButton(buttons, owner) {
+const button = buttons.find((candidate) =&gt; candidate.dataset.owner === owner);
+if (!button || typeof button.focus !== &quot;function&quot;) return null;
+button.focus();
+return button;
+}
+function groupTasksByLane(tasks) {
+const byStatus = new Map();
+for (const lane of KANBAN_LANES) {
+for (const status of lane.statuses) byStatus.set(status, lane.id);
+}
+const buckets = new Map(KANBAN_LANES.map((lane) =&gt; [lane.id, []]));
+for (const task of Array.isArray(tasks) ? tasks : []) {
+const laneId = byStatus.get(task?.status) || KANBAN_LANES[0].id;
+buckets.get(laneId).push(task);
+}
+return KANBAN_LANES.map((lane) =&gt; ({
+id: lane.id,
+title: lane.title,
+dot: lane.dot,
+showExactStatus: lane.statuses.length &gt; 1,
+tasks: buckets.get(lane.id),
+}));
+}
+return {
+employees,
+statuses,
+projects,
+kanbanLanes: KANBAN_LANES,
+groupTasksByLane,
+stateFromHost,
+restorePendingState,
+filteredTasks,
+summary,
+employeeTasks,
+unassignedTasks,
+representativeTask,
+viewForEmployee,
+focusEmployeeButton,
+normalizeSeating,
+swapSeats,
+describeTask,
+billboardView,
+};
+}
+return { STATUS_ORDER: STATUS_ORDER, KANBAN_LANES: KANBAN_LANES, EMPLOYEES: EMPLOYEES, SHARED_OWNER: SHARED_OWNER, ACTIVE_TICKER_STATUSES: ACTIVE_TICKER_STATUSES, ALL_STATUS: ALL_STATUS, ALL_PROJECTS: ALL_PROJECTS, UNSPECIFIED_PROJECT: UNSPECIFIED_PROJECT, isSharedOwner: isSharedOwner, todayKstIso: todayKstIso, safeNotionUrl: safeNotionUrl, toNotionAppUrl: toNotionAppUrl, computeScheduleGauge: computeScheduleGauge, normalizeTaskId: normalizeTaskId, extractTaskId: extractTaskId, createOfficeModel: createOfficeModel };
+})();
+const __wips_mod_2 = (() =&gt; {
+function setSafeHref(anchor, url, toNotionAppUrl) {
+const appUrl = toNotionAppUrl(url);
+if (appUrl) {
+anchor.href = appUrl;
+anchor.removeAttribute(&quot;target&quot;);
+anchor.removeAttribute(&quot;rel&quot;);
+} else {
+anchor.removeAttribute(&quot;href&quot;);
+anchor.removeAttribute(&quot;target&quot;);
+anchor.removeAttribute(&quot;rel&quot;);
+}
+}
+function addText(parent, tag, className, text) {
+const node = document.createElement(tag);
+if (className) node.className = className;
+if (text !== undefined &amp;&amp; text !== null) node.textContent = String(text);
+parent.append(node);
+return node;
+}
+function createSvgNode(tag, attrs) {
+const node = document.createElementNS
+? document.createElementNS(&quot;http://www.w3.org/2000/svg&quot;, tag)
+: document.createElement(tag);
+Object.entries(attrs).forEach(([key, value]) =&gt; node.setAttribute(key, value));
+return node;
+}
+function createIcon16(shapes, extraAttrs = {}) {
+const svg = createSvgNode(&quot;svg&quot;, {
+...extraAttrs,
+width: &quot;13&quot;,
+height: &quot;13&quot;,
+viewBox: &quot;0 0 16 16&quot;,
+fill: &quot;none&quot;,
+&quot;aria-hidden&quot;: &quot;true&quot;,
+});
+svg.append(...shapes.map(([tag, attrs]) =&gt; createSvgNode(tag, attrs)));
+return svg;
+}
+function checkboxShapes(checked) {
+const rect = [&quot;rect&quot;, {
+x: &quot;2&quot;,
+y: &quot;2&quot;,
+width: &quot;12&quot;,
+height: &quot;12&quot;,
+rx: &quot;3&quot;,
+stroke: &quot;currentColor&quot;,
+&quot;stroke-width&quot;: &quot;1.4&quot;,
+}];
+if (!checked) return [rect];
+return [
+rect,
+[&quot;path&quot;, {
+d: &quot;M5.2 8.2L7.1 10.1L11 6.1&quot;,
+stroke: &quot;currentColor&quot;,
+&quot;stroke-width&quot;: &quot;1.5&quot;,
+&quot;stroke-linecap&quot;: &quot;round&quot;,
+&quot;stroke-linejoin&quot;: &quot;round&quot;,
+}],
+];
+}
+function createBar(done, total) {
+const complete = total &gt; 0 &amp;&amp; done === total;
+if (total &lt;= 12) {
+const segs = document.createElement(&quot;div&quot;);
+segs.className = &quot;kanban-progress-segs&quot;;
+segs.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+for (let idx = 0; idx &lt; total; idx += 1) {
+const seg = document.createElement(&quot;span&quot;);
+seg.className = idx &lt; done
+? (complete ? &quot;kanban-progress-seg is-done-all&quot; : &quot;kanban-progress-seg is-filled&quot;)
+: &quot;kanban-progress-seg&quot;;
+segs.append(seg);
+}
+return segs;
+}
+const track = document.createElement(&quot;div&quot;);
+track.className = &quot;kanban-progress-track&quot;;
+track.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+const fill = document.createElement(&quot;span&quot;);
+fill.className = &quot;kanban-progress-fill&quot;;
+if (complete) fill.dataset.complete = &quot;true&quot;;
+if (fill.style) fill.style.width = Math.round((done / total) * 100) + &quot;%&quot;;
+track.append(fill);
+return track;
+}
+function createRow(kind, labelText, shapes, done, total) {
+const row = document.createElement(&quot;div&quot;);
+row.className = &quot;kanban-progress-row&quot;;
+row.dataset.kind = kind;
+const kindNode = document.createElement(&quot;span&quot;);
+kindNode.className = &quot;kanban-progress-kind&quot;;
+kindNode.append(createIcon16(shapes));
+addText(kindNode, &quot;span&quot;, &quot;&quot;, labelText);
+row.append(kindNode, createBar(done, total));
+const count = addText(row, &quot;span&quot;, &quot;kanban-progress-count&quot;, done + &quot;/&quot; + total);
+if (total &gt; 0 &amp;&amp; done === total) count.dataset.complete = &quot;true&quot;;
+return row;
+}
+function createTaskProgressBox(details, openProgressDrawers, toNotionAppUrl) {
+if (!details.checklist &amp;&amp; !details.subtasks) return null;
+const box = document.createElement(&quot;details&quot;);
+box.className = &quot;kanban-progress-box&quot;;
+if (openProgressDrawers.has(details.taskKey)) box.open = true;
+box.addEventListener(&quot;toggle&quot;, () =&gt; {
+if (box.open) openProgressDrawers.add(details.taskKey);
+else openProgressDrawers.delete(details.taskKey);
+});
+const summary = document.createElement(&quot;summary&quot;);
+summary.className = &quot;kanban-progress-summary&quot;;
+const rows = document.createElement(&quot;div&quot;);
+rows.className = &quot;kanban-progress-rows&quot;;
+if (details.checklist) {
+rows.append(createRow(&quot;checklist&quot;, &quot;체크&quot;, checkboxShapes(true), details.checklist.done, details.checklist.total));
+}
+if (details.subtasks) {
+rows.append(createRow(
+&quot;subtasks&quot;,
+&quot;하위&quot;,
+[
+[&quot;circle&quot;, { cx: &quot;4&quot;, cy: &quot;3.5&quot;, r: &quot;1.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.4&quot; }],
+[&quot;circle&quot;, { cx: &quot;11.5&quot;, cy: &quot;7.5&quot;, r: &quot;1.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.4&quot; }],
+[&quot;circle&quot;, { cx: &quot;11.5&quot;, cy: &quot;12.5&quot;, r: &quot;1.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.4&quot; }],
+[&quot;path&quot;, { d: &quot;M4 5.2V12.5H9.8M4 7.5H9.8&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.4&quot;, &quot;stroke-linecap&quot;: &quot;round&quot;, &quot;stroke-linejoin&quot;: &quot;round&quot; }],
+],
+details.subtasks.done,
+details.subtasks.total,
+));
+}
+const chevron = createIcon16(
+[[&quot;path&quot;, { d: &quot;M4 6L8 10L12 6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.6&quot;, &quot;stroke-linecap&quot;: &quot;round&quot;, &quot;stroke-linejoin&quot;: &quot;round&quot; }]],
+{ class: &quot;kanban-progress-chevron&quot; },
+);
+summary.append(rows, chevron);
+box.append(summary);
+const drawer = document.createElement(&quot;div&quot;);
+drawer.className = &quot;kanban-progress-drawer&quot;;
+if (details.checklist) {
+const group = document.createElement(&quot;div&quot;);
+group.className = &quot;kanban-progress-group&quot;;
+group.dataset.group = &quot;checklist&quot;;
+addText(group, &quot;div&quot;, &quot;kanban-progress-group-title&quot;, &quot;체크리스트 (&quot; + details.checklist.done + &quot;/&quot; + details.checklist.total + &quot;)&quot;);
+const list = document.createElement(&quot;ul&quot;);
+list.className = &quot;kanban-progress-list&quot;;
+details.checklist.items.forEach((item) =&gt; {
+const li = document.createElement(&quot;li&quot;);
+li.className = item.done ? &quot;kanban-progress-item is-done&quot; : &quot;kanban-progress-item&quot;;
+li.dataset.done = String(item.done);
+const mark = document.createElement(&quot;span&quot;);
+mark.className = &quot;kanban-check-mark&quot;;
+mark.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+mark.append(createIcon16(checkboxShapes(item.done)));
+li.append(mark);
+addText(li, &quot;span&quot;, &quot;kanban-progress-item-text&quot;, item.text);
+list.append(li);
+});
+group.append(list);
+drawer.append(group);
+}
+if (details.subtasks) {
+const group = document.createElement(&quot;div&quot;);
+group.className = &quot;kanban-progress-group&quot;;
+group.dataset.group = &quot;subtasks&quot;;
+addText(group, &quot;div&quot;, &quot;kanban-progress-group-title&quot;, &quot;하위 일감 (&quot; + details.subtasks.done + &quot;/&quot; + details.subtasks.total + &quot;)&quot;);
+const list = document.createElement(&quot;ul&quot;);
+list.className = &quot;kanban-progress-list&quot;;
+details.subtasks.items.forEach((item) =&gt; {
+const li = document.createElement(&quot;li&quot;);
+li.className = item.done ? &quot;kanban-progress-item is-done&quot; : &quot;kanban-progress-item&quot;;
+li.dataset.done = String(item.done);
+const dot = document.createElement(&quot;span&quot;);
+dot.className = &quot;status-dot&quot;;
+dot.dataset.status = item.status;
+dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+li.append(dot);
+if (item.sourceUrl) {
+const link = document.createElement(&quot;a&quot;);
+link.className = &quot;kanban-subtask-link&quot;;
+link.textContent = item.title;
+setSafeHref(link, item.sourceUrl, toNotionAppUrl);
+li.append(link);
+} else {
+addText(li, &quot;span&quot;, &quot;kanban-progress-item-text&quot;, item.title);
+}
+addText(li, &quot;span&quot;, &quot;kanban-subtask-status&quot;, item.status);
+list.append(li);
+});
+group.append(list);
+drawer.append(group);
+}
+box.append(drawer);
+return box;
+}
+return { setSafeHref: setSafeHref, addText: addText, createSvgNode: createSvgNode, createTaskProgressBox: createTaskProgressBox };
+})();
+const __wips_mod_3 = (() =&gt; {
+const { ACTIVE_TICKER_STATUSES, ALL_PROJECTS, toNotionAppUrl } = __wips_mod_1;
+const { addText, createSvgNode, createTaskProgressBox, setSafeHref: setAnchorSafeHref } = __wips_mod_2;
+const NOTION_ICON_PATHS = [
+{ d: &quot;M3.5 4.8L16.8 3.5L20 6.1L6.7 7.4L3.5 4.8Z&quot;, fill: &quot;currentColor&quot;, &quot;fill-opacity&quot;: &quot;0.16&quot; },
+{ d: &quot;M3.5 4.8L6.7 7.4V20.6L3.5 18V4.8Z&quot;, fill: &quot;currentColor&quot;, &quot;fill-opacity&quot;: &quot;0.28&quot; },
+{ d: &quot;M3.5 4.8L16.8 3.5L20 6.1V19.3L6.7 20.6L3.5 18V4.8Z&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.5&quot;, &quot;stroke-linejoin&quot;: &quot;round&quot; },
+{ d: &quot;M3.5 4.8L6.7 7.4L20 6.1M6.7 7.4V20.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.5&quot;, &quot;stroke-linejoin&quot;: &quot;round&quot; },
+{ d: &quot;M9.1 9.6L11.9 9.4L15.1 14V9.7L14.3 9.8V9L17.5 8.7V9.5L16.8 9.6V17L15.2 17.1L11.7 12.1V16.6L12.5 16.5V17.3L9.1 17.6V16.8L10 16.7V10.4L9.1 10.5V9.6Z&quot;, fill: &quot;currentColor&quot; },
+];
+const STATUS_LABELS_EN = {
+진행: &quot;RUNNING&quot;,
+검증: &quot;TESTING&quot;,
+&quot;장시간 테스트 중&quot;: &quot;LONG TEST&quot;,
+대기: &quot;WAITING&quot;,
+예정: &quot;STANDBY&quot;,
+완료: &quot;DONE&quot;,
+};
+function setSafeHref(anchor, url) {
+return setAnchorSafeHref(anchor, url, toNotionAppUrl);
+}
+function createPersonArt(owner) {
+const art = document.createElement(&quot;span&quot;);
+art.className = &quot;person-art&quot;;
+art.dataset.employee = owner;
+art.dataset.agentStyle = owner === &quot;석규&quot; || owner === &quot;UI&quot; ? &quot;cyber&quot; : &quot;suit&quot;;
+let motionPhase = 0;
+for (const character of owner) motionPhase = (motionPhase * 31 + character.codePointAt(0)) % 5;
+art.dataset.motionPhase = String(motionPhase);
+art.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+return art;
+}
+function createKanbanCard(model, task, showExactStatus, openProgressDrawers) {
+const details = model.describeTask(task);
+const card = document.createElement(&quot;article&quot;);
+card.className = &quot;kanban-card&quot;;
+card.dataset.taskTitle = details.title;
+const top = document.createElement(&quot;div&quot;);
+top.className = &quot;kanban-card-top&quot;;
+const badge = document.createElement(&quot;span&quot;);
+badge.className = &quot;kanban-badge&quot;;
+const dot = document.createElement(&quot;span&quot;);
+dot.className = &quot;status-dot&quot;;
+dot.dataset.status = details.status;
+dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+badge.append(dot);
+addText(badge, &quot;span&quot;, &quot;&quot;, showExactStatus ? details.status + &quot; · &quot; + details.project : details.project);
+top.append(badge);
+const tags = document.createElement(&quot;div&quot;);
+tags.className = &quot;kanban-card-tags&quot;;
+if (details.priority &amp;&amp; details.priority !== &quot;미지정&quot;) {
+addText(tags, &quot;span&quot;, &quot;kanban-priority&quot;, details.priority);
+}
+const dday = addText(tags, &quot;span&quot;, &quot;kanban-dday&quot;, details.dDayLabel);
+dday.dataset.tone = details.tone;
+if (details.sourceUrl) {
+const link = document.createElement(&quot;a&quot;);
+link.className = &quot;task-source&quot;;
+link.setAttribute(&quot;aria-label&quot;, &quot;Notion에서 보기&quot;);
+link.setAttribute(&quot;title&quot;, &quot;Notion에서 보기&quot;);
+setSafeHref(link, details.sourceUrl);
+const svg = createSvgNode(&quot;svg&quot;, {
+viewBox: &quot;0 0 24 24&quot;,
+fill: &quot;none&quot;,
+&quot;aria-hidden&quot;: &quot;true&quot;,
+});
+svg.append(...NOTION_ICON_PATHS.map((attrs) =&gt; createSvgNode(&quot;path&quot;, attrs)));
+link.append(svg);
+tags.append(link);
+}
+top.append(tags);
+card.append(top);
+addText(card, &quot;h3&quot;, &quot;&quot;, details.title);
+const metaParts = [&quot;일정 &quot; + details.goalDate];
+if (details.nextCheck &amp;&amp; details.nextCheck !== &quot;미지정&quot;) {
+metaParts.push(&quot;확인 &quot; + details.nextCheck);
+}
+const meta = document.createElement(&quot;div&quot;);
+meta.className = &quot;kanban-meta&quot;;
+addText(meta, &quot;span&quot;, &quot;&quot;, metaParts.join(&quot; · &quot;));
+const pct = addText(meta, &quot;span&quot;, &quot;kanban-progress-pct&quot;, details.progress + &quot;%&quot;);
+pct.dataset.tone = details.tone;
+card.append(meta);
+const bar = document.createElement(&quot;div&quot;);
+bar.className = &quot;kanban-bar&quot;;
+const fill = document.createElement(&quot;span&quot;);
+fill.className = &quot;kanban-bar-fill&quot;;
+fill.dataset.tone = details.tone;
+if (fill.style) fill.style.width = details.progress + &quot;%&quot;;
+bar.append(fill);
+card.append(bar);
+if (details.nextAction &amp;&amp; details.nextAction !== &quot;미지정&quot;) {
+const next = document.createElement(&quot;div&quot;);
+next.className = &quot;kanban-next&quot;;
+addText(next, &quot;span&quot;, &quot;kanban-next-label&quot;, &quot;다음&quot;);
+addText(next, &quot;span&quot;, &quot;&quot;, details.nextAction);
+card.append(next);
+}
+const progressBox = createTaskProgressBox(details, openProgressDrawers, toNotionAppUrl);
+if (progressBox) card.append(progressBox);
+if (details.doneCondition &amp;&amp; details.doneCondition !== &quot;미지정&quot;) {
+const cond = document.createElement(&quot;details&quot;);
+cond.className = &quot;kanban-details&quot;;
+addText(cond, &quot;summary&quot;, &quot;&quot;, &quot;완료 조건 보기&quot;);
+addText(cond, &quot;p&quot;, &quot;&quot;, details.doneCondition);
+card.append(cond);
+}
+return card;
+}
+function renderKanbanBoard(model, container, tasks, openProgressDrawers) {
+const lanes = model.groupTasksByLane(tasks);
+container.replaceChildren(...lanes.map((lane) =&gt; {
+const col = document.createElement(&quot;section&quot;);
+col.className = &quot;kanban-col&quot;;
+col.dataset.laneId = lane.id;
+const head = document.createElement(&quot;header&quot;);
+head.className = &quot;kanban-col-head&quot;;
+const titleWrap = document.createElement(&quot;span&quot;);
+titleWrap.className = &quot;kanban-col-title&quot;;
+const dot = document.createElement(&quot;span&quot;);
+dot.className = &quot;status-dot&quot;;
+dot.dataset.status = lane.dot;
+dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+titleWrap.append(dot);
+addText(titleWrap, &quot;span&quot;, &quot;&quot;, lane.title);
+head.append(titleWrap);
+addText(head, &quot;span&quot;, &quot;kanban-col-count tabular-nums&quot;, lane.tasks.length);
+col.append(head);
+const body = document.createElement(&quot;div&quot;);
+body.className = &quot;kanban-col-body&quot;;
+if (lane.tasks.length === 0) {
+addText(body, &quot;p&quot;, &quot;kanban-empty&quot;, &quot;해당 일감 없음&quot;);
+} else {
+body.append(...lane.tasks.map((task) =&gt; createKanbanCard(model, task, lane.showExactStatus, openProgressDrawers)));
+}
+col.append(body);
+return col;
+}));
+}
+function renderTaskList(model, container, tasks, openProgressDrawers) {
+container.replaceChildren(...tasks.map((task) =&gt; createKanbanCard(model, task, true, openProgressDrawers)));
+}
+function renderStatusCounts(model, countsNode, summary) {
+countsNode.replaceChildren();
+model.statuses.forEach((status) =&gt; {
+const item = document.createElement(&quot;span&quot;);
+item.className = &quot;status-count&quot;;
+const dot = document.createElement(&quot;span&quot;);
+dot.className = &quot;status-dot&quot;;
+dot.dataset.status = status;
+dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+item.append(dot);
+addText(item, &quot;span&quot;, &quot;&quot;, status);
+addText(item, &quot;strong&quot;, &quot;tabular-nums&quot;, summary.statuses[status]);
+countsNode.append(item);
+});
+}
+function createWorkstation(ctx, owner) {
+const {
+filters,
+model,
+selectedEmployee,
+seatingOrder,
+seatingStore,
+employeeNode,
+onSelectEmployee,
+onRender,
+} = ctx;
+const view = model.viewForEmployee(owner, filters);
+const station = document.createElement(&quot;article&quot;);
+station.className = &quot;workstation&quot;;
+const isWorking = Boolean(view.representative &amp;&amp; ACTIVE_TICKER_STATUSES.has(view.representative.status));
+station.dataset.activity = isWorking ? &quot;working&quot; : &quot;idle&quot;;
+station.dataset.status = view.representative ? view.representative.status : &quot;idle&quot;;
+const bubble = document.createElement(&quot;div&quot;);
+bubble.className = &quot;speech-bubble&quot;;
+bubble.title = view.representative
+? view.representative.status + &quot; · &quot; + view.representative.title + &quot; (&quot; + view.topLevelCount + &quot;건)&quot;
+: &quot;할당된 활성 일감 없음&quot;;
+const rawStatus = view.representative ? view.representative.status : null;
+const statusEn = rawStatus ? (STATUS_LABELS_EN[rawStatus] || rawStatus) : &quot;IDLE&quot;;
+const taskCount = view.topLevelCount || 0;
+const taskCountLabel = taskCount + (taskCount === 1 ? &quot; TASK&quot; : &quot; TASKS&quot;);
+const hudStatusText = view.representative ? statusEn + &quot; · &quot; + taskCountLabel : &quot;IDLE · 0 TASKS&quot;;
+const hudHeader = document.createElement(&quot;div&quot;);
+hudHeader.className = &quot;hud-header&quot;;
+addText(hudHeader, &quot;span&quot;, &quot;hud-tag&quot;, &quot;[&quot; + owner + &quot;]&quot;);
+addText(hudHeader, &quot;span&quot;, &quot;hud-state&quot;, hudStatusText);
+bubble.append(hudHeader);
+const hudMeter = document.createElement(&quot;div&quot;);
+hudMeter.className = &quot;hud-meter&quot;;
+const hudMeterFill = document.createElement(&quot;span&quot;);
+hudMeterFill.className = &quot;hud-meter-fill&quot;;
+hudMeter.append(hudMeterFill);
+bubble.append(hudMeter);
+const editingSeating = seatingStore.isEditing();
+const button = document.createElement(&quot;button&quot;);
+button.type = &quot;button&quot;;
+button.className = &quot;employee-button&quot;;
+button.dataset.owner = owner;
+button.setAttribute(&quot;aria-label&quot;, owner + &quot;의 최상위 일감 &quot; + view.topLevelCount + &quot;개 보기&quot;);
+button.setAttribute(&quot;aria-pressed&quot;, String(selectedEmployee === owner));
+button.draggable = editingSeating;
+button.append(createPersonArt(owner));
+button.addEventListener(&quot;click&quot;, (event) =&gt; {
+if (seatingStore.consumeClickSuppression()) {
+event.preventDefault();
+event.stopPropagation();
+return;
+}
+onSelectEmployee(owner);
+});
+button.addEventListener(&quot;dragstart&quot;, (event) =&gt; {
+if (!seatingStore.isEditing()) {
+event.preventDefault();
+return;
+}
+seatingStore.startDrag(owner);
+button.classList.add(&quot;is-dragging&quot;);
+if (event.dataTransfer) {
+event.dataTransfer.effectAllowed = &quot;move&quot;;
+event.dataTransfer.setData(&quot;text/plain&quot;, owner);
+}
+});
+station.append(bubble, button);
+if (editingSeating) {
+station.addEventListener(&quot;dragover&quot;, (event) =&gt; {
+if (!seatingStore.canDrop(owner, model.employees)) return;
+event.preventDefault();
+if (event.dataTransfer) event.dataTransfer.dropEffect = &quot;move&quot;;
+station.classList.add(&quot;is-drop-target&quot;);
+});
+station.addEventListener(&quot;dragleave&quot;, (event) =&gt; {
+if (station.contains(event.relatedTarget)) return;
+station.classList.remove(&quot;is-drop-target&quot;);
+});
+station.addEventListener(&quot;drop&quot;, (event) =&gt; {
+if (!seatingStore.canDrop(owner, model.employees)) return;
+event.preventDefault();
+seatingStore.dropOn(owner);
+onRender();
+});
+button.addEventListener(&quot;dragend&quot;, () =&gt; {
+seatingStore.endDrag();
+button.classList.remove(&quot;is-dragging&quot;);
+employeeNode.querySelectorAll(&quot;.workstation.is-drop-target&quot;).forEach((target) =&gt; {
+target.classList.remove(&quot;is-drop-target&quot;);
+});
+window.setTimeout(() =&gt; seatingStore.clearClickSuppression(), 0);
+});
+const label = document.createElement(&quot;label&quot;);
+label.className = &quot;seat-control&quot;;
+addText(label, &quot;span&quot;, &quot;&quot;, (seatingOrder.indexOf(owner) + 1) + &quot;번 자리 · &quot; + owner);
+const select = document.createElement(&quot;select&quot;);
+select.className = &quot;form-select&quot;;
+select.dataset.seatOwner = owner;
+select.setAttribute(&quot;aria-label&quot;, owner + &quot; 이동할 자리&quot;);
+seatingOrder.forEach((occupant, index) =&gt; {
+const option = document.createElement(&quot;option&quot;);
+option.value = occupant;
+option.textContent = (index + 1) + &quot;번 · &quot; + occupant + (occupant === owner ? &quot; (현재)&quot; : &quot;와 교환&quot;);
+select.append(option);
+});
+select.value = owner;
+select.addEventListener(&quot;change&quot;, () =&gt; {
+seatingStore.swapWith(owner, select.value);
+onRender();
+Array.from(employeeNode.querySelectorAll(&quot;select&quot;)).find((node) =&gt; node.dataset.seatOwner === owner)?.focus();
+});
+label.append(select);
+station.append(label);
+}
+return station;
+}
+function renderBillboard(model, filters, nodes, onSelectEmployee) {
+const { billboardNode, communalTasksNode, communalTitleNode } = nodes;
+if (!billboardNode) return;
+const view = model.billboardView(filters);
+const head = document.createElement(&quot;div&quot;);
+head.className = &quot;hq-billboard-head&quot;;
+const titleWrap = document.createElement(&quot;span&quot;);
+titleWrap.className = &quot;hq-billboard-title&quot;;
+const dot = document.createElement(&quot;span&quot;);
+dot.className = &quot;hq-billboard-dot&quot;;
+dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
+titleWrap.append(dot);
+const projectSuffix = filters.project !== ALL_PROJECTS ? &quot; · &quot; + filters.project : &quot;&quot;;
+addText(titleWrap, &quot;span&quot;, &quot;&quot;, &quot;SHARED SCHEDULE&quot; + projectSuffix);
+head.append(titleWrap);
+addText(
+head,
+&quot;span&quot;,
+&quot;hq-billboard-meta&quot;,
+&quot;TODAY &quot; + view.todayLabel + &quot; · 공통 &quot; + view.scheduleTasks.length + &quot; · 진행 &quot; + view.tickerTasks.length,
+);
+let upperNode;
+if (view.scheduleTasks.length === 0) {
+upperNode = document.createElement(&quot;div&quot;);
+upperNode.className = &quot;hq-billboard-empty&quot;;
+upperNode.textContent = &quot;표시할 공통 일정이 없습니다.&quot;;
+} else {
+upperNode = document.createElement(&quot;div&quot;);
+upperNode.className = &quot;hq-stepper&quot;;
+upperNode.append(...view.scheduleTasks.slice(0, 4).map((item) =&gt; {
+const button = document.createElement(&quot;button&quot;);
+button.type = &quot;button&quot;;
+button.className = &quot;hq-step-card&quot;;
+button.dataset.tone = item.tone;
+button.title = item.title + &quot; (&quot; + item.shortDate + &quot;)&quot;;
+const labelRow = document.createElement(&quot;div&quot;);
+labelRow.className = &quot;hq-step-label&quot;;
+addText(labelRow, &quot;span&quot;, &quot;&quot;, item.stepLabel);
+addText(labelRow, &quot;span&quot;, &quot;&quot;, item.status);
+button.append(labelRow);
+addText(button, &quot;div&quot;, &quot;hq-step-title&quot;, item.title);
+const bar = document.createElement(&quot;div&quot;);
+bar.className = &quot;hq-step-bar&quot;;
+const fill = document.createElement(&quot;span&quot;);
+fill.className = &quot;hq-step-bar-fill&quot;;
+if (fill.style) fill.style.width = item.progress + &quot;%&quot;;
+bar.append(fill);
+button.append(bar);
+const foot = document.createElement(&quot;div&quot;);
+foot.className = &quot;hq-step-foot&quot;;
+addText(foot, &quot;span&quot;, &quot;hq-step-dday&quot;, item.dDayLabel);
+addText(foot, &quot;span&quot;, &quot;hq-step-date&quot;, item.shortDate);
+button.append(foot);
+button.addEventListener(&quot;click&quot;, () =&gt; {
+const cards = Array.from(communalTasksNode.querySelectorAll(&quot;.kanban-card&quot;));
+cards.forEach((card) =&gt; card.classList.remove(&quot;is-billboard-highlight&quot;));
+const match = cards.find((card) =&gt; card.dataset.taskTitle === item.title);
+if (match) {
+match.classList.add(&quot;is-billboard-highlight&quot;);
+match.scrollIntoView?.({ behavior: &quot;smooth&quot;, block: &quot;center&quot; });
+} else {
+communalTitleNode?.scrollIntoView?.({ behavior: &quot;smooth&quot;, block: &quot;start&quot; });
+}
+});
+return button;
+}));
+}
+const tickerBar = document.createElement(&quot;div&quot;);
+tickerBar.className = &quot;hq-ticker-bar&quot;;
+addText(tickerBar, &quot;span&quot;, &quot;hq-ticker-badge&quot;, &quot;LIVE&quot;);
+const viewport = document.createElement(&quot;div&quot;);
+viewport.className = &quot;hq-ticker-viewport&quot;;
+if (view.tickerTasks.length === 0) {
+addText(viewport, &quot;span&quot;, &quot;hq-ticker-empty&quot;, &quot;진행 중인 요원 일감이 없습니다.&quot;);
+} else {
+const track = document.createElement(&quot;div&quot;);
+track.className = &quot;hq-ticker-track&quot;;
+const sequence = view.tickerTasks.concat(view.tickerTasks);
+sequence.forEach((item, index) =&gt; {
+if (index &gt; 0) addText(track, &quot;span&quot;, &quot;hq-ticker-sep&quot;, &quot;·&quot;);
+const button = document.createElement(&quot;button&quot;);
+button.type = &quot;button&quot;;
+button.className = &quot;hq-ticker-item&quot;;
+button.title = &quot;[&quot; + item.owner + &quot;] &quot; + item.title + &quot; (&quot; + item.shortDate + &quot;)&quot;;
+addText(button, &quot;span&quot;, &quot;hq-ticker-owner&quot;, &quot;[&quot; + item.owner + &quot;]&quot;);
+addText(button, &quot;span&quot;, &quot;&quot;, item.title);
+addText(button, &quot;span&quot;, &quot;hq-ticker-date&quot;, &quot;(&quot; + item.shortDate + &quot;)&quot;);
+button.addEventListener(&quot;click&quot;, () =&gt; onSelectEmployee(item.owner));
+track.append(button);
+});
+viewport.append(track);
+}
+tickerBar.append(viewport);
+billboardNode.replaceChildren(head, upperNode, tickerBar);
+}
+function renderOfficeView(ctx) {
+const { model, filters, selectedEmployee, seatingStore, openProgressDrawers, nodes, onSelectEmployee, onRender } = ctx;
+const summary = model.summary(filters);
+const view = model.viewForEmployee(selectedEmployee, filters);
+nodes.summaryNode.textContent = &quot;현재 표시 &quot; + summary.total + &quot; / &quot; + summary.snapshotTotal + &quot;개 · 미배정 &quot; + summary.unassigned + &quot;개&quot;;
+renderStatusCounts(model, nodes.countsNode, summary);
+renderBillboard(model, filters, nodes, onSelectEmployee);
+const seatingOrder = seatingStore.syncEmployees(model.employees);
+const wsCtx = {
+filters,
+model,
+selectedEmployee,
+seatingOrder,
+seatingStore,
+employeeNode: nodes.employeeNode,
+onSelectEmployee,
+onRender,
+};
+nodes.employeeNode.replaceChildren(...seatingOrder.map((owner) =&gt; createWorkstation(wsCtx, owner)));
+nodes.selectedTitle.textContent = selectedEmployee + &quot;의 일감 · &quot; + view.tasks.length + &quot;개&quot;;
+nodes.selectedNote.textContent = view.empty ? &quot;선택한 직원은 유지되며, 조건에 맞는 일감이 없습니다.&quot; : &quot;대표 일감 외 &quot; + view.otherCount + &quot;개를 포함합니다.&quot;;
+nodes.selectedEmpty.hidden = !view.empty;
+nodes.selectedEmpty.textContent = &quot;현재 필터에 맞는 &quot; + selectedEmployee + &quot;의 일감이 없습니다.&quot;;
+if (view.empty) {
+nodes.selectedTasksNode.replaceChildren();
+} else {
+renderKanbanBoard(model, nodes.selectedTasksNode, view.tasks, openProgressDrawers);
+}
+const unassigned = model.unassignedTasks(filters);
+nodes.communalCount.textContent = unassigned.length + &quot;개&quot;;
+nodes.communalEmpty.hidden = unassigned.length &gt; 0;
+nodes.communalEmpty.textContent = &quot;현재 조건에 맞는 미배정 일감이 없습니다.&quot;;
+renderTaskList(model, nodes.communalTasksNode, unassigned, openProgressDrawers);
+}
+return { NOTION_ICON_PATHS: NOTION_ICON_PATHS, setSafeHref: setSafeHref, createPersonArt: createPersonArt, createKanbanCard: createKanbanCard, renderKanbanBoard: renderKanbanBoard, renderTaskList: renderTaskList, renderStatusCounts: renderStatusCounts, renderBillboard: renderBillboard, renderOfficeView: renderOfficeView };
+})();
+const __wips_mod_4 = (() =&gt; {
 const EMPTY_SNAPSHOT = Object.freeze({
 snapshotDate: &quot;&quot;,
 timezone: &quot;Asia/Seoul&quot;,
@@ -3868,8 +4952,8 @@ dataSourceId: rawDataSourceId.toLowerCase(),
 }
 return { EMPTY_SNAPSHOT: EMPTY_SNAPSHOT, UUID_PATTERN: UUID_PATTERN, createEmptySnapshot: createEmptySnapshot, validateSnapshot: validateSnapshot, isEmptySnapshot: isEmptySnapshot, detectRuntimeMode: detectRuntimeMode, validateConnectionConfig: validateConnectionConfig };
 })();
-const __wips_mod_1 = (() =&gt; {
-const { validateConnectionConfig, validateSnapshot } = __wips_mod_0;
+const __wips_mod_5 = (() =&gt; {
+const { validateConnectionConfig, validateSnapshot } = __wips_mod_4;
 const OPFS_DIR_NAME = &quot;wips-office-private-v1&quot;;
 const CONNECTION_FILE = &quot;connection.json&quot;;
 const SNAPSHOT_CACHE_FILE = &quot;snapshot-cache.json&quot;;
@@ -3997,7 +5081,7 @@ return { cleared: true };
 }
 return { OPFS_DIR_NAME: OPFS_DIR_NAME, CONNECTION_FILE: CONNECTION_FILE, SNAPSHOT_CACHE_FILE: SNAPSHOT_CACHE_FILE, createOpfsStore: createOpfsStore };
 })();
-const __wips_mod_2 = (() =&gt; {
+const __wips_mod_6 = (() =&gt; {
 const NOTION_VERSION = &quot;2026-03-11&quot;;
 const NOTION_API_ROOT = &quot;https://api.notion.com/v1&quot;;
 const MAX_RETRY_AFTER_MS = 10_000;
@@ -4486,1164 +5570,10 @@ data_source_ids: [safeDataSourceId],
 }
 return { NOTION_VERSION: NOTION_VERSION, NOTION_API_ROOT: NOTION_API_ROOT, MAX_RETRY_AFTER_MS: MAX_RETRY_AFTER_MS, MAX_RETRIES: MAX_RETRIES, MAX_PAGES: MAX_PAGES, REQUEST_TIMEOUT_MS: REQUEST_TIMEOUT_MS, NotionApiError: NotionApiError, mapNotionPage: mapNotionPage, parseRetryAfter: parseRetryAfter, fetchPageChecklist: fetchPageChecklist, fetchNotionSnapshot: fetchNotionSnapshot };
 })();
-const { createEmptySnapshot, detectRuntimeMode, isEmptySnapshot, validateConnectionConfig } = __wips_mod_0;
-const { createOpfsStore } = __wips_mod_1;
-const { fetchNotionSnapshot } = __wips_mod_2;
-const STATUS_ORDER = [&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;, &quot;대기&quot;, &quot;예정&quot;, &quot;완료&quot;];
-const STATUS_RANK = new Map(STATUS_ORDER.map((status, index) =&gt; [status, index]));
-const KANBAN_LANES = [
-{ id: &quot;planned&quot;, title: &quot;예정 · 대기&quot;, dot: &quot;대기&quot;, statuses: [&quot;대기&quot;, &quot;예정&quot;] },
-{ id: &quot;progress&quot;, title: &quot;진행&quot;, dot: &quot;진행&quot;, statuses: [&quot;진행&quot;] },
-{ id: &quot;review&quot;, title: &quot;검증 · 테스트&quot;, dot: &quot;검증&quot;, statuses: [&quot;검증&quot;, &quot;장시간 테스트 중&quot;] },
-];
-const EMPLOYEES = [&quot;sb&quot;, &quot;이요원&quot;, &quot;여이전트&quot;, &quot;석규&quot;, &quot;UI&quot;];
-const SHARED_OWNER = &quot;공통&quot;;
-const ACTIVE_TICKER_STATUSES = new Set([&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;]);
-const NOTION_ICON_PATHS = [
-{ d: &quot;M3.5 4.8L16.8 3.5L20 6.1L6.7 7.4L3.5 4.8Z&quot;, fill: &quot;currentColor&quot;, &quot;fill-opacity&quot;: &quot;0.16&quot; },
-{ d: &quot;M3.5 4.8L6.7 7.4V20.6L3.5 18V4.8Z&quot;, fill: &quot;currentColor&quot;, &quot;fill-opacity&quot;: &quot;0.28&quot; },
-{ d: &quot;M3.5 4.8L16.8 3.5L20 6.1V19.3L6.7 20.6L3.5 18V4.8Z&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.5&quot;, &quot;stroke-linejoin&quot;: &quot;round&quot; },
-{ d: &quot;M3.5 4.8L6.7 7.4L20 6.1M6.7 7.4V20.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.5&quot;, &quot;stroke-linejoin&quot;: &quot;round&quot; },
-{ d: &quot;M9.1 9.6L11.9 9.4L15.1 14V9.7L14.3 9.8V9L17.5 8.7V9.5L16.8 9.6V17L15.2 17.1L11.7 12.1V16.6L12.5 16.5V17.3L9.1 17.6V16.8L10 16.7V10.4L9.1 10.5V9.6Z&quot;, fill: &quot;currentColor&quot; },
-];
-const ALL_STATUS = &quot;전체 상태&quot;;
-const ALL_PROJECTS = &quot;전체 프로젝트&quot;;
-const UNSPECIFIED_PROJECT = &quot;프로젝트 미지정&quot;;
-function isSharedOwner(owner) {
-return owner === null || owner === undefined || owner === &quot;&quot; || owner === SHARED_OWNER;
-}
-function todayKstIso() {
-try {
-return new Intl.DateTimeFormat(&quot;en-CA&quot;, { timeZone: &quot;Asia/Seoul&quot; }).format(new Date());
-} catch {
-return new Date().toISOString().slice(0, 10);
-}
-}
-function parseIsoDayMs(value) {
-if (typeof value !== &quot;string&quot;) return null;
-const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-if (!match) return null;
-return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-}
-function formatMmDd(value) {
-if (typeof value !== &quot;string&quot;) return &quot;&quot;;
-const match = value.match(/^\d{4}-(\d{2})-(\d{2})$/);
-return match ? match[1] + &quot;/&quot; + match[2] : value;
-}
-function formatScheduleShort(task, includeTrailingTilde) {
-if (task.startDate &amp;&amp; task.endDate) {
-return formatMmDd(task.startDate) + &quot;~&quot; + formatMmDd(task.endDate);
-}
-if (task.startDate) {
-return formatMmDd(task.startDate) + (includeTrailingTilde ? &quot;~&quot; : &quot;&quot;);
-}
-if (task.endDate) return &quot;~&quot; + formatMmDd(task.endDate);
-return &quot;일정 미지정&quot;;
-}
-function projectLabel(task) {
-return task.project === null || task.project === undefined ? UNSPECIFIED_PROJECT : task.project;
-}
-function matches(task, filters) {
-const statusMatches = filters.status === ALL_STATUS || task.status === filters.status;
-const projectMatches = filters.project === ALL_PROJECTS || projectLabel(task) === filters.project;
-return statusMatches &amp;&amp; projectMatches;
-}
-function safeNotionUrl(value) {
-if (typeof value !== &quot;string&quot;) return &quot;&quot;;
-try {
-const parsed = new URL(value);
-const notionHosts = [&quot;app.notion.com&quot;, &quot;notion.so&quot;, &quot;www.notion.so&quot;];
-return parsed.protocol === &quot;https:&quot; &amp;&amp;
-notionHosts.includes(parsed.hostname) &amp;&amp;
-parsed.host === parsed.hostname &amp;&amp;
-parsed.username === &quot;&quot; &amp;&amp;
-parsed.password === &quot;&quot;
-? parsed.href
-: &quot;&quot;;
-} catch {
-return &quot;&quot;;
-}
-}
-function toNotionAppUrl(value) {
-const safeUrl = safeNotionUrl(value);
-return safeUrl ? safeUrl.replace(/^https:/, &quot;notion:&quot;) : &quot;&quot;;
-}
-function formatGoalDate(task) {
-if (task.startDate &amp;&amp; task.endDate) return task.startDate + &quot; — &quot; + task.endDate;
-if (task.startDate) return task.startDate + &quot; · 종료일 미지정&quot;;
-if (task.endDate) return &quot;시작일 미지정 · &quot; + task.endDate;
-return &quot;미지정&quot;;
-}
-function computeScheduleGauge(task, referenceDateIso) {
-const todayIso = referenceDateIso || todayKstIso();
-const todayMs = parseIsoDayMs(todayIso);
-const targetIso = task?.startDate || task?.endDate || null;
-const targetMs = parseIsoDayMs(targetIso);
-let dDayLabel = ACTIVE_TICKER_STATUSES.has(task?.status) ? &quot;수시&quot; : &quot;미정&quot;;
-let diffDays = null;
-if (todayMs !== null &amp;&amp; targetMs !== null) {
-diffDays = Math.round((targetMs - todayMs) / 86_400_000);
-if (diffDays &gt; 0) dDayLabel = &quot;D-&quot; + diffDays;
-else if (diffDays === 0) dDayLabel = &quot;D-DAY&quot;;
-else dDayLabel = &quot;D+&quot; + Math.abs(diffDays);
-}
-let progress = 20;
-if (diffDays !== null) {
-if (diffDays &lt;= 0) progress = 100;
-else if (diffDays &gt;= 14) progress = 10;
-else progress = Math.round(100 - (diffDays / 14) * 90);
-}
-let tone = &quot;slate&quot;;
-if (diffDays !== null) {
-if (diffDays &gt;= 2) {
-tone = &quot;green&quot;;
-} else if (diffDays === 1 || diffDays === 0) {
-tone = &quot;amber&quot;;
-} else if (Boolean(task?.startDate) &amp;&amp; ACTIVE_TICKER_STATUSES.has(task?.status)) {
-tone = &quot;green&quot;;
-} else {
-tone = &quot;red&quot;;
-}
-}
-return { dDayLabel, diffDays, progress, tone };
-}
-function normalizeTaskId(value) {
-if (typeof value !== &quot;string&quot;) return &quot;&quot;;
-return value.trim().toLowerCase().replace(/-/g, &quot;&quot;);
-}
-function extractTaskId(task) {
-const direct = normalizeTaskId(task?.id);
-if (direct) return direct;
-if (typeof task?.url !== &quot;string&quot; || !task.url) return &quot;&quot;;
-const pathOnly = task.url.split(/[?#]/)[0].replace(/\/+$/, &quot;&quot;);
-const match = pathOnly.match(/([0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
-return match ? normalizeTaskId(match[1]) : &quot;&quot;;
-}
-function createOfficeModel(snapshot) {
-const tasks = Array.isArray(snapshot.results) ? snapshot.results.slice() : [];
-const statuses = STATUS_ORDER.concat([...new Set(tasks.map((task) =&gt; task.status).filter(Boolean))]
-.filter((status) =&gt; !STATUS_ORDER.includes(status)));
-const employees = EMPLOYEES.concat([...new Set(tasks.map((task) =&gt; task.owner).filter((owner) =&gt; owner &amp;&amp; !isSharedOwner(owner)))]
-.filter((owner) =&gt; !EMPLOYEES.includes(owner)));
-const projects = [&quot;2.3&quot;, &quot;2.2.1&quot;, &quot;기타&quot;].concat([...new Set(tasks.map((task) =&gt; task.project).filter(Boolean))]
-.filter((project) =&gt; ![&quot;2.3&quot;, &quot;2.2.1&quot;, &quot;기타&quot;].includes(project)));
-const tasksById = new Map();
-for (const task of tasks) {
-const id = extractTaskId(task);
-if (id &amp;&amp; !tasksById.has(id)) {
-tasksById.set(id, task);
-}
-}
-const childrenByParentId = new Map();
-const seenChildrenByParent = new Map();
-function addChildLink(parentId, childTask) {
-if (!parentId || !childTask) return;
-const childId = extractTaskId(childTask);
-if (childId &amp;&amp; childId === parentId) return;
-const childKey = childId || childTask;
-let seen = seenChildrenByParent.get(parentId);
-if (!seen) {
-seen = new Set();
-seenChildrenByParent.set(parentId, seen);
-}
-if (seen.has(childKey)) return;
-seen.add(childKey);
-let list = childrenByParentId.get(parentId);
-if (!list) {
-list = [];
-childrenByParentId.set(parentId, list);
-}
-list.push(childTask);
-}
-for (const task of tasks) {
-if (Array.isArray(task.parentTaskIds)) {
-for (const rawParentId of task.parentTaskIds) {
-addChildLink(normalizeTaskId(rawParentId), task);
-}
-}
-}
-for (const task of tasks) {
-const parentId = extractTaskId(task);
-if (!parentId || !Array.isArray(task.subTaskIds)) continue;
-for (const rawChildId of task.subTaskIds) {
-const childTask = tasksById.get(normalizeTaskId(rawChildId));
-if (childTask) addChildLink(parentId, childTask);
-}
-}
-function computeTaskProgress(task) {
-const rawChecklist = Array.isArray(task?.checklist) ? task.checklist : [];
-const checklistItems = rawChecklist
-.filter((item) =&gt; item &amp;&amp; typeof item === &quot;object&quot; &amp;&amp; typeof item.text === &quot;string&quot; &amp;&amp; item.text.trim())
-.map((item) =&gt; ({ text: item.text.trim(), done: Boolean(item.done) }));
-const checklist = checklistItems.length &gt; 0
-? {
-done: checklistItems.filter((item) =&gt; item.done).length,
-total: checklistItems.length,
-items: checklistItems,
-}
-: null;
-const taskId = extractTaskId(task);
-const linkedChildren = taskId ? (childrenByParentId.get(taskId) || []) : [];
-const subtaskItems = linkedChildren.map((child) =&gt; ({
-id: extractTaskId(child) || child.title || &quot;&quot;,
-title: child.title || &quot;제목 없음&quot;,
-status: child.status || &quot;미지정&quot;,
-owner: child.owner ?? null,
-done: child.status === &quot;완료&quot;,
-sourceUrl: safeNotionUrl(child.url),
-}));
-const subtasks = subtaskItems.length &gt; 0
-? {
-done: subtaskItems.filter((item) =&gt; item.done).length,
-total: subtaskItems.length,
-items: subtaskItems,
-}
-: null;
-return { checklist, subtasks };
-}
-function describeTask(task, referenceDateIso) {
-const gauge = computeScheduleGauge(task, referenceDateIso);
-const progressDetail = computeTaskProgress(task);
-return {
-taskKey: task.id || task.url || task.title || &quot;&quot;,
-title: task.title,
-status: task.status,
-project: projectLabel(task),
-priority: task.priority ?? &quot;미지정&quot;,
-goalDate: formatGoalDate(task),
-nextCheck: task.checkDate ?? &quot;미지정&quot;,
-nextAction: task.nextAction ?? &quot;미지정&quot;,
-doneCondition: task.doneCondition ?? &quot;미지정&quot;,
-sourceUrl: safeNotionUrl(task.url),
-dDayLabel: gauge.dDayLabel,
-progress: gauge.progress,
-tone: gauge.tone,
-checklist: progressDetail.checklist,
-subtasks: progressDetail.subtasks,
-};
-}
-function parseStateCandidate(candidate) {
-if (typeof candidate === &quot;string&quot;) {
-try { return JSON.parse(candidate); } catch { return null; }
-}
-return candidate &amp;&amp; typeof candidate === &quot;object&quot; ? candidate : null;
-}
-function stateFromHost(candidate) {
-const outer = parseStateCandidate(candidate);
-if (!outer) return null;
-const nested = parseStateCandidate(outer.privateContent) || parseStateCandidate(outer.modelContent);
-const saved = nested || outer;
-const selectedEmployee = employees.includes(saved.selectedEmployee) ? saved.selectedEmployee : &quot;sb&quot;;
-const status = [ALL_STATUS].concat(statuses).includes(saved.status) ? saved.status : ALL_STATUS;
-const projectOptions = [ALL_PROJECTS, ...projects, UNSPECIFIED_PROJECT];
-const project = projectOptions.includes(saved.project) ? saved.project : ALL_PROJECTS;
-return { selectedEmployee, status, project };
-}
-function restorePendingState(candidate, currentState, userChangedState) {
-if (userChangedState) return currentState;
-return stateFromHost(candidate) || currentState;
-}
-function filteredTasks(filters) {
-return tasks.filter((task) =&gt; matches(task, filters));
-}
-function summary(filters) {
-const shown = filteredTasks(filters);
-const statusCounts = Object.fromEntries(statuses.map((status) =&gt; [
-status,
-shown.filter((task) =&gt; task.status === status).length,
-]));
-return {
-total: shown.length,
-snapshotTotal: tasks.length,
-unassigned: shown.filter((task) =&gt; isSharedOwner(task.owner)).length,
-statuses: statusCounts,
-};
-}
-function employeeTasks(owner, filters) {
-return filteredTasks(filters).filter((task) =&gt; task.owner === owner &amp;&amp; task.status !== &quot;완료&quot;);
-}
-function unassignedTasks(filters) {
-return filteredTasks(filters).filter((task) =&gt; isSharedOwner(task.owner) &amp;&amp; task.status !== &quot;완료&quot;);
-}
-function billboardView(filters, referenceDateIso) {
-const todayIso = referenceDateIso || todayKstIso();
-const shared = unassignedTasks(filters);
-const scheduleTasks = shared
-.map((task, index) =&gt; ({
-task,
-index,
-targetIso: task.startDate || task.endDate || null,
-rank: STATUS_RANK.get(task.status) ?? STATUS_ORDER.length,
-}))
-.sort((left, right) =&gt; {
-const leftActiveUndated = !left.targetIso &amp;&amp; ACTIVE_TICKER_STATUSES.has(left.task.status);
-const rightActiveUndated = !right.targetIso &amp;&amp; ACTIVE_TICKER_STATUSES.has(right.task.status);
-if (leftActiveUndated !== rightActiveUndated) return leftActiveUndated ? -1 : 1;
-if (left.targetIso &amp;&amp; right.targetIso &amp;&amp; left.targetIso !== right.targetIso) {
-return left.targetIso.localeCompare(right.targetIso);
-}
-if (Boolean(left.targetIso) !== Boolean(right.targetIso)) return left.targetIso ? -1 : 1;
-return left.rank - right.rank || left.index - right.index;
-})
-.map(({ task }, idx) =&gt; {
-const gauge = computeScheduleGauge(task, todayIso);
-return {
-stepLabel: &quot;STEP &quot; + String(idx + 1).padStart(2, &quot;0&quot;),
-title: task.title,
-status: task.status || &quot;미정&quot;,
-dDayLabel: gauge.dDayLabel,
-shortDate: formatScheduleShort(task, false),
-progress: gauge.progress,
-tone: gauge.tone,
-task,
-};
-});
-const tickerTasks = filteredTasks(filters)
-.filter((task) =&gt; !isSharedOwner(task.owner) &amp;&amp; ACTIVE_TICKER_STATUSES.has(task.status))
-.map((task) =&gt; ({
-owner: task.owner,
-title: task.title,
-status: task.status,
-shortDate: formatScheduleShort(task, true),
-task,
-}));
-return {
-todayLabel: formatMmDd(todayIso),
-scheduleTasks,
-tickerTasks,
-};
-}
-function representativeTask(owner, filters) {
-const owned = employeeTasks(owner, filters).filter((task) =&gt; task.status !== &quot;완료&quot; &amp;&amp; !task.parentTaskIds?.length);
-if (owned.length === 0) return null;
-return owned
-.map((task, index) =&gt; ({ task, index }))
-.sort((left, right) =&gt; {
-const leftRank = STATUS_RANK.get(left.task.status) ?? STATUS_ORDER.length;
-const rightRank = STATUS_RANK.get(right.task.status) ?? STATUS_ORDER.length;
-return leftRank - rightRank || left.index - right.index;
-})[0].task;
-}
-function viewForEmployee(owner, filters) {
-const owned = employeeTasks(owner, filters);
-const topLevelCount = owned.filter((task) =&gt; task.status !== &quot;완료&quot; &amp;&amp; !task.parentTaskIds?.length).length;
-const representative = representativeTask(owner, filters);
-return {
-owner,
-tasks: owned,
-topLevelCount,
-representative,
-otherCount: representative ? topLevelCount - 1 : 0,
-empty: owned.length === 0,
-};
-}
-function normalizeSeating(saved) {
-const valid = Array.isArray(saved) ? saved.filter((owner) =&gt; employees.includes(owner)) : [];
-return [...new Set([...valid, ...employees])];
-}
-function swapSeats(saved, owner, target) {
-const order = normalizeSeating(saved);
-const from = order.indexOf(owner);
-const to = order.indexOf(target);
-if (from &gt;= 0 &amp;&amp; to &gt;= 0) [order[from], order[to]] = [order[to], order[from]];
-return order;
-}
-function focusEmployeeButton(buttons, owner) {
-const button = buttons.find((candidate) =&gt; candidate.dataset.owner === owner);
-if (!button || typeof button.focus !== &quot;function&quot;) return null;
-button.focus();
-return button;
-}
-function groupTasksByLane(tasks) {
-const byStatus = new Map();
-for (const lane of KANBAN_LANES) {
-for (const status of lane.statuses) byStatus.set(status, lane.id);
-}
-const buckets = new Map(KANBAN_LANES.map((lane) =&gt; [lane.id, []]));
-for (const task of Array.isArray(tasks) ? tasks : []) {
-const laneId = byStatus.get(task?.status) || KANBAN_LANES[0].id;
-buckets.get(laneId).push(task);
-}
-return KANBAN_LANES.map((lane) =&gt; ({
-id: lane.id,
-title: lane.title,
-dot: lane.dot,
-showExactStatus: lane.statuses.length &gt; 1,
-tasks: buckets.get(lane.id),
-}));
-}
-return {
-employees,
-statuses,
-projects,
-kanbanLanes: KANBAN_LANES,
-groupTasksByLane,
-stateFromHost,
-restorePendingState,
-filteredTasks,
-summary,
-employeeTasks,
-unassignedTasks,
-representativeTask,
-viewForEmployee,
-focusEmployeeButton,
-normalizeSeating,
-swapSeats,
-describeTask,
-billboardView,
-};
-}
-window.__wipsOfficeModel = createOfficeModel;
-const root = document.getElementById(&quot;wips-office-root&quot;);
-if (!root) return;
-const dataNode = document.getElementById(&quot;wips-office-data&quot;);
-let snapshot = JSON.parse(dataNode.textContent);
-let model = createOfficeModel(snapshot);
-const statusSelect = document.getElementById(&quot;wips-office-status&quot;);
-const projectSelect = document.getElementById(&quot;wips-office-project&quot;);
-const refreshButton = document.getElementById(&quot;wips-office-refresh&quot;);
-const syncStatus = document.getElementById(&quot;wips-office-sync-status&quot;);
-const summaryNode = document.getElementById(&quot;wips-office-summary&quot;);
-const countsNode = document.getElementById(&quot;wips-office-status-counts&quot;);
-const employeeNode = document.getElementById(&quot;wips-office-employees&quot;);
-const seatingEdit = document.getElementById(&quot;wips-office-edit-seating&quot;);
-const seatingReset = document.getElementById(&quot;wips-office-reset-seating&quot;);
-const seatingMessage = document.getElementById(&quot;wips-office-seating-message&quot;);
-const seatingKey = &quot;wips-office-seating-v1&quot;;
-let editingSeating = false;
-let draggingOwner = null;
-let suppressEmployeeClick = false;
-let savedSeating = [];
-try { savedSeating = JSON.parse(window.localStorage.getItem(seatingKey)); } catch {}
-let seatingOrder = model.normalizeSeating(savedSeating);
-function persistSeating(message) {
-try {
-window.localStorage.setItem(seatingKey, JSON.stringify(seatingOrder));
-seatingMessage.textContent = message + &quot; 이 브라우저에 저장했습니다.&quot;;
-} catch {
-seatingMessage.textContent = message + &quot; 저장할 수 없어 현재 화면에만 적용됩니다.&quot;;
-}
-}
-function canDropSeat(owner) {
-return editingSeating &amp;&amp; draggingOwner !== null &amp;&amp; draggingOwner !== owner &amp;&amp;
-model.employees.includes(draggingOwner) &amp;&amp; model.employees.includes(owner);
-}
-seatingEdit.addEventListener(&quot;click&quot;, () =&gt; {
-editingSeating = !editingSeating;
-seatingEdit.setAttribute(&quot;aria-pressed&quot;, String(editingSeating));
-seatingEdit.textContent = editingSeating ? &quot;배치 완료&quot; : &quot;자리 배치&quot;;
-seatingReset.hidden = !editingSeating;
-seatingMessage.textContent = editingSeating
-? &quot;요원을 다른 자리로 끌거나 아래 선택 메뉴에서 고르면 두 요원의 자리를 서로 바꿉니다. 변경 즉시 저장됩니다.&quot;
-: &quot;자리 배치는 이 브라우저에 저장됩니다.&quot;;
-render();
-});
-seatingReset.addEventListener(&quot;click&quot;, () =&gt; {
-seatingOrder = model.normalizeSeating([]);
-persistSeating(&quot;기본 배치로 되돌렸습니다.&quot;);
-render();
-});
-const selectedTitle = document.getElementById(&quot;wips-office-selected-title&quot;);
-const selectedNote = document.getElementById(&quot;wips-office-selected-note&quot;);
-const selectedEmpty = document.getElementById(&quot;wips-office-selected-empty&quot;);
-const selectedTasksNode = document.getElementById(&quot;wips-office-selected-tasks&quot;);
-const communalCount = document.getElementById(&quot;wips-office-communal-count&quot;);
-const communalEmpty = document.getElementById(&quot;wips-office-communal-empty&quot;);
-const communalTasksNode = document.getElementById(&quot;wips-office-communal-tasks&quot;);
-const communalTitleNode = document.getElementById(&quot;wips-office-communal-title&quot;);
-const billboardNode = document.getElementById(&quot;wips-office-billboard&quot;);
-const sourceNode = document.getElementById(&quot;wips-office-source&quot;);
-let pendingHostState = window.openai &amp;&amp; window.openai.widgetState;
-let hasLiveModel = false;
-let userChangedState = false;
-const initialState = model.stateFromHost(pendingHostState);
-const state = initialState || {
-selectedEmployee: &quot;sb&quot;,
-status: ALL_STATUS,
-project: ALL_PROJECTS,
-};
-const openProgressDrawers = new Set();
-statusSelect.value = state.status;
-projectSelect.value = state.project;
-function setSafeHref(anchor, url) {
-const appUrl = toNotionAppUrl(url);
-if (appUrl) {
-anchor.href = appUrl;
-anchor.removeAttribute(&quot;target&quot;);
-anchor.removeAttribute(&quot;rel&quot;);
-} else {
-anchor.removeAttribute(&quot;href&quot;);
-anchor.removeAttribute(&quot;target&quot;);
-anchor.removeAttribute(&quot;rel&quot;);
-}
-}
-function addText(parent, tag, className, text) {
-const node = document.createElement(tag);
-if (className) node.className = className;
-if (text !== undefined &amp;&amp; text !== null) node.textContent = String(text);
-parent.append(node);
-return node;
-}
-function createPersonArt(owner) {
-const art = document.createElement(&quot;span&quot;);
-art.className = &quot;person-art&quot;;
-art.dataset.employee = owner;
-art.dataset.agentStyle = owner === &quot;석규&quot; || owner === &quot;UI&quot; ? &quot;cyber&quot; : &quot;suit&quot;;
-let motionPhase = 0;
-for (const character of owner) motionPhase = (motionPhase * 31 + character.codePointAt(0)) % 5;
-art.dataset.motionPhase = String(motionPhase);
-art.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-return art;
-}
-function createWorkstation(owner, filters) {
-const view = model.viewForEmployee(owner, filters);
-const station = document.createElement(&quot;article&quot;);
-station.className = &quot;workstation&quot;;
-const isWorking = Boolean(view.representative &amp;&amp; ACTIVE_TICKER_STATUSES.has(view.representative.status));
-station.dataset.activity = isWorking ? &quot;working&quot; : &quot;idle&quot;;
-station.dataset.status = view.representative ? view.representative.status : &quot;idle&quot;;
-const bubble = document.createElement(&quot;div&quot;);
-bubble.className = &quot;speech-bubble&quot;;
-bubble.title = view.representative
-? view.representative.status + &quot; · &quot; + view.representative.title + &quot; (&quot; + view.topLevelCount + &quot;건)&quot;
-: &quot;할당된 활성 일감 없음&quot;;
-const STATUS_LABELS_EN = {
-진행: &quot;RUNNING&quot;,
-검증: &quot;TESTING&quot;,
-&quot;장시간 테스트 중&quot;: &quot;LONG TEST&quot;,
-대기: &quot;WAITING&quot;,
-예정: &quot;STANDBY&quot;,
-완료: &quot;DONE&quot;,
-};
-const rawStatus = view.representative ? view.representative.status : null;
-const statusEn = rawStatus ? (STATUS_LABELS_EN[rawStatus] || rawStatus) : &quot;IDLE&quot;;
-const taskCount = view.topLevelCount || 0;
-const taskCountLabel = taskCount + (taskCount === 1 ? &quot; TASK&quot; : &quot; TASKS&quot;);
-const hudStatusText = view.representative ? statusEn + &quot; · &quot; + taskCountLabel : &quot;IDLE · 0 TASKS&quot;;
-const hudHeader = document.createElement(&quot;div&quot;);
-hudHeader.className = &quot;hud-header&quot;;
-addText(hudHeader, &quot;span&quot;, &quot;hud-tag&quot;, &quot;[&quot; + owner + &quot;]&quot;);
-addText(hudHeader, &quot;span&quot;, &quot;hud-state&quot;, hudStatusText);
-bubble.append(hudHeader);
-const hudMeter = document.createElement(&quot;div&quot;);
-hudMeter.className = &quot;hud-meter&quot;;
-const hudMeterFill = document.createElement(&quot;span&quot;);
-hudMeterFill.className = &quot;hud-meter-fill&quot;;
-hudMeter.append(hudMeterFill);
-bubble.append(hudMeter);
-const button = document.createElement(&quot;button&quot;);
-button.type = &quot;button&quot;;
-button.className = &quot;employee-button&quot;;
-button.dataset.owner = owner;
-button.setAttribute(&quot;aria-label&quot;, owner + &quot;의 최상위 일감 &quot; + view.topLevelCount + &quot;개 보기&quot;);
-button.setAttribute(&quot;aria-pressed&quot;, String(state.selectedEmployee === owner));
-button.draggable = editingSeating;
-button.append(createPersonArt(owner));
-button.addEventListener(&quot;click&quot;, (event) =&gt; {
-if (suppressEmployeeClick) {
-event.preventDefault();
-event.stopPropagation();
-suppressEmployeeClick = false;
-return;
-}
-userChangedState = true;
-state.selectedEmployee = owner;
-render();
-model.focusEmployeeButton(Array.from(employeeNode.querySelectorAll(&quot;button&quot;)), owner);
-saveState();
-});
-button.addEventListener(&quot;dragstart&quot;, (event) =&gt; {
-if (!editingSeating) {
-event.preventDefault();
-return;
-}
-draggingOwner = owner;
-suppressEmployeeClick = true;
-button.classList.add(&quot;is-dragging&quot;);
-if (event.dataTransfer) {
-event.dataTransfer.effectAllowed = &quot;move&quot;;
-event.dataTransfer.setData(&quot;text/plain&quot;, owner);
-}
-});
-station.append(bubble, button);
-if (editingSeating) {
-station.addEventListener(&quot;dragover&quot;, (event) =&gt; {
-if (!canDropSeat(owner)) return;
-event.preventDefault();
-if (event.dataTransfer) event.dataTransfer.dropEffect = &quot;move&quot;;
-station.classList.add(&quot;is-drop-target&quot;);
-});
-station.addEventListener(&quot;dragleave&quot;, (event) =&gt; {
-if (station.contains(event.relatedTarget)) return;
-station.classList.remove(&quot;is-drop-target&quot;);
-});
-station.addEventListener(&quot;drop&quot;, (event) =&gt; {
-if (!canDropSeat(owner)) return;
-event.preventDefault();
-const source = draggingOwner;
-draggingOwner = null;
-seatingOrder = model.swapSeats(seatingOrder, source, owner);
-persistSeating(source + &quot;와 &quot; + owner + &quot;의 자리를 바꿨습니다.&quot;);
-render();
-});
-button.addEventListener(&quot;dragend&quot;, () =&gt; {
-draggingOwner = null;
-button.classList.remove(&quot;is-dragging&quot;);
-employeeNode.querySelectorAll(&quot;.workstation.is-drop-target&quot;).forEach((target) =&gt; {
-target.classList.remove(&quot;is-drop-target&quot;);
-});
-window.setTimeout(() =&gt; { suppressEmployeeClick = false; }, 0);
-});
-const label = document.createElement(&quot;label&quot;);
-label.className = &quot;seat-control&quot;;
-addText(label, &quot;span&quot;, &quot;&quot;, (seatingOrder.indexOf(owner) + 1) + &quot;번 자리 · &quot; + owner);
-const select = document.createElement(&quot;select&quot;);
-select.className = &quot;form-select&quot;;
-select.dataset.seatOwner = owner;
-select.setAttribute(&quot;aria-label&quot;, owner + &quot; 이동할 자리&quot;);
-seatingOrder.forEach((occupant, index) =&gt; {
-const option = document.createElement(&quot;option&quot;);
-option.value = occupant;
-option.textContent = (index + 1) + &quot;번 · &quot; + occupant + (occupant === owner ? &quot; (현재)&quot; : &quot;와 교환&quot;);
-select.append(option);
-});
-select.value = owner;
-select.addEventListener(&quot;change&quot;, () =&gt; {
-const target = select.value;
-seatingOrder = model.swapSeats(seatingOrder, owner, target);
-persistSeating(owner + &quot;와 &quot; + target + &quot;의 자리를 바꿨습니다.&quot;);
-render();
-Array.from(employeeNode.querySelectorAll(&quot;select&quot;)).find((node) =&gt; node.dataset.seatOwner === owner)?.focus();
-});
-label.append(select);
-station.append(label);
-}
-return station;
-}
-function renderTaskList(container, tasks) {
-container.replaceChildren(...tasks.map((task) =&gt; createKanbanCard(task, true)));
-}
-function createSvgNode(tag, attrs) {
-const node = document.createElementNS
-? document.createElementNS(&quot;http://www.w3.org/2000/svg&quot;, tag)
-: document.createElement(tag);
-Object.entries(attrs).forEach(([key, value]) =&gt; node.setAttribute(key, value));
-return node;
-}
-function createTaskProgressBox(details) {
-if (!details.checklist &amp;&amp; !details.subtasks) return null;
-const SEGMENT_LIMIT = 12;
-const box = document.createElement(&quot;details&quot;);
-box.className = &quot;kanban-progress-box&quot;;
-if (openProgressDrawers.has(details.taskKey)) {
-box.open = true;
-}
-box.addEventListener(&quot;toggle&quot;, () =&gt; {
-if (box.open) openProgressDrawers.add(details.taskKey);
-else openProgressDrawers.delete(details.taskKey);
-});
-const summary = document.createElement(&quot;summary&quot;);
-summary.className = &quot;kanban-progress-summary&quot;;
-const rows = document.createElement(&quot;div&quot;);
-rows.className = &quot;kanban-progress-rows&quot;;
-function createBar(done, total) {
-const complete = total &gt; 0 &amp;&amp; done === total;
-if (total &lt;= SEGMENT_LIMIT) {
-const segs = document.createElement(&quot;div&quot;);
-segs.className = &quot;kanban-progress-segs&quot;;
-segs.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-for (let idx = 0; idx &lt; total; idx += 1) {
-const seg = document.createElement(&quot;span&quot;);
-seg.className = idx &lt; done
-? (complete ? &quot;kanban-progress-seg is-done-all&quot; : &quot;kanban-progress-seg is-filled&quot;)
-: &quot;kanban-progress-seg&quot;;
-segs.append(seg);
-}
-return segs;
-}
-const track = document.createElement(&quot;div&quot;);
-track.className = &quot;kanban-progress-track&quot;;
-track.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-const fill = document.createElement(&quot;span&quot;);
-fill.className = &quot;kanban-progress-fill&quot;;
-if (complete) fill.dataset.complete = &quot;true&quot;;
-if (fill.style) fill.style.width = Math.round((done / total) * 100) + &quot;%&quot;;
-track.append(fill);
-return track;
-}
-function createRow(kind, labelText, iconNodes, done, total) {
-const row = document.createElement(&quot;div&quot;);
-row.className = &quot;kanban-progress-row&quot;;
-row.dataset.kind = kind;
-const kindNode = document.createElement(&quot;span&quot;);
-kindNode.className = &quot;kanban-progress-kind&quot;;
-const icon = createSvgNode(&quot;svg&quot;, {
-width: &quot;13&quot;,
-height: &quot;13&quot;,
-viewBox: &quot;0 0 16 16&quot;,
-fill: &quot;none&quot;,
-&quot;aria-hidden&quot;: &quot;true&quot;,
-});
-icon.append(...iconNodes);
-kindNode.append(icon);
-addText(kindNode, &quot;span&quot;, &quot;&quot;, labelText);
-row.append(kindNode);
-row.append(createBar(done, total));
-const count = addText(row, &quot;span&quot;, &quot;kanban-progress-count&quot;, done + &quot;/&quot; + total);
-if (total &gt; 0 &amp;&amp; done === total) {
-count.dataset.complete = &quot;true&quot;;
-}
-return row;
-}
-if (details.checklist) {
-rows.append(createRow(
-&quot;checklist&quot;,
-&quot;체크&quot;,
-[
-createSvgNode(&quot;rect&quot;, {
-x: &quot;2&quot;,
-y: &quot;2&quot;,
-width: &quot;12&quot;,
-height: &quot;12&quot;,
-rx: &quot;3&quot;,
-stroke: &quot;currentColor&quot;,
-&quot;stroke-width&quot;: &quot;1.4&quot;,
-}),
-createSvgNode(&quot;path&quot;, {
-d: &quot;M5.2 8.2L7.1 10.1L11 6.1&quot;,
-stroke: &quot;currentColor&quot;,
-&quot;stroke-width&quot;: &quot;1.5&quot;,
-&quot;stroke-linecap&quot;: &quot;round&quot;,
-&quot;stroke-linejoin&quot;: &quot;round&quot;,
-}),
-],
-details.checklist.done,
-details.checklist.total,
-));
-}
-if (details.subtasks) {
-rows.append(createRow(
-&quot;subtasks&quot;,
-&quot;하위&quot;,
-[
-createSvgNode(&quot;circle&quot;, { cx: &quot;4&quot;, cy: &quot;3.5&quot;, r: &quot;1.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.4&quot; }),
-createSvgNode(&quot;circle&quot;, { cx: &quot;11.5&quot;, cy: &quot;7.5&quot;, r: &quot;1.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.4&quot; }),
-createSvgNode(&quot;circle&quot;, { cx: &quot;11.5&quot;, cy: &quot;12.5&quot;, r: &quot;1.6&quot;, stroke: &quot;currentColor&quot;, &quot;stroke-width&quot;: &quot;1.4&quot; }),
-createSvgNode(&quot;path&quot;, {
-d: &quot;M4 5.2V12.5H9.8M4 7.5H9.8&quot;,
-stroke: &quot;currentColor&quot;,
-&quot;stroke-width&quot;: &quot;1.4&quot;,
-&quot;stroke-linecap&quot;: &quot;round&quot;,
-&quot;stroke-linejoin&quot;: &quot;round&quot;,
-}),
-],
-details.subtasks.done,
-details.subtasks.total,
-));
-}
-const chevron = createSvgNode(&quot;svg&quot;, {
-class: &quot;kanban-progress-chevron&quot;,
-width: &quot;13&quot;,
-height: &quot;13&quot;,
-viewBox: &quot;0 0 16 16&quot;,
-fill: &quot;none&quot;,
-&quot;aria-hidden&quot;: &quot;true&quot;,
-});
-chevron.append(createSvgNode(&quot;path&quot;, {
-d: &quot;M4 6L8 10L12 6&quot;,
-stroke: &quot;currentColor&quot;,
-&quot;stroke-width&quot;: &quot;1.6&quot;,
-&quot;stroke-linecap&quot;: &quot;round&quot;,
-&quot;stroke-linejoin&quot;: &quot;round&quot;,
-}));
-summary.append(rows, chevron);
-box.append(summary);
-const drawer = document.createElement(&quot;div&quot;);
-drawer.className = &quot;kanban-progress-drawer&quot;;
-if (details.checklist) {
-const group = document.createElement(&quot;div&quot;);
-group.className = &quot;kanban-progress-group&quot;;
-group.dataset.group = &quot;checklist&quot;;
-addText(
-group,
-&quot;div&quot;,
-&quot;kanban-progress-group-title&quot;,
-&quot;체크리스트 (&quot; + details.checklist.done + &quot;/&quot; + details.checklist.total + &quot;)&quot;,
-);
-const list = document.createElement(&quot;ul&quot;);
-list.className = &quot;kanban-progress-list&quot;;
-details.checklist.items.forEach((item) =&gt; {
-const li = document.createElement(&quot;li&quot;);
-li.className = item.done ? &quot;kanban-progress-item is-done&quot; : &quot;kanban-progress-item&quot;;
-li.dataset.done = String(item.done);
-const mark = document.createElement(&quot;span&quot;);
-mark.className = &quot;kanban-check-mark&quot;;
-mark.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-const markSvg = createSvgNode(&quot;svg&quot;, {
-width: &quot;13&quot;,
-height: &quot;13&quot;,
-viewBox: &quot;0 0 16 16&quot;,
-fill: &quot;none&quot;,
-&quot;aria-hidden&quot;: &quot;true&quot;,
-});
-markSvg.append(createSvgNode(&quot;rect&quot;, {
-x: &quot;2&quot;,
-y: &quot;2&quot;,
-width: &quot;12&quot;,
-height: &quot;12&quot;,
-rx: &quot;3&quot;,
-stroke: &quot;currentColor&quot;,
-&quot;stroke-width&quot;: &quot;1.4&quot;,
-}));
-if (item.done) {
-markSvg.append(createSvgNode(&quot;path&quot;, {
-d: &quot;M5.2 8.2L7.1 10.1L11 6.1&quot;,
-stroke: &quot;currentColor&quot;,
-&quot;stroke-width&quot;: &quot;1.5&quot;,
-&quot;stroke-linecap&quot;: &quot;round&quot;,
-&quot;stroke-linejoin&quot;: &quot;round&quot;,
-}));
-}
-mark.append(markSvg);
-li.append(mark);
-addText(li, &quot;span&quot;, &quot;kanban-progress-item-text&quot;, item.text);
-list.append(li);
-});
-group.append(list);
-drawer.append(group);
-}
-if (details.subtasks) {
-const group = document.createElement(&quot;div&quot;);
-group.className = &quot;kanban-progress-group&quot;;
-group.dataset.group = &quot;subtasks&quot;;
-addText(
-group,
-&quot;div&quot;,
-&quot;kanban-progress-group-title&quot;,
-&quot;하위 일감 (&quot; + details.subtasks.done + &quot;/&quot; + details.subtasks.total + &quot;)&quot;,
-);
-const list = document.createElement(&quot;ul&quot;);
-list.className = &quot;kanban-progress-list&quot;;
-details.subtasks.items.forEach((item) =&gt; {
-const li = document.createElement(&quot;li&quot;);
-li.className = item.done ? &quot;kanban-progress-item is-done&quot; : &quot;kanban-progress-item&quot;;
-li.dataset.done = String(item.done);
-const dot = document.createElement(&quot;span&quot;);
-dot.className = &quot;status-dot&quot;;
-dot.dataset.status = item.status;
-dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-li.append(dot);
-if (item.sourceUrl) {
-const link = document.createElement(&quot;a&quot;);
-link.className = &quot;kanban-subtask-link&quot;;
-link.textContent = item.title;
-setSafeHref(link, item.sourceUrl);
-li.append(link);
-} else {
-addText(li, &quot;span&quot;, &quot;kanban-progress-item-text&quot;, item.title);
-}
-addText(li, &quot;span&quot;, &quot;kanban-subtask-status&quot;, item.status);
-list.append(li);
-});
-group.append(list);
-drawer.append(group);
-}
-box.append(drawer);
-return box;
-}
-function createKanbanCard(task, showExactStatus) {
-const details = model.describeTask(task);
-const card = document.createElement(&quot;article&quot;);
-card.className = &quot;kanban-card&quot;;
-card.dataset.taskTitle = details.title;
-const top = document.createElement(&quot;div&quot;);
-top.className = &quot;kanban-card-top&quot;;
-const badge = document.createElement(&quot;span&quot;);
-badge.className = &quot;kanban-badge&quot;;
-const dot = document.createElement(&quot;span&quot;);
-dot.className = &quot;status-dot&quot;;
-dot.dataset.status = details.status;
-dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-badge.append(dot);
-addText(badge, &quot;span&quot;, &quot;&quot;, showExactStatus ? details.status + &quot; · &quot; + details.project : details.project);
-top.append(badge);
-const tags = document.createElement(&quot;div&quot;);
-tags.className = &quot;kanban-card-tags&quot;;
-if (details.priority &amp;&amp; details.priority !== &quot;미지정&quot;) {
-addText(tags, &quot;span&quot;, &quot;kanban-priority&quot;, details.priority);
-}
-const dday = addText(tags, &quot;span&quot;, &quot;kanban-dday&quot;, details.dDayLabel);
-dday.dataset.tone = details.tone;
-if (details.sourceUrl) {
-const link = document.createElement(&quot;a&quot;);
-link.className = &quot;task-source&quot;;
-link.setAttribute(&quot;aria-label&quot;, &quot;Notion에서 보기&quot;);
-link.setAttribute(&quot;title&quot;, &quot;Notion에서 보기&quot;);
-setSafeHref(link, details.sourceUrl);
-const svg = createSvgNode(&quot;svg&quot;, {
-viewBox: &quot;0 0 24 24&quot;,
-fill: &quot;none&quot;,
-&quot;aria-hidden&quot;: &quot;true&quot;,
-});
-svg.append(...NOTION_ICON_PATHS.map((attrs) =&gt; createSvgNode(&quot;path&quot;, attrs)));
-link.append(svg);
-tags.append(link);
-}
-top.append(tags);
-card.append(top);
-addText(card, &quot;h3&quot;, &quot;&quot;, details.title);
-const metaParts = [&quot;일정 &quot; + details.goalDate];
-if (details.nextCheck &amp;&amp; details.nextCheck !== &quot;미지정&quot;) {
-metaParts.push(&quot;확인 &quot; + details.nextCheck);
-}
-const meta = document.createElement(&quot;div&quot;);
-meta.className = &quot;kanban-meta&quot;;
-addText(meta, &quot;span&quot;, &quot;&quot;, metaParts.join(&quot; · &quot;));
-const pct = addText(meta, &quot;span&quot;, &quot;kanban-progress-pct&quot;, details.progress + &quot;%&quot;);
-pct.dataset.tone = details.tone;
-card.append(meta);
-const bar = document.createElement(&quot;div&quot;);
-bar.className = &quot;kanban-bar&quot;;
-const fill = document.createElement(&quot;span&quot;);
-fill.className = &quot;kanban-bar-fill&quot;;
-fill.dataset.tone = details.tone;
-if (fill.style) fill.style.width = details.progress + &quot;%&quot;;
-bar.append(fill);
-card.append(bar);
-if (details.nextAction &amp;&amp; details.nextAction !== &quot;미지정&quot;) {
-const next = document.createElement(&quot;div&quot;);
-next.className = &quot;kanban-next&quot;;
-addText(next, &quot;span&quot;, &quot;kanban-next-label&quot;, &quot;다음&quot;);
-addText(next, &quot;span&quot;, &quot;&quot;, details.nextAction);
-card.append(next);
-}
-const progressBox = createTaskProgressBox(details);
-if (progressBox) card.append(progressBox);
-if (details.doneCondition &amp;&amp; details.doneCondition !== &quot;미지정&quot;) {
-const cond = document.createElement(&quot;details&quot;);
-cond.className = &quot;kanban-details&quot;;
-addText(cond, &quot;summary&quot;, &quot;&quot;, &quot;완료 조건 보기&quot;);
-addText(cond, &quot;p&quot;, &quot;&quot;, details.doneCondition);
-card.append(cond);
-}
-return card;
-}
-function renderKanbanBoard(container, tasks) {
-const lanes = model.groupTasksByLane(tasks);
-container.replaceChildren(...lanes.map((lane) =&gt; {
-const col = document.createElement(&quot;section&quot;);
-col.className = &quot;kanban-col&quot;;
-col.dataset.laneId = lane.id;
-const head = document.createElement(&quot;div&quot;);
-head.className = &quot;kanban-col-head&quot;;
-const title = document.createElement(&quot;span&quot;);
-title.className = &quot;kanban-col-title&quot;;
-const dot = document.createElement(&quot;span&quot;);
-dot.className = &quot;status-dot&quot;;
-dot.dataset.status = lane.dot;
-dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-title.append(dot);
-addText(title, &quot;span&quot;, &quot;&quot;, lane.title);
-head.append(title);
-addText(head, &quot;span&quot;, &quot;kanban-col-count&quot;, String(lane.tasks.length));
-col.append(head);
-const cardsWrap = document.createElement(&quot;div&quot;);
-cardsWrap.className = &quot;kanban-cards&quot;;
-if (lane.tasks.length === 0) {
-addText(cardsWrap, &quot;div&quot;, &quot;kanban-empty&quot;, &quot;해당 일감 없음&quot;);
-} else {
-cardsWrap.append(...lane.tasks.map((task) =&gt; createKanbanCard(task, lane.showExactStatus)));
-}
-col.append(cardsWrap);
-return col;
-}));
-}
-function renderStatusCounts(summary) {
-countsNode.replaceChildren();
-model.statuses.forEach((status) =&gt; {
-const item = document.createElement(&quot;span&quot;);
-item.className = &quot;status-count&quot;;
-const dot = document.createElement(&quot;span&quot;);
-dot.className = &quot;status-dot&quot;;
-dot.dataset.status = status;
-dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-item.append(dot);
-addText(item, &quot;span&quot;, &quot;&quot;, status);
-addText(item, &quot;strong&quot;, &quot;tabular-nums&quot;, summary.statuses[status]);
-countsNode.append(item);
-});
-}
-function createBillboardStep(item) {
-const button = document.createElement(&quot;button&quot;);
-button.type = &quot;button&quot;;
-button.className = &quot;hq-step-card&quot;;
-button.dataset.tone = item.tone;
-button.title = item.title + &quot; (&quot; + item.shortDate + &quot;)&quot;;
-const labelRow = document.createElement(&quot;div&quot;);
-labelRow.className = &quot;hq-step-label&quot;;
-addText(labelRow, &quot;span&quot;, &quot;&quot;, item.stepLabel);
-addText(labelRow, &quot;span&quot;, &quot;&quot;, item.status);
-button.append(labelRow);
-addText(button, &quot;div&quot;, &quot;hq-step-title&quot;, item.title);
-const bar = document.createElement(&quot;div&quot;);
-bar.className = &quot;hq-step-bar&quot;;
-const fill = document.createElement(&quot;span&quot;);
-fill.className = &quot;hq-step-bar-fill&quot;;
-if (fill.style) fill.style.width = item.progress + &quot;%&quot;;
-bar.append(fill);
-button.append(bar);
-const foot = document.createElement(&quot;div&quot;);
-foot.className = &quot;hq-step-foot&quot;;
-addText(foot, &quot;span&quot;, &quot;hq-step-dday&quot;, item.dDayLabel);
-addText(foot, &quot;span&quot;, &quot;hq-step-date&quot;, item.shortDate);
-button.append(foot);
-button.addEventListener(&quot;click&quot;, () =&gt; {
-const cards = Array.from(communalTasksNode.querySelectorAll(&quot;.kanban-card&quot;));
-cards.forEach((card) =&gt; card.classList.remove(&quot;is-billboard-highlight&quot;));
-const match = cards.find((card) =&gt; card.dataset.taskTitle === item.title);
-if (match) {
-match.classList.add(&quot;is-billboard-highlight&quot;);
-match.scrollIntoView?.({ behavior: &quot;smooth&quot;, block: &quot;center&quot; });
-} else {
-communalTitleNode?.scrollIntoView?.({ behavior: &quot;smooth&quot;, block: &quot;start&quot; });
-}
-});
-return button;
-}
-function createTickerButton(item) {
-const button = document.createElement(&quot;button&quot;);
-button.type = &quot;button&quot;;
-button.className = &quot;hq-ticker-item&quot;;
-button.title = &quot;[&quot; + item.owner + &quot;] &quot; + item.title + &quot; (&quot; + item.shortDate + &quot;)&quot;;
-addText(button, &quot;span&quot;, &quot;hq-ticker-owner&quot;, &quot;[&quot; + item.owner + &quot;]&quot;);
-addText(button, &quot;span&quot;, &quot;&quot;, item.title);
-addText(button, &quot;span&quot;, &quot;hq-ticker-date&quot;, &quot;(&quot; + item.shortDate + &quot;)&quot;);
-button.addEventListener(&quot;click&quot;, () =&gt; {
-userChangedState = true;
-state.selectedEmployee = item.owner;
-render();
-model.focusEmployeeButton(Array.from(employeeNode.querySelectorAll(&quot;button&quot;)), item.owner);
-saveState();
-});
-return button;
-}
-function renderBillboard(filters) {
-if (!billboardNode) return;
-const view = model.billboardView(filters);
-const head = document.createElement(&quot;div&quot;);
-head.className = &quot;hq-billboard-head&quot;;
-const titleWrap = document.createElement(&quot;span&quot;);
-titleWrap.className = &quot;hq-billboard-title&quot;;
-const dot = document.createElement(&quot;span&quot;);
-dot.className = &quot;hq-billboard-dot&quot;;
-dot.setAttribute(&quot;aria-hidden&quot;, &quot;true&quot;);
-titleWrap.append(dot);
-const projectSuffix = filters.project !== ALL_PROJECTS ? &quot; · &quot; + filters.project : &quot;&quot;;
-addText(titleWrap, &quot;span&quot;, &quot;&quot;, &quot;SHARED SCHEDULE&quot; + projectSuffix);
-head.append(titleWrap);
-addText(
-head,
-&quot;span&quot;,
-&quot;hq-billboard-meta&quot;,
-&quot;TODAY &quot; + view.todayLabel + &quot; · 공통 &quot; + view.scheduleTasks.length + &quot; · 진행 &quot; + view.tickerTasks.length,
-);
-let upperNode;
-if (view.scheduleTasks.length === 0) {
-upperNode = document.createElement(&quot;div&quot;);
-upperNode.className = &quot;hq-billboard-empty&quot;;
-upperNode.textContent = &quot;표시할 공통 일정이 없습니다.&quot;;
-} else {
-upperNode = document.createElement(&quot;div&quot;);
-upperNode.className = &quot;hq-stepper&quot;;
-upperNode.append(...view.scheduleTasks.slice(0, 4).map(createBillboardStep));
-}
-const tickerBar = document.createElement(&quot;div&quot;);
-tickerBar.className = &quot;hq-ticker-bar&quot;;
-addText(tickerBar, &quot;span&quot;, &quot;hq-ticker-badge&quot;, &quot;LIVE&quot;);
-const viewport = document.createElement(&quot;div&quot;);
-viewport.className = &quot;hq-ticker-viewport&quot;;
-if (view.tickerTasks.length === 0) {
-addText(viewport, &quot;span&quot;, &quot;hq-ticker-empty&quot;, &quot;진행 중인 요원 일감이 없습니다.&quot;);
-} else {
-const track = document.createElement(&quot;div&quot;);
-track.className = &quot;hq-ticker-track&quot;;
-const sequence = view.tickerTasks.concat(view.tickerTasks);
-sequence.forEach((item, index) =&gt; {
-if (index &gt; 0) addText(track, &quot;span&quot;, &quot;hq-ticker-sep&quot;, &quot;·&quot;);
-track.append(createTickerButton(item));
-});
-viewport.append(track);
-}
-tickerBar.append(viewport);
-billboardNode.replaceChildren(head, upperNode, tickerBar);
-}
-function render() {
-const filters = { status: statusSelect.value, project: projectSelect.value };
-const summary = model.summary(filters);
-const view = model.viewForEmployee(state.selectedEmployee, filters);
-summaryNode.textContent = &quot;현재 표시 &quot; + summary.total + &quot; / &quot; + summary.snapshotTotal + &quot;개 · 미배정 &quot; + summary.unassigned + &quot;개&quot;;
-renderStatusCounts(summary);
-renderBillboard(filters);
-seatingOrder = model.normalizeSeating(seatingOrder);
-employeeNode.replaceChildren(...seatingOrder.map((owner) =&gt; createWorkstation(owner, filters)));
-selectedTitle.textContent = state.selectedEmployee + &quot;의 일감 · &quot; + view.tasks.length + &quot;개&quot;;
-selectedNote.textContent = view.empty ? &quot;선택한 직원은 유지되며, 조건에 맞는 일감이 없습니다.&quot; : &quot;대표 일감 외 &quot; + view.otherCount + &quot;개를 포함합니다.&quot;;
-selectedEmpty.hidden = !view.empty;
-selectedEmpty.textContent = &quot;현재 필터에 맞는 &quot; + state.selectedEmployee + &quot;의 일감이 없습니다.&quot;;
-if (view.empty) {
-selectedTasksNode.replaceChildren();
-} else {
-renderKanbanBoard(selectedTasksNode, view.tasks);
-}
-const unassigned = model.unassignedTasks(filters);
-communalCount.textContent = unassigned.length + &quot;개&quot;;
-communalEmpty.hidden = unassigned.length &gt; 0;
-communalEmpty.textContent = &quot;현재 조건에 맞는 미배정 일감이 없습니다.&quot;;
-renderTaskList(communalTasksNode, unassigned);
-}
-function setSelectOptions(select, values, selectedValue) {
-const options = [...new Set(values.concat(selectedValue ? [selectedValue] : []))];
-select.replaceChildren(...options.map((value) =&gt; {
-const option = document.createElement(&quot;option&quot;);
-option.value = value;
-option.textContent = value;
-return option;
-}));
-select.value = selectedValue;
-}
-function formatSuccessTime(value) {
-if (!value) return snapshot.snapshotDate || &quot;스냅샷&quot;;
-const date = new Date(value);
-if (Number.isNaN(date.getTime())) return String(value);
-return date.toLocaleTimeString(&quot;ko-KR&quot;, {
-timeZone: &quot;Asia/Seoul&quot;,
-hour: &quot;2-digit&quot;,
-minute: &quot;2-digit&quot;,
-hour12: false,
-});
-}
-function setSyncStatus(message, stateName) {
-syncStatus.textContent = message;
-syncStatus.dataset.state = stateName;
-}
-const connectToggleButton = document.getElementById(&quot;wips-office-connect-toggle&quot;);
-const logoutButton = document.getElementById(&quot;wips-office-logout&quot;);
-const offlineBanner = document.getElementById(&quot;wips-office-offline-banner&quot;);
-const connectionPanel = document.getElementById(&quot;wips-office-connection-panel&quot;);
-const connectionForm = document.getElementById(&quot;wips-office-connection-form&quot;);
-const tokenInput = document.getElementById(&quot;wips-office-token&quot;);
-const dataSourceIdInput = document.getElementById(&quot;wips-office-datasource-id&quot;);
-const connectSubmitButton = document.getElementById(&quot;wips-office-connect-submit&quot;);
-const connectCancelButton = document.getElementById(&quot;wips-office-connect-cancel&quot;);
-const connectionMessage = document.getElementById(&quot;wips-office-connection-message&quot;);
-const mainView = document.getElementById(&quot;wips-office-main-view&quot;);
-const IS_STATIC_MODE =
-detectRuntimeMode({ initialSnapshot: snapshot, runtimeMode: window.__WIPS_RUNTIME_MODE }) === &quot;static&quot;;
-let activeConnection = null;
-let activeFetchController = null;
-let pollTimerId = null;
-let sessionEpoch = 0;
-let isRefreshing = false;
+const __wips_mod_7 = (() =&gt; {
+const { createEmptySnapshot, detectRuntimeMode, isEmptySnapshot, validateConnectionConfig } = __wips_mod_4;
+const { createOpfsStore } = __wips_mod_5;
+const { fetchNotionSnapshot } = __wips_mod_6;
 function validateStaticConnection(input) {
 const check = validateConnectionConfig(input);
 if (check.ok) return check;
@@ -5653,11 +5583,6 @@ return { ok: false, error: &quot;Notion 토큰은 공백이나 제어 문자 없
 }
 return { ok: false, error: &quot;데이터 소스 ID는 표준 UUID(8-4-4-4-12) 형식이어야 합니다.&quot; };
 }
-const opfsStore = createOpfsStore({
-getDirectory: typeof navigator !== &quot;undefined&quot; &amp;&amp; typeof navigator?.storage?.getDirectory === &quot;function&quot;
-? () =&gt; navigator.storage.getDirectory()
-: null,
-});
 function formatStaticNotionError(error) {
 if (error?.code === &quot;NOTION_ABORTED&quot;) return error;
 if (error?.code === &quot;NOTION_RATE_LIMIT&quot;) {
@@ -5689,7 +5614,45 @@ return wrapped;
 }
 return error instanceof Error ? error : new Error(String(error || &quot;Notion 조회에 실패했습니다.&quot;));
 }
-async function fetchNotionSnapshotStatic(connection, signal) {
+function resolveLogoutTargetOrigin(windowObj) {
+const locOrigin = windowObj?.location?.origin;
+if (typeof locOrigin === &quot;string&quot; &amp;&amp; locOrigin &amp;&amp; locOrigin !== &quot;null&quot;) {
+return locOrigin;
+}
+const winOrigin = windowObj?.origin;
+if (typeof winOrigin === &quot;string&quot; &amp;&amp; winOrigin &amp;&amp; winOrigin !== &quot;null&quot;) {
+return winOrigin;
+}
+return null;
+}
+function createSessionController({
+initialSnapshot,
+explicitMode,
+windowObj = globalThis.window,
+navigatorObj = globalThis.navigator,
+fetchImpl,
+opfsStore,
+hooks,
+}) {
+const staticMode = detectRuntimeMode({ initialSnapshot, runtimeMode: explicitMode }) === &quot;static&quot;;
+const store = opfsStore || createOpfsStore({
+getDirectory: typeof navigatorObj !== &quot;undefined&quot; &amp;&amp; typeof navigatorObj?.storage?.getDirectory === &quot;function&quot;
+? () =&gt; navigatorObj.storage.getDirectory()
+: null,
+});
+let modeState = staticMode ? &quot;unconnected&quot; : &quot;local&quot;;
+let activeConnection = null;
+let activeFetchController = null;
+let pollTimerId = null;
+let sessionEpoch = 0;
+let isRefreshing = false;
+let hasCachedData = !staticMode &amp;&amp; Array.isArray(initialSnapshot?.results) &amp;&amp; initialSnapshot.results.length &gt; 0;
+function resolveFetch() {
+if (typeof fetchImpl === &quot;function&quot;) return fetchImpl;
+if (typeof fetch === &quot;function&quot;) return fetch;
+return globalThis.fetch;
+}
+async function queryStaticNotion(connection, signal) {
 const valid = validateStaticConnection(connection);
 if (!valid.ok) throw new Error(valid.error);
 try {
@@ -5698,12 +5661,341 @@ token: valid.value.token,
 dataSourceId: valid.value.dataSourceId,
 strictUuid: true,
 signal,
-fetchImpl: typeof fetch === &quot;function&quot; ? fetch : globalThis.fetch,
+fetchImpl: resolveFetch(),
 });
 return { ...snap, lastSuccessAt: new Date().toISOString() };
 } catch (error) {
 throw formatStaticNotionError(error);
 }
+}
+function stopPolling() {
+if (pollTimerId !== null) {
+windowObj?.clearInterval?.(pollTimerId);
+pollTimerId = null;
+}
+}
+function startPolling() {
+if (pollTimerId !== null) return;
+pollTimerId = windowObj?.setInterval?.(refresh, 30_000) ?? null;
+}
+async function refresh() {
+if (isRefreshing || (staticMode &amp;&amp; !activeConnection)) return;
+isRefreshing = true;
+hooks.setRefreshDisabled(true);
+const requestEpoch = sessionEpoch;
+hooks.setSyncStatus(&quot;갱신 중…&quot;, &quot;loading&quot;);
+let responseData = null;
+try {
+if (staticMode) {
+activeFetchController?.abort();
+activeFetchController = new AbortController();
+const freshSnapshot = await queryStaticNotion(activeConnection, activeFetchController.signal);
+if (requestEpoch !== sessionEpoch) return;
+if (store.isSupported()) await store.saveSnapshot(freshSnapshot).catch(() =&gt; {});
+if (requestEpoch !== sessionEpoch) return;
+hasCachedData = freshSnapshot.results.length &gt; 0;
+modeState = &quot;connected&quot;;
+hooks.onSnapshot(freshSnapshot);
+hooks.setOfflineBanner(&quot;&quot;);
+hooks.setSyncStatus(hooks.formatTime(freshSnapshot.lastSuccessAt) + &quot; 갱신&quot;, &quot;success&quot;);
+return;
+}
+const response = await resolveFetch()(&quot;/api/tasks&quot;, {
+headers: { Accept: &quot;application/json&quot; },
+cache: &quot;no-store&quot;,
+});
+responseData = await response.json().catch(() =&gt; null);
+if (!response.ok) {
+const error = new Error(responseData?.error || &quot;Notion 데이터를 갱신하지 못했습니다.&quot;);
+error.responseData = responseData;
+throw error;
+}
+if (!responseData || !Array.isArray(responseData.results) || typeof responseData.snapshotDate !== &quot;string&quot;) {
+throw new Error(&quot;서버가 유효한 Notion 스냅샷을 반환하지 않았습니다.&quot;);
+}
+hasCachedData = responseData.results.length &gt; 0;
+hooks.onSnapshot(responseData);
+hooks.setSyncStatus(hooks.formatTime(responseData.lastSuccessAt) + &quot; 갱신&quot;, &quot;success&quot;);
+} catch (error) {
+if (requestEpoch !== sessionEpoch || error?.code === &quot;NOTION_ABORTED&quot;) return;
+const detail = error.responseData || responseData;
+const fallbackTime = staticMode ? hooks.getLastSuccessAt() : detail?.lastSuccessAt;
+const message = error.message || &quot;서버에 연결할 수 없습니다. 연결 상태를 확인하세요.&quot;;
+if (staticMode &amp;&amp; navigatorObj?.onLine === false &amp;&amp; hasCachedData) {
+modeState = &quot;offline-cached&quot;;
+hooks.setOfflineBanner(&quot;오프라인 상태입니다. 기기 OPFS에 저장된 마지막 조회 데이터를 표시합니다.&quot;);
+}
+hooks.setSyncStatus(message + (fallbackTime ? &quot; · &quot; + hooks.formatTime(fallbackTime) : &quot;&quot;), &quot;error&quot;);
+} finally {
+isRefreshing = false;
+if (requestEpoch === sessionEpoch) {
+hooks.setRefreshDisabled(staticMode &amp;&amp; !activeConnection);
+}
+}
+}
+async function connect(credentials) {
+const validation = validateStaticConnection(credentials);
+if (!validation.ok) {
+hooks.setConnectionMessage(validation.error, &quot;error&quot;);
+return { ok: false, error: validation.error };
+}
+const submitEpoch = sessionEpoch;
+modeState = &quot;connecting&quot;;
+hooks.setConnectSubmitDisabled(true);
+hooks.setConnectionMessage(&quot;Notion 연결 확인 및 데이터 조회 중…&quot;, &quot;loading&quot;);
+hooks.setSyncStatus(&quot;연결 확인 중…&quot;, &quot;loading&quot;);
+try {
+activeFetchController?.abort();
+activeFetchController = new AbortController();
+const freshSnapshot = await queryStaticNotion(validation.value, activeFetchController.signal);
+if (submitEpoch !== sessionEpoch) return { ok: false, aborted: true };
+if (store.isSupported()) {
+await store.saveConnection(validation.value);
+await store.saveSnapshot(freshSnapshot);
+}
+if (submitEpoch !== sessionEpoch) return { ok: false, aborted: true };
+activeConnection = validation.value;
+hasCachedData = freshSnapshot.results.length &gt; 0;
+modeState = &quot;connected&quot;;
+hooks.onConnected(validation.value, freshSnapshot);
+hooks.setOfflineBanner(&quot;&quot;);
+hooks.setConnectionMessage(&quot;연결이 저장되었습니다. OPFS에 격리 보관됩니다.&quot;, &quot;info&quot;);
+hooks.setSyncStatus(hooks.formatTime(freshSnapshot.lastSuccessAt) + &quot; 갱신&quot;, &quot;success&quot;);
+startPolling();
+return { ok: true, snapshot: freshSnapshot };
+} catch (error) {
+if (submitEpoch !== sessionEpoch || error?.code === &quot;NOTION_ABORTED&quot;) {
+return { ok: false, aborted: true };
+}
+modeState = activeConnection ? &quot;connected&quot; : &quot;unconnected&quot;;
+const msg = error?.message || &quot;Notion 연결에 실패했습니다.&quot;;
+hooks.setConnectionMessage(msg, &quot;error&quot;);
+hooks.setSyncStatus(msg, &quot;error&quot;);
+return { ok: false, error: msg };
+} finally {
+if (submitEpoch === sessionEpoch) {
+hooks.setConnectSubmitDisabled(false);
+}
+}
+}
+async function logout() {
+sessionEpoch += 1;
+isRefreshing = false;
+activeFetchController?.abort();
+activeFetchController = null;
+stopPolling();
+activeConnection = null;
+hasCachedData = false;
+modeState = &quot;unconnected&quot;;
+hooks.onBeforeLogoutClear();
+if (store.isSupported()) await store.clearAll().catch(() =&gt; {});
+if (typeof windowObj?.__wipsClearSwSession === &quot;function&quot;) {
+await windowObj.__wipsClearSwSession().catch(() =&gt; {});
+}
+try {
+if (typeof CustomEvent === &quot;function&quot;) {
+windowObj?.dispatchEvent?.(new CustomEvent(&quot;wips:logout&quot;));
+}
+} catch {}
+try {
+if (windowObj?.parent &amp;&amp; windowObj.parent !== windowObj) {
+const targetOrigin = resolveLogoutTargetOrigin(windowObj);
+if (targetOrigin) {
+windowObj.parent.postMessage({ type: &quot;wips:logout&quot; }, targetOrigin);
+}
+if (typeof windowObj.parent.__wipsClearSwSession === &quot;function&quot;) {
+await windowObj.parent.__wipsClearSwSession().catch(() =&gt; {});
+}
+}
+} catch {}
+hooks.onLoggedOut(createEmptySnapshot());
+hooks.setConnectionMessage(&quot;로그아웃되었습니다. 이 기기에서 토큰·연결 정보와 업무 데이터를 삭제했습니다.&quot;, &quot;info&quot;);
+hooks.setSyncStatus(&quot;로그아웃됨&quot;, &quot;idle&quot;);
+}
+async function initStatic() {
+const startEpoch = sessionEpoch;
+hooks.onResetEmpty(createEmptySnapshot());
+hooks.setStaticUnconnectedControls();
+if (!store.isSupported()) {
+hooks.setConnectionMessage(
+&quot;이 브라우저는 OPFS 격리 저장소를 지원하지 않습니다. 연결 정보는 현재 탭 세션 메모리에만 유지되며 새로고침 시 삭제됩니다.&quot;,
+&quot;info&quot;,
+);
+hooks.setSyncStatus(&quot;연결 필요 (OPFS 미지원)&quot;, &quot;idle&quot;);
+return;
+}
+let savedConnection = null;
+try {
+savedConnection = await store.loadConnection();
+} catch {
+savedConnection = null;
+}
+let savedSnapshot = null;
+try {
+savedSnapshot = await store.loadSnapshot();
+} catch {
+savedSnapshot = null;
+}
+if (startEpoch !== sessionEpoch) return;
+if (!savedConnection) {
+if (store.isSupported()) await store.clearAll().catch(() =&gt; {});
+modeState = &quot;unconnected&quot;;
+hooks.setSyncStatus(&quot;연결 필요&quot;, &quot;idle&quot;);
+return;
+}
+activeConnection = savedConnection;
+hooks.onRestoredConnection(savedConnection);
+if (savedSnapshot &amp;&amp; !isEmptySnapshot(savedSnapshot)) {
+hasCachedData = savedSnapshot.results.length &gt; 0;
+hooks.onSnapshot(savedSnapshot);
+if (navigatorObj?.onLine === false) {
+modeState = &quot;offline-cached&quot;;
+hooks.setOfflineBanner(&quot;오프라인 상태입니다. 기기 OPFS에 저장된 마지막 조회 데이터를 표시합니다.&quot;);
+hooks.setSyncStatus(&quot;오프라인 · &quot; + hooks.formatTime(savedSnapshot.lastSuccessAt), &quot;error&quot;);
+startPolling();
+return;
+}
+}
+modeState = &quot;connected&quot;;
+await refresh();
+if (startEpoch === sessionEpoch &amp;&amp; activeConnection) {
+startPolling();
+}
+}
+function handleOffline() {
+if (staticMode &amp;&amp; activeConnection &amp;&amp; hasCachedData) {
+modeState = &quot;offline-cached&quot;;
+hooks.setOfflineBanner(&quot;오프라인 상태입니다. 기기 OPFS에 저장된 마지막 조회 데이터를 표시합니다.&quot;);
+}
+}
+function handleOnline() {
+if (staticMode &amp;&amp; activeConnection) {
+hooks.setOfflineBanner(&quot;&quot;);
+void refresh();
+}
+}
+return {
+isStaticMode: () =&gt; staticMode,
+getModeState: () =&gt; modeState,
+getActiveConnection: () =&gt; activeConnection,
+initStatic,
+connect,
+refresh,
+logout,
+handleOffline,
+handleOnline,
+startPolling,
+stopPolling,
+};
+}
+return { validateStaticConnection: validateStaticConnection, formatStaticNotionError: formatStaticNotionError, resolveLogoutTargetOrigin: resolveLogoutTargetOrigin, createSessionController: createSessionController };
+})();
+const { createSeatingStore } = __wips_mod_0;
+const { ALL_PROJECTS, ALL_STATUS, UNSPECIFIED_PROJECT, createOfficeModel } = __wips_mod_1;
+const { renderOfficeView, setSafeHref } = __wips_mod_3;
+const { createSessionController } = __wips_mod_7;
+window.__wipsOfficeModel = createOfficeModel;
+const byId = (id) =&gt; document.getElementById(&quot;wips-office-&quot; + id);
+const root = byId(&quot;root&quot;);
+if (!root) return;
+const dataNode = byId(&quot;data&quot;);
+let snapshot = JSON.parse(dataNode.textContent);
+let model = createOfficeModel(snapshot);
+const statusSelect = byId(&quot;status&quot;);
+const projectSelect = byId(&quot;project&quot;);
+const refreshButton = byId(&quot;refresh&quot;);
+const syncStatus = byId(&quot;sync-status&quot;);
+const summaryNode = byId(&quot;summary&quot;);
+const countsNode = byId(&quot;status-counts&quot;);
+const employeeNode = byId(&quot;employees&quot;);
+const seatingEdit = byId(&quot;edit-seating&quot;);
+const seatingReset = byId(&quot;reset-seating&quot;);
+const seatingMessage = byId(&quot;seating-message&quot;);
+const selectedTitle = byId(&quot;selected-title&quot;);
+const selectedNote = byId(&quot;selected-note&quot;);
+const selectedEmpty = byId(&quot;selected-empty&quot;);
+const selectedTasksNode = byId(&quot;selected-tasks&quot;);
+const communalCount = byId(&quot;communal-count&quot;);
+const communalEmpty = byId(&quot;communal-empty&quot;);
+const communalTasksNode = byId(&quot;communal-tasks&quot;);
+const communalTitleNode = byId(&quot;communal-title&quot;);
+const billboardNode = byId(&quot;billboard&quot;);
+const sourceNode = byId(&quot;source&quot;);
+const connectToggleButton = byId(&quot;connect-toggle&quot;);
+const logoutButton = byId(&quot;logout&quot;);
+const offlineBanner = byId(&quot;offline-banner&quot;);
+const connectionPanel = byId(&quot;connection-panel&quot;);
+const connectionForm = byId(&quot;connection-form&quot;);
+const tokenInput = byId(&quot;token&quot;);
+const dataSourceIdInput = byId(&quot;datasource-id&quot;);
+const connectSubmitButton = byId(&quot;connect-submit&quot;);
+const connectCancelButton = byId(&quot;connect-cancel&quot;);
+const connectionMessage = byId(&quot;connection-message&quot;);
+const mainView = byId(&quot;main-view&quot;);
+const seatingStore = createSeatingStore({
+normalizeSeating: (saved) =&gt; model.normalizeSeating(saved),
+swapSeats: (order, owner, target) =&gt; model.swapSeats(order, owner, target),
+onMessage: (text) =&gt; {
+seatingMessage.textContent = text;
+},
+});
+let pendingHostState = window.openai &amp;&amp; window.openai.widgetState;
+let hasLiveModel = false;
+let userChangedState = false;
+const initialState = model.stateFromHost(pendingHostState);
+const state = initialState || {
+selectedEmployee: &quot;sb&quot;,
+status: ALL_STATUS,
+project: ALL_PROJECTS,
+};
+const openProgressDrawers = new Set();
+statusSelect.value = state.status;
+projectSelect.value = state.project;
+function saveState() {
+try {
+if (!window.openai || typeof window.openai.setWidgetState !== &quot;function&quot;) return;
+const pending = window.openai.setWidgetState({
+modelContent: { selectedEmployee: state.selectedEmployee },
+privateContent: {
+selectedEmployee: state.selectedEmployee,
+status: statusSelect.value,
+project: projectSelect.value,
+},
+});
+if (pending &amp;&amp; typeof pending.catch === &quot;function&quot;) pending.catch(() =&gt; {});
+} catch {}
+}
+function selectEmployee(owner) {
+userChangedState = true;
+state.selectedEmployee = owner;
+render();
+model.focusEmployeeButton(Array.from(employeeNode.querySelectorAll(&quot;button&quot;)), owner);
+saveState();
+}
+function render() {
+renderOfficeView({
+model,
+filters: { status: statusSelect.value, project: projectSelect.value },
+selectedEmployee: state.selectedEmployee,
+seatingStore,
+openProgressDrawers,
+nodes: {
+summaryNode,
+countsNode,
+billboardNode,
+employeeNode,
+selectedTitle,
+selectedNote,
+selectedEmpty,
+selectedTasksNode,
+communalTitleNode,
+communalCount,
+communalEmpty,
+communalTasksNode,
+},
+onSelectEmployee: selectEmployee,
+onRender: render,
+});
 }
 function setConnectionMessage(message, stateName) {
 if (!connectionMessage) return;
@@ -5719,6 +6011,31 @@ offlineBanner.hidden = false;
 offlineBanner.textContent = &quot;&quot;;
 offlineBanner.hidden = true;
 }
+}
+function setSyncStatus(message, stateName) {
+syncStatus.textContent = message;
+syncStatus.dataset.state = stateName;
+}
+function formatSuccessTime(value, fallbackDate) {
+if (!value) return fallbackDate || &quot;스냅샷&quot;;
+const date = new Date(value);
+if (Number.isNaN(date.getTime())) return String(value);
+return date.toLocaleTimeString(&quot;ko-KR&quot;, {
+timeZone: &quot;Asia/Seoul&quot;,
+hour: &quot;2-digit&quot;,
+minute: &quot;2-digit&quot;,
+hour12: false,
+});
+}
+function setSelectOptions(select, values, selectedValue) {
+const options = [...new Set(values.concat(selectedValue ? [selectedValue] : []))];
+select.replaceChildren(...options.map((value) =&gt; {
+const option = document.createElement(&quot;option&quot;);
+option.value = value;
+option.textContent = value;
+return option;
+}));
+select.value = selectedValue;
 }
 function applySnapshot(nextSnapshot) {
 let selectedStatus = statusSelect.value;
@@ -5750,9 +6067,9 @@ sourceNode.removeAttribute(&quot;href&quot;);
 if (mainView) mainView.hidden = false;
 render();
 }
-function clearViewDom() {
+function clearViewDom(emptySnapshot) {
 openProgressDrawers.clear();
-snapshot = createEmptySnapshot();
+snapshot = emptySnapshot;
 model = createOfficeModel(snapshot);
 hasLiveModel = false;
 dataNode.textContent = JSON.stringify(snapshot);
@@ -5774,114 +6091,73 @@ sourceNode.removeAttribute(&quot;href&quot;);
 if (mainView) mainView.hidden = true;
 setOfflineBanner(&quot;&quot;);
 }
-function stopStaticPolling() {
-if (pollTimerId !== null) {
-window.clearInterval(pollTimerId);
-pollTimerId = null;
-}
-}
-function startStaticPolling() {
-if (pollTimerId !== null) return;
-pollTimerId = window.setInterval(refreshData, 30_000);
-}
-async function refreshData() {
-if (isRefreshing || (IS_STATIC_MODE &amp;&amp; !activeConnection)) return;
-isRefreshing = true;
+const sessionController = createSessionController({
+initialSnapshot: snapshot,
+explicitMode: window.__WIPS_RUNTIME_MODE,
+windowObj: window,
+navigatorObj: navigator,
+hooks: {
+formatTime: (value) =&gt; formatSuccessTime(value, snapshot.snapshotDate),
+getLastSuccessAt: () =&gt; snapshot.lastSuccessAt,
+setRefreshDisabled: (disabled) =&gt; {
+refreshButton.disabled = disabled;
+},
+setConnectSubmitDisabled: (disabled) =&gt; {
+if (connectSubmitButton) connectSubmitButton.disabled = disabled;
+},
+setSyncStatus,
+setConnectionMessage,
+setOfflineBanner,
+onSnapshot: applySnapshot,
+onResetEmpty: clearViewDom,
+setStaticUnconnectedControls: () =&gt; {
+if (connectToggleButton) connectToggleButton.hidden = false;
+if (logoutButton) logoutButton.hidden = true;
 refreshButton.disabled = true;
-const requestEpoch = sessionEpoch;
-setSyncStatus(&quot;갱신 중…&quot;, &quot;loading&quot;);
-let responseData = null;
-try {
-if (IS_STATIC_MODE) {
-activeFetchController?.abort();
-activeFetchController = new AbortController();
-const freshSnapshot = await fetchNotionSnapshotStatic(activeConnection, activeFetchController.signal);
-if (requestEpoch !== sessionEpoch) return;
-if (opfsStore.isSupported()) await opfsStore.saveSnapshot(freshSnapshot).catch(() =&gt; {});
-if (requestEpoch !== sessionEpoch) return;
+if (connectionPanel) connectionPanel.hidden = false;
+if (connectCancelButton) connectCancelButton.hidden = true;
+},
+onRestoredConnection: (savedConnection) =&gt; {
+if (dataSourceIdInput) dataSourceIdInput.value = savedConnection.dataSourceId;
+if (logoutButton) logoutButton.hidden = false;
+refreshButton.disabled = false;
+if (connectionPanel) connectionPanel.hidden = true;
+},
+onConnected: (_connection, freshSnapshot) =&gt; {
+if (tokenInput) tokenInput.value = &quot;&quot;;
+if (connectionPanel) connectionPanel.hidden = true;
+if (logoutButton) logoutButton.hidden = false;
+refreshButton.disabled = false;
 applySnapshot(freshSnapshot);
-setOfflineBanner(&quot;&quot;);
-setSyncStatus(formatSuccessTime(freshSnapshot.lastSuccessAt) + &quot; 갱신&quot;, &quot;success&quot;);
-return;
-}
-const response = await fetch(&quot;/api/tasks&quot;, {
-headers: { Accept: &quot;application/json&quot; },
-cache: &quot;no-store&quot;,
-});
-responseData = await response.json().catch(() =&gt; null);
-if (!response.ok) {
-const error = new Error(responseData?.error || &quot;Notion 데이터를 갱신하지 못했습니다.&quot;);
-error.responseData = responseData;
-throw error;
-}
-if (!responseData || !Array.isArray(responseData.results) || typeof responseData.snapshotDate !== &quot;string&quot;) {
-throw new Error(&quot;서버가 유효한 Notion 스냅샷을 반환하지 않았습니다.&quot;);
-}
-applySnapshot(responseData);
-setSyncStatus(formatSuccessTime(snapshot.lastSuccessAt) + &quot; 갱신&quot;, &quot;success&quot;);
-} catch (error) {
-if (requestEpoch !== sessionEpoch || error?.code === &quot;NOTION_ABORTED&quot;) return;
-const detail = error.responseData || responseData;
-const fallbackTime = IS_STATIC_MODE ? snapshot.lastSuccessAt : detail?.lastSuccessAt;
-const message = error.message || &quot;서버에 연결할 수 없습니다. 연결 상태를 확인하세요.&quot;;
-if (IS_STATIC_MODE &amp;&amp; navigator?.onLine === false &amp;&amp; snapshot.results.length &gt; 0) {
-setOfflineBanner(&quot;오프라인 상태입니다. 기기 OPFS에 저장된 마지막 조회 데이터를 표시합니다.&quot;);
-}
-setSyncStatus(message + (fallbackTime ? &quot; · &quot; + formatSuccessTime(fallbackTime) : &quot;&quot;), &quot;error&quot;);
-} finally {
-isRefreshing = false;
-if (requestEpoch === sessionEpoch) {
-refreshButton.disabled = IS_STATIC_MODE &amp;&amp; !activeConnection;
-}
-}
-}
-async function logoutSession() {
-sessionEpoch += 1;
-isRefreshing = false;
-activeFetchController?.abort();
-activeFetchController = null;
-stopStaticPolling();
-activeConnection = null;
+},
+onBeforeLogoutClear: () =&gt; {
 if (logoutButton) logoutButton.hidden = true;
 refreshButton.disabled = true;
 if (connectSubmitButton) connectSubmitButton.disabled = false;
-if (opfsStore.isSupported()) await opfsStore.clearAll().catch(() =&gt; {});
-if (typeof window.__wipsClearSwSession === &quot;function&quot;) {
-await window.__wipsClearSwSession().catch(() =&gt; {});
-}
-try {
-if (typeof CustomEvent === &quot;function&quot;) {
-window.dispatchEvent(new CustomEvent(&quot;wips:logout&quot;));
-}
-} catch {}
-try {
-if (window.parent &amp;&amp; window.parent !== window) {
-window.parent.postMessage({ type: &quot;wips:logout&quot; }, window.location.origin);
-}
-} catch {}
-clearViewDom();
+},
+onLoggedOut: (emptySnapshot) =&gt; {
+clearViewDom(emptySnapshot);
 if (tokenInput) tokenInput.value = &quot;&quot;;
 if (dataSourceIdInput) dataSourceIdInput.value = &quot;&quot;;
 if (connectionPanel) connectionPanel.hidden = false;
 if (connectCancelButton) connectCancelButton.hidden = true;
-const msg = &quot;로그아웃되었습니다. 이 기기에서 토큰·연결 정보와 업무 데이터를 삭제했습니다.&quot;;
-setConnectionMessage(msg, &quot;info&quot;);
-setSyncStatus(&quot;로그아웃됨&quot;, &quot;idle&quot;);
-}
-function saveState() {
-try {
-if (!window.openai || typeof window.openai.setWidgetState !== &quot;function&quot;) return;
-const pending = window.openai.setWidgetState({
-modelContent: { selectedEmployee: state.selectedEmployee },
-privateContent: {
-selectedEmployee: state.selectedEmployee,
-status: statusSelect.value,
-project: projectSelect.value,
+},
 },
 });
-if (pending &amp;&amp; typeof pending.catch === &quot;function&quot;) pending.catch(() =&gt; {});
-} catch {}
-}
+seatingEdit.addEventListener(&quot;click&quot;, () =&gt; {
+const editing = seatingStore.toggleEdit();
+seatingEdit.setAttribute(&quot;aria-pressed&quot;, String(editing));
+seatingEdit.textContent = editing ? &quot;배치 완료&quot; : &quot;자리 배치&quot;;
+seatingReset.hidden = !editing;
+seatingMessage.textContent = editing
+? &quot;요원을 다른 자리로 끌거나 아래 선택 메뉴에서 고르면 두 요원의 자리를 서로 바꿉니다. 변경 즉시 저장됩니다.&quot;
+: &quot;자리 배치는 이 브라우저에 저장됩니다.&quot;;
+render();
+});
+seatingReset.addEventListener(&quot;click&quot;, () =&gt; {
+seatingStore.reset();
+render();
+});
 statusSelect.addEventListener(&quot;change&quot;, () =&gt; {
 userChangedState = true;
 state.status = statusSelect.value;
@@ -5912,137 +6188,45 @@ statusSelect.value = incoming.status;
 projectSelect.value = incoming.project;
 render();
 });
-async function initStaticMode() {
-const startEpoch = sessionEpoch;
-clearViewDom();
-if (connectToggleButton) connectToggleButton.hidden = false;
-if (logoutButton) logoutButton.hidden = true;
-refreshButton.disabled = true;
-if (connectionPanel) connectionPanel.hidden = false;
-if (connectCancelButton) connectCancelButton.hidden = true;
-if (!opfsStore.isSupported()) {
-setConnectionMessage(
-&quot;이 브라우저는 OPFS 격리 저장소를 지원하지 않습니다. 연결 정보는 현재 탭 세션 메모리에만 유지되며 새로고침 시 삭제됩니다.&quot;,
-&quot;info&quot;,
-);
-setSyncStatus(&quot;연결 필요 (OPFS 미지원)&quot;, &quot;idle&quot;);
-return;
-}
-let savedConnection = null;
-let savedSnapshot = null;
-try {
-savedConnection = await opfsStore.loadConnection();
-savedSnapshot = await opfsStore.loadSnapshot();
-} catch {
-savedConnection = null;
-savedSnapshot = null;
-}
-if (startEpoch !== sessionEpoch) return;
-if (!savedConnection) {
-if (opfsStore.isSupported()) await opfsStore.clearAll().catch(() =&gt; {});
-setSyncStatus(&quot;연결 필요&quot;, &quot;idle&quot;);
-return;
-}
-activeConnection = savedConnection;
-if (dataSourceIdInput) dataSourceIdInput.value = savedConnection.dataSourceId;
-if (logoutButton) logoutButton.hidden = false;
-refreshButton.disabled = false;
-if (connectionPanel) connectionPanel.hidden = true;
-if (savedSnapshot &amp;&amp; !isEmptySnapshot(savedSnapshot)) {
-applySnapshot(savedSnapshot);
-if (navigator?.onLine === false) {
-setOfflineBanner(&quot;오프라인 상태입니다. 기기 OPFS에 저장된 마지막 조회 데이터를 표시합니다.&quot;);
-setSyncStatus(&quot;오프라인 · &quot; + formatSuccessTime(savedSnapshot.lastSuccessAt), &quot;error&quot;);
-startStaticPolling();
-return;
-}
-}
-await refreshData();
-if (startEpoch === sessionEpoch &amp;&amp; activeConnection) {
-startStaticPolling();
-}
-}
-refreshButton.addEventListener(&quot;click&quot;, refreshData);
+refreshButton.addEventListener(&quot;click&quot;, () =&gt; {
+void sessionController.refresh();
+});
 connectToggleButton?.addEventListener(&quot;click&quot;, () =&gt; {
 if (!connectionPanel) return;
 connectionPanel.hidden = !connectionPanel.hidden;
+const activeConnection = sessionController.getActiveConnection();
 if (connectCancelButton) connectCancelButton.hidden = !activeConnection;
-if (!connectionPanel.hidden &amp;&amp; activeConnection) {
-if (dataSourceIdInput) dataSourceIdInput.value = activeConnection.dataSourceId;
+if (!connectionPanel.hidden &amp;&amp; activeConnection &amp;&amp; dataSourceIdInput) {
+dataSourceIdInput.value = activeConnection.dataSourceId;
 }
 });
 connectCancelButton?.addEventListener(&quot;click&quot;, () =&gt; {
-if (connectionPanel &amp;&amp; activeConnection) {
+if (connectionPanel &amp;&amp; sessionController.getActiveConnection()) {
 connectionPanel.hidden = true;
 }
 });
 logoutButton?.addEventListener(&quot;click&quot;, () =&gt; {
-void logoutSession();
+void sessionController.logout();
 });
 connectionForm?.addEventListener(&quot;submit&quot;, async (event) =&gt; {
 event.preventDefault();
-const validation = validateStaticConnection({
+await sessionController.connect({
 token: tokenInput?.value || &quot;&quot;,
 dataSourceId: dataSourceIdInput?.value || &quot;&quot;,
 });
-if (!validation.ok) {
-setConnectionMessage(validation.error, &quot;error&quot;);
-return;
-}
-const submitEpoch = sessionEpoch;
-if (connectSubmitButton) connectSubmitButton.disabled = true;
-setConnectionMessage(&quot;Notion 연결 확인 및 데이터 조회 중…&quot;, &quot;loading&quot;);
-setSyncStatus(&quot;연결 확인 중…&quot;, &quot;loading&quot;);
-try {
-activeFetchController?.abort();
-activeFetchController = new AbortController();
-const freshSnapshot = await fetchNotionSnapshotStatic(validation.value, activeFetchController.signal);
-if (submitEpoch !== sessionEpoch) return;
-if (opfsStore.isSupported()) {
-await opfsStore.saveConnection(validation.value);
-await opfsStore.saveSnapshot(freshSnapshot);
-}
-if (submitEpoch !== sessionEpoch) return;
-activeConnection = validation.value;
-if (tokenInput) tokenInput.value = &quot;&quot;;
-if (connectionPanel) connectionPanel.hidden = true;
-if (logoutButton) logoutButton.hidden = false;
-refreshButton.disabled = false;
-applySnapshot(freshSnapshot);
-setOfflineBanner(&quot;&quot;);
-setConnectionMessage(&quot;연결이 저장되었습니다. OPFS에 격리 보관됩니다.&quot;, &quot;info&quot;);
-setSyncStatus(formatSuccessTime(freshSnapshot.lastSuccessAt) + &quot; 갱신&quot;, &quot;success&quot;);
-startStaticPolling();
-} catch (error) {
-if (submitEpoch !== sessionEpoch || error?.code === &quot;NOTION_ABORTED&quot;) return;
-const msg = error?.message || &quot;Notion 연결에 실패했습니다.&quot;;
-setConnectionMessage(msg, &quot;error&quot;);
-setSyncStatus(msg, &quot;error&quot;);
-} finally {
-if (connectSubmitButton &amp;&amp; submitEpoch === sessionEpoch) {
-connectSubmitButton.disabled = false;
-}
-}
 });
-if (IS_STATIC_MODE) {
-window.addEventListener?.(&quot;offline&quot;, () =&gt; {
-if (activeConnection &amp;&amp; snapshot.results.length &gt; 0) {
-setOfflineBanner(&quot;오프라인 상태입니다. 기기 OPFS에 저장된 마지막 조회 데이터를 표시합니다.&quot;);
-}
-});
-window.addEventListener?.(&quot;online&quot;, () =&gt; {
-if (activeConnection) {
-setOfflineBanner(&quot;&quot;);
-void refreshData();
-}
-});
-void initStaticMode();
+if (sessionController.isStaticMode()) {
+window.addEventListener?.(&quot;offline&quot;, () =&gt; sessionController.handleOffline());
+window.addEventListener?.(&quot;online&quot;, () =&gt; sessionController.handleOnline());
+void sessionController.initStatic();
 } else {
 setSafeHref(sourceNode, snapshot.sourceUrl);
 render();
 setSyncStatus(&quot;동기화 중…&quot;, &quot;loading&quot;);
-refreshData();
-window.setInterval(refreshData, 30_000);
+void sessionController.refresh();
+window.setInterval(() =&gt; {
+void sessionController.refresh();
+}, 30_000);
 }
 })();
 &lt;/script&gt;
