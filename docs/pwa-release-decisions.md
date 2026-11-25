@@ -23,6 +23,7 @@
 
 - **허용 메서드 및 경로 (Read-Only)**:
   - `POST https://api.notion.com/v1/data_sources/{uuid}/query` (`{uuid}`는 표준 UUID 형식만 허용)
+  - `GET https://api.notion.com/v1/blocks/{id}/children` (할 일 체크리스트 읽기 전용 조회)
   - 페이지 생성·수정·삭제(쓰기) API는 클라이언트에 포함하지 않는다.
 - **네트워크 격리 옵션 및 금지 사항**:
   - 모든 `fetch` 호출에 `credentials: 'omit'`, `redirect: 'error'`, `cache: 'no-store'`를 적용한다.

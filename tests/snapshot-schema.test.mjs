@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   EMPTY_SNAPSHOT,
+  createEmptySnapshot,
   detectRuntimeMode,
   isEmptySnapshot,
   validateConnectionConfig,
@@ -94,4 +95,12 @@ test("validates connection config strictly and blocks control chars and bad UUID
   ]) {
     assert.equal(validateConnectionConfig(invalid).ok, false);
   }
+
+  const trimmed = validateConnectionConfig({
+    token: "demo_token_abc123",
+    dataSourceId: "  AAAA1111-BBBB-4333-8444-555555555555  ",
+  });
+  assert.equal(trimmed.ok, true);
+  assert.equal(trimmed.value.dataSourceId, "aaaa1111-bbbb-4333-8444-555555555555");
+  assert.equal(isEmptySnapshot(createEmptySnapshot()), true);
 });

@@ -6,20 +6,23 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import vm from "node:vm";
 
+import { DIST_ALLOWLIST } from "../lib/app-assets.mjs";
 import { buildPages } from "../scripts/build-pages.mjs";
 import { unescapeHtmlAttr } from "../scripts/sync-office.mjs";
 import { verifyDist } from "../scripts/verify-dist.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..");
 
+function contentTypeForAsset(file) {
+  if (file.endsWith(".webmanifest")) return "application/manifest+json; charset=utf-8";
+  if (file.endsWith(".js")) return "application/javascript; charset=utf-8";
+  if (file.endsWith(".png")) return "image/png";
+  return "text/html; charset=utf-8";
+}
+
 const SUBPATH_ROUTES = new Map([
   ["/WIPS-Office/", { file: "index.html", contentType: "text/html; charset=utf-8" }],
-  ["/WIPS-Office/index.html", { file: "index.html", contentType: "text/html; charset=utf-8" }],
-  ["/WIPS-Office/manifest.webmanifest", { file: "manifest.webmanifest", contentType: "application/manifest+json; charset=utf-8" }],
-  ["/WIPS-Office/pwa-register.js", { file: "pwa-register.js", contentType: "application/javascript; charset=utf-8" }],
-  ["/WIPS-Office/sw.js", { file: "sw.js", contentType: "application/javascript; charset=utf-8" }],
-  ["/WIPS-Office/icons/icon-192.png", { file: "icons/icon-192.png", contentType: "image/png" }],
-  ["/WIPS-Office/icons/icon-512.png", { file: "icons/icon-512.png", contentType: "image/png" }],
+  ...DIST_ALLOWLIST.map((file) => [`/WIPS-Office/${file}`, { file, contentType: contentTypeForAsset(file) }]),
 ]);
 
 test("built dist/ serves cleanly under /WIPS-Office/ subpath and blocks non-allowlisted endpoints", async () => {

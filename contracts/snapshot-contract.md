@@ -7,7 +7,7 @@
 - `snapshotDate` (`string`): `""` (빈 초기 스냅샷) 또는 `"YYYY-MM-DD"` (한국 시간 기준 날짜)
 - `timezone` (`string`): 비어 있지 않은 문자열 (기본 `"Asia/Seoul"`)
 - `sourceUrl` (`string`): 정적 빈 초기 스냅샷 및 테스트 샘플에서는 `""`, 서버/실사용 스냅샷에서는 허용된 HTTPS URL 또는 `""`
-- `results` (`Array<TaskItem>`): 정규화된 일감 배열 (초기 배포 스냅샷은 반드시 `[]`)
+- `results` (`Array<TaskItem>`): 정규화된 일감 배열 (초기 배포 스냅샷은 반드시 `[]`). 각 항목은 `title` 외에 선택 필드 `id` (`string`), `parentTaskIds` (`Array<string>`), `subTaskIds` (`Array<string>`), `checklist` (`Array<{ text: string, done: boolean }>`)를 포함할 수 있다.
 - `has_more` (`boolean`): `false`
 - `data_source_ids` (`Array<string>`): 데이터 소스 ID 목록 (초기 배포 스냅샷은 반드시 `[]`)
 - `lastSuccessAt` (`string | null | undefined`, 선택): ISO 8601 마지막 성공 시각

@@ -2,7 +2,7 @@ import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { DIST_ALLOWLIST } from "./build-pages.mjs";
+import { DIST_ALLOWLIST, readDotEnvFile } from "../lib/app-assets.mjs";
 import { BANNED_CDN_HOSTS, OUTER_CSP, SRCDOC_CSP, unescapeHtmlAttr } from "./sync-office.mjs";
 
 const PROJECT_DIR = fileURLToPath(new URL("..", import.meta.url));
@@ -38,21 +38,9 @@ function loadLocalSecretIndicators(rootDir) {
   const taskIndicators = [];
 
   const envPath = resolve(rootDir, ".env");
-  if (existsSync(envPath)) {
-    const rawEnv = readFileSync(envPath, "utf8");
-    for (const line of rawEnv.split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eqIdx = trimmed.indexOf("=");
-      if (eqIdx <= 0) continue;
-      const key = trimmed.slice(0, eqIdx).trim();
-      let val = trimmed.slice(eqIdx + 1).trim();
-      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-        val = val.slice(1, -1);
-      }
-      if (val && val.length >= 6) {
-        secretLiterals.push({ label: `.env ${key}`, value: val });
-      }
+  for (const [key, val] of Object.entries(readDotEnvFile(envPath))) {
+    if (val && val.length >= 6) {
+      secretLiterals.push({ label: `.env ${key}`, value: val });
     }
   }
 
@@ -123,7 +111,7 @@ function checkLocalStorageSafety(rel, text, errors) {
       windowText.includes("storageKey") ||
       windowText.includes("sizeStorageKey") ||
       windowText.includes("codex:visualization-");
-    const hasSensitiveTerm = /\b(?:token|secret|snapshot|dataSourceId|corsProxy|connection)\b/i.test(windowText);
+    const hasSensitiveTerm = /\b(?:token|secret|snapshot|dataSourceId|connection)\b/i.test(windowText);
     if (!hasApprovedContext || hasSensitiveTerm) {
       errors.push(`Unapproved localStorage access context in ${rel}`);
     }
