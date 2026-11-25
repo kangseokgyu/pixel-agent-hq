@@ -2,6 +2,8 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { DEFAULT_OFFICE_ENTRY, bundleModules, injectBundledOfficeScript } from "./bundle-office.mjs";
+
 export const OUTER_CSP =
   "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.notion.com; worker-src 'self'; manifest-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'";
 
@@ -100,6 +102,8 @@ export function syncOfficeHtml({
   rootDir = PROJECT_DIR,
   outPath,
   empty = false,
+  check = false,
+  entryRelPath = DEFAULT_OFFICE_ENTRY,
 } = {}) {
   const indexPath = resolve(rootDir, "index.html");
   const officePath = resolve(rootDir, "wips-office.html");
@@ -107,10 +111,34 @@ export function syncOfficeHtml({
   const targetPath = outPath ? resolve(rootDir, outPath) : indexPath;
 
   const indexHtml = readFileSync(indexPath, "utf8");
-  const officeHtml = readFileSync(officePath, "utf8");
+  const rawOfficeHtml = readFileSync(officePath, "utf8");
+  const bundledJs = bundleModules(entryRelPath, { rootDir });
+  const expectedOfficeHtml = injectBundledOfficeScript(rawOfficeHtml, bundledJs);
   const emptySnapshot = JSON.parse(readFileSync(emptyPath, "utf8"));
 
-  const built = buildSyncedIndexHtml({ indexHtml, officeHtml, emptySnapshot, empty });
+  const built = buildSyncedIndexHtml({
+    indexHtml,
+    officeHtml: expectedOfficeHtml,
+    emptySnapshot,
+    empty,
+  });
+
+  if (check) {
+    const drifted = [];
+    if (rawOfficeHtml !== expectedOfficeHtml) drifted.push("wips-office.html");
+    if (indexHtml !== built) drifted.push("index.html");
+    return {
+      ok: drifted.length === 0,
+      drifted,
+      outPath: targetPath,
+      empty,
+      bytes: Buffer.byteLength(built, "utf8"),
+    };
+  }
+
+  if (!outPath) {
+    writeFileSync(officePath, expectedOfficeHtml, "utf8");
+  }
   mkdirSync(dirname(targetPath), { recursive: true });
   writeFileSync(targetPath, built, "utf8");
   return { outPath: targetPath, empty, bytes: Buffer.byteLength(built, "utf8") };
@@ -118,11 +146,14 @@ export function syncOfficeHtml({
 
 function parseArgs(argv) {
   let empty = false;
+  let check = false;
   let outPath;
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--empty") {
       empty = true;
+    } else if (arg === "--check") {
+      check = true;
     } else if (arg === "--out" && i + 1 < argv.length) {
       outPath = argv[i + 1];
       i += 1;
@@ -130,11 +161,20 @@ function parseArgs(argv) {
       throw new Error(`Unknown argument: ${arg}`);
     }
   }
-  return { empty, outPath };
+  return { empty, check, outPath };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const options = parseArgs(process.argv.slice(2));
   const result = syncOfficeHtml(options);
-  process.stdout.write(`Synced ${result.outPath} (empty=${result.empty}, ${result.bytes} bytes)\n`);
+  if (options.check) {
+    if (!result.ok) {
+      process.stderr.write(`SYNC-CHECK DRIFT: ${result.drifted.join(", ")}\n`);
+      process.exitCode = 1;
+    } else {
+      process.stdout.write("sync-office: OK (wips-office.html and index.html are up to date)\n");
+    }
+  } else {
+    process.stdout.write(`Synced ${result.outPath} (empty=${result.empty}, ${result.bytes} bytes)\n`);
+  }
 }
