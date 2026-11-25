@@ -6,13 +6,17 @@ import test from "node:test";
 import vm from "node:vm";
 
 import {
-  DATA_SOURCE_ID,
   MAX_RETRY_AFTER_MS,
   NOTION_VERSION,
+  NotionApiError,
+  mapNotionPage,
+} from "./lib/notion-client.mjs";
+import {
+  DATA_SOURCE_ID,
   SOURCE_URL,
   createWipsServer,
   fetchNotionSnapshot,
-  mapNotionPage,
+  readConfig,
 } from "./server.mjs";
 
 const projectDir = fileURLToPath(new URL(".", import.meta.url));
@@ -426,4 +430,67 @@ test("maps parent and child task relations independently of other relations", ()
   const cleared = mapNotionPage(page);
   assert.deepEqual(cleared.parentTaskIds, []);
   assert.deepEqual(cleared.subTaskIds, []);
+});
+
+test("readConfig parses .env files with export, quotes, comments, and env precedence", async () => {
+  const { mkdtempSync, rmSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const tempDir = mkdtempSync(join(tmpdir(), "wips-env-"));
+  try {
+    writeFileSync(
+      join(tempDir, ".env"),
+      [
+        "# comment line",
+        'export NOTION_TOKEN="ntn_from_file" # inline',
+        "NOTION_DATA_SOURCE_ID='11111111-2222-4333-8444-555555555555'",
+        "PORT=8123 # port comment",
+      ].join("\n"),
+    );
+    const fromFile = readConfig({ env: {}, appDir: tempDir });
+    assert.equal(fromFile.token, "ntn_from_file");
+    assert.equal(fromFile.dataSourceId, "11111111-2222-4333-8444-555555555555");
+    assert.equal(fromFile.port, 8123);
+
+    const fromEnv = readConfig({
+      env: { NOTION_TOKEN: "ntn_override", PORT: "9001" },
+      appDir: tempDir,
+    });
+    assert.equal(fromEnv.token, "ntn_override");
+    assert.equal(fromEnv.port, 9001);
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("handles HEAD, 405 method errors, and typed NotionApiError HTTP statuses", async (t) => {
+  let nextError = null;
+  const server = createWipsServer({
+    staticDir: projectDir,
+    initialSnapshot: snapshot,
+    fetchSnapshot: async () => {
+      throw nextError;
+    },
+  });
+  const port = await listen(server);
+  t.after(() => close(server));
+  const baseUrl = `http://127.0.0.1:${port}`;
+
+  const headRes = await fetch(`${baseUrl}/index.html`, { method: "HEAD" });
+  assert.equal(headRes.status, 200);
+  assert.equal(await headRes.text(), "");
+
+  assert.equal((await fetch(`${baseUrl}/index.html`, { method: "POST" })).status, 405);
+  assert.equal((await fetch(`${baseUrl}/api/tasks`, { method: "POST" })).status, 405);
+
+  nextError = new NotionApiError("Missing token", { code: "NOTION_TOKEN_MISSING", status: 503 });
+  assert.equal((await fetch(`${baseUrl}/api/tasks`)).status, 503);
+
+  nextError = new NotionApiError("Bad token", { code: "NOTION_INVALID_TOKEN", status: 400 });
+  const badTokenRes = await fetch(`${baseUrl}/api/tasks`);
+  assert.equal(badTokenRes.status, 400);
+  assert.match((await badTokenRes.json()).error, /NOTION_TOKEN/);
+
+  nextError = new NotionApiError("Timed out", { code: "NOTION_TIMEOUT", status: 504 });
+  assert.equal((await fetch(`${baseUrl}/api/tasks`)).status, 504);
 });

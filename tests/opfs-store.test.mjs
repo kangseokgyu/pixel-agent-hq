@@ -128,3 +128,18 @@ test("rejects operations cleanly when OPFS is unsupported", async () => {
   await assert.rejects(store.loadConnection(), /OPFS/i);
   await assert.rejects(store.clearAll(), /OPFS/i);
 });
+
+test("returns null instead of throwing when stored OPFS JSON is corrupt", async () => {
+  const mockOpfs = createMockOpfs();
+  const root = await mockOpfs.getDirectory();
+  const dir = await root.getDirectoryHandle(OPFS_DIR_NAME, { create: true });
+  for (const name of [CONNECTION_FILE, SNAPSHOT_CACHE_FILE]) {
+    const handle = await dir.getFileHandle(name, { create: true });
+    const writable = await handle.createWritable();
+    await writable.write("{not-valid-json");
+    await writable.close();
+  }
+  const store = createOpfsStore({ getDirectory: mockOpfs.getDirectory });
+  assert.equal(await store.loadConnection(), null);
+  assert.equal(await store.loadSnapshot(), null);
+});

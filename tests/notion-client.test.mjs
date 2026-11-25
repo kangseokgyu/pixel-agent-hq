@@ -355,3 +355,51 @@ test("rethrows abort errors during checklist enrichment instead of swallowing th
     (error) => error.code === "NOTION_ABORTED",
   );
 });
+
+test("aborts 429 retry backoff immediately on AbortSignal and guards cyclic block checklists", async () => {
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), 15);
+  await assert.rejects(
+    notionClient.fetchNotionSnapshot({
+      token: "demo_readonly_token",
+      dataSourceId: "11111111-2222-4333-8444-555555555555",
+      strictUuid: true,
+      signal: controller.signal,
+      fetchImpl: async () => jsonResponse(429, {}, { "retry-after": "5" }),
+    }),
+    (error) => error.code === "NOTION_ABORTED",
+  );
+
+  let cycleHits = 0;
+  const items = await notionClient.fetchPageChecklist({
+    token: "demo_readonly_token",
+    blockId: "root-blk",
+    fetchImpl: async () => {
+      cycleHits += 1;
+      return jsonResponse(200, {
+        results: [
+          { id: "todo-loop", type: "to_do", has_children: true, to_do: { rich_text: [{ plain_text: "순환 항목" }], checked: false } },
+          { id: "root-blk", type: "toggle", has_children: true },
+        ],
+        has_more: false,
+      });
+    },
+  });
+  assert.equal(cycleHits, 2);
+  assert.deepEqual(items, [
+    { text: "순환 항목", done: false },
+    { text: "순환 항목", done: false },
+  ]);
+
+  const mapped = notionClient.mapNotionPage({
+    id: "p1",
+    url: "https://app.notion.com/p1",
+    properties: {
+      일감: { title: [{ plain_text: "관계 정제" }] },
+      "상위 일감": { relation: [{ id: "root-1" }, { id: "" }, {}, { id: 123 }] },
+      "하위 일감": { relation: [{ id: "sub-1" }] },
+    },
+  });
+  assert.deepEqual(mapped.parentTaskIds, ["root-1"]);
+  assert.deepEqual(mapped.subTaskIds, ["sub-1"]);
+});

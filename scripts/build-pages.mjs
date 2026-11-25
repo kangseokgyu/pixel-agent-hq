@@ -3,19 +3,14 @@ import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "no
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { DIST_ALLOWLIST, SHELL_RELATIVE_PATHS, STATIC_COPIES } from "../lib/app-assets.mjs";
 import { syncOfficeHtml } from "./sync-office.mjs";
 
 const PROJECT_DIR = fileURLToPath(new URL("..", import.meta.url));
 const SW_VERSION_PATTERN = /const SW_VERSION = "[^"]+";/;
+const SW_SHELL_PATHS_PATTERN = /const SHELL_RELATIVE_PATHS = \[[\s\S]*?\];/;
 
-export const DIST_ALLOWLIST = Object.freeze([
-  "index.html",
-  "manifest.webmanifest",
-  "pwa-register.js",
-  "sw.js",
-  "icons/icon-192.png",
-  "icons/icon-512.png",
-]);
+export { DIST_ALLOWLIST };
 
 export function buildPages({
   rootDir = PROJECT_DIR,
@@ -30,23 +25,23 @@ export function buildPages({
     empty: true,
   });
 
-  const staticCopies = [
-    "manifest.webmanifest",
-    "pwa-register.js",
-    "icons/icon-192.png",
-    "icons/icon-512.png",
-  ];
-  for (const relPath of staticCopies) {
+  for (const relPath of STATIC_COPIES) {
     copyFileSync(resolve(rootDir, relPath), resolve(distDir, relPath));
   }
 
-  const swTemplate = readFileSync(resolve(rootDir, "sw.js"), "utf8");
-  if (!SW_VERSION_PATTERN.test(swTemplate)) {
+  const swRaw = readFileSync(resolve(rootDir, "sw.js"), "utf8");
+  if (!SW_VERSION_PATTERN.test(swRaw)) {
     throw new Error("Could not find SW_VERSION constant in sw.js.");
   }
+  if (!SW_SHELL_PATHS_PATTERN.test(swRaw)) {
+    throw new Error("Could not find SHELL_RELATIVE_PATHS constant in sw.js.");
+  }
+
+  const shellPathsLiteral = `const SHELL_RELATIVE_PATHS = ${JSON.stringify(SHELL_RELATIVE_PATHS, null, 2)};`;
+  const swTemplate = swRaw.replace(SW_SHELL_PATHS_PATTERN, shellPathsLiteral);
 
   const hash = createHash("sha256");
-  for (const relPath of ["index.html", ...staticCopies]) {
+  for (const relPath of ["index.html", ...STATIC_COPIES]) {
     hash.update(relPath);
     hash.update(readFileSync(resolve(distDir, relPath)));
   }

@@ -51,6 +51,15 @@ test("build-pages.mjs produces allowlisted zero-data dist/ with content-hashed S
     const builtSw = readFileSync(join(distDir, "sw.js"), "utf8");
     assert.match(builtSw, new RegExp(`const SW_VERSION = "${buildResult.swVersion}";`));
 
+    const { SHELL_RELATIVE_PATHS } = await import("../lib/app-assets.mjs");
+    const rootSw = readFileSync(join(ROOT, "sw.js"), "utf8");
+    const swPathsMatch = rootSw.match(/const SHELL_RELATIVE_PATHS = (\[[\s\S]*?\]);/);
+    assert.ok(swPathsMatch);
+    assert.deepEqual(JSON.parse(swPathsMatch[1].replace(/,(\s*\])/, "$1")), SHELL_RELATIVE_PATHS);
+    const builtSwPathsMatch = builtSw.match(/const SHELL_RELATIVE_PATHS = (\[[\s\S]*?\]);/);
+    assert.ok(builtSwPathsMatch);
+    assert.deepEqual(JSON.parse(builtSwPathsMatch[1]), SHELL_RELATIVE_PATHS);
+
     const builtHtml = readFileSync(join(distDir, "index.html"), "utf8");
     assert.ok(!builtHtml.includes("00000000-0000-4000-8000-000000000000"));
     assert.ok(!builtHtml.includes("00000000000000000000000000000000"));
@@ -187,6 +196,30 @@ test("verify-dist.mjs passes clean dist/ and fails on all security/leak regressi
       assert.equal(report.ok, false, `Expected verifyDist to fail for: ${c.name}`);
       assert.ok(report.errors.length > 0, `Expected errors for: ${c.name}`);
     }
+
+    const fakeEnvRoot = join(tempRoot, "env-root");
+    const fakeEnvDist = join(fakeEnvRoot, "dist");
+    mkdirSync(fakeEnvDist, { recursive: true });
+    cpSync(cleanDist, fakeEnvDist, { recursive: true });
+    writeFileSync(join(fakeEnvRoot, ".env"), 'export NOTION_TOKEN="custom_secret_value_999"\n');
+    writeFileSync(
+      join(fakeEnvDist, "pwa-register.js"),
+      `${readFileSync(join(fakeEnvDist, "pwa-register.js"), "utf8")}\n// custom_secret_value_999\n`,
+    );
+    const envLeakReport = verifyDist({ rootDir: fakeEnvRoot, distDir: fakeEnvDist });
+    assert.equal(envLeakReport.ok, false);
+    assert.ok(envLeakReport.errors.some((e) => e.includes(".env NOTION_TOKEN")));
+
+    const storageDist = join(tempRoot, "storage-context");
+    mkdirSync(storageDist, { recursive: true });
+    cpSync(cleanDist, storageDist, { recursive: true });
+    const htmlWithBadStorage = readFileSync(join(storageDist, "index.html"), "utf8").replace(
+      "</body>",
+      "<script>localStorage.getItem('snapshot');</script></body>",
+    );
+    writeFileSync(join(storageDist, "index.html"), htmlWithBadStorage);
+    const storageReport = verifyDist({ rootDir: ROOT, distDir: storageDist });
+    assert.equal(storageReport.ok, false);
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
   }
