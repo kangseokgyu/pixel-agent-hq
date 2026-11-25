@@ -4,6 +4,8 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 
+import { createOfficeModel as createDirectOfficeModel } from "./src/office-model.mjs";
+
 const folder = fileURLToPath(new URL(".", import.meta.url));
 const snapshot = JSON.parse(readFileSync(folder + "/wips-data.json", "utf8"));
 const fragment = readFileSync(folder + "/wips-office.html", "utf8");
@@ -19,8 +21,8 @@ const context = {
   URL,
 };
 vm.runInNewContext(modelScript, context, { filename: "wips-office.html" });
-const createOfficeModel = context.window.__wipsOfficeModel;
-assert.equal(typeof createOfficeModel, "function", "the office model is available to the fragment");
+assert.equal(typeof context.window.__wipsOfficeModel, "function", "the office model is available to the fragment");
+const createOfficeModel = createDirectOfficeModel;
 const model = createOfficeModel(snapshot);
 const allFilters = { status: "전체 상태", project: "전체 프로젝트" };
 

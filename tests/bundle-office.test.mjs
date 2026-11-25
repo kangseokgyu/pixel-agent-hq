@@ -11,8 +11,8 @@ import { syncOfficeHtml } from "../scripts/sync-office.mjs";
 const ROOT = resolve(import.meta.dirname, "..");
 
 test("bundleModules emits deterministic scoped closures without top-level collisions", () => {
-  const first = bundleModules("src/office-entry.mjs", { rootDir: ROOT });
-  const second = bundleModules("src/office-entry.mjs", { rootDir: ROOT });
+  const first = bundleModules("src/office-app.mjs", { rootDir: ROOT });
+  const second = bundleModules("src/office-app.mjs", { rootDir: ROOT });
   assert.equal(first, second);
   assert.equal(/\b(?:innerHTML|outerHTML|insertAdjacentHTML)\b|\beval\s*\(|\bnew\s+Function\b/.test(first), false);
   assert.match(first, /const __wips_mod_0 = \(\(\) => \{/);
