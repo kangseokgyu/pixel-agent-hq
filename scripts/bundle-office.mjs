@@ -139,6 +139,10 @@ export function injectBundledOfficeScript(officeHtml, bundledJs) {
   );
 }
 
+export function serializeJsonForHtmlScript(value) {
+  return JSON.stringify(value, null, 2).replaceAll("<", "\\u003c");
+}
+
 export function buildOfficeHtml({
   rootDir = PROJECT_DIR,
   snapshot,
@@ -148,7 +152,7 @@ export function buildOfficeHtml({
   const spritesCss = readFileSync(resolve(rootDir, "src/office/sprites.css"), "utf8").trimEnd();
   const officeCss = readFileSync(resolve(rootDir, "src/office/office.css"), "utf8").trimEnd();
   const bundledJs = bundleModules(entryRelPath, { rootDir });
-  const dataBlock = `<script type="application/json" id="wips-office-data">\n${JSON.stringify(snapshot, null, 2)}\n</script>`;
+  const dataBlock = `<script type="application/json" id="wips-office-data">\n${serializeJsonForHtmlScript(snapshot)}\n</script>`;
   const scriptBlock = `<script id="office-model">\n${bundledJs}\n</script>`;
 
   return templateHtml

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { DEFAULT_OFFICE_ENTRY, buildOfficeHtml } from "./bundle-office.mjs";
+import { DEFAULT_OFFICE_ENTRY, buildOfficeHtml, serializeJsonForHtmlScript } from "./bundle-office.mjs";
 
 export const OUTER_CSP =
   "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://api.notion.com; worker-src 'self'; manifest-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'";
@@ -71,7 +71,7 @@ export function injectEmptySnapshot(officeHtml, emptySnapshot) {
   if (!DATA_SCRIPT_PATTERN.test(officeHtml)) {
     throw new Error("Could not find <script id=\"wips-office-data\"> in wips-office.html.");
   }
-  const serialized = JSON.stringify(emptySnapshot, null, 2);
+  const serialized = serializeJsonForHtmlScript(emptySnapshot);
   return officeHtml.replace(
     DATA_SCRIPT_PATTERN,
     (_match, openTag, closeTag) => `${openTag}\n${serialized}\n${closeTag}`,

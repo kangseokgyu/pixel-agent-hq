@@ -5,7 +5,12 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import vm from "node:vm";
 
-import { bundleModules, injectBundledOfficeScript } from "../scripts/bundle-office.mjs";
+import {
+  buildOfficeHtml,
+  bundleModules,
+  injectBundledOfficeScript,
+  serializeJsonForHtmlScript,
+} from "../scripts/bundle-office.mjs";
 import { syncOfficeHtml } from "../scripts/sync-office.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..");
@@ -42,4 +47,23 @@ test("injectBundledOfficeScript replaces office-model script and syncOfficeHtml 
 
   const checkResult = syncOfficeHtml({ rootDir: ROOT, check: true });
   assert.equal(checkResult.ok, true, `Expected sync check clean, got drifted: ${checkResult.drifted.join(", ")}`);
+});
+
+test("buildOfficeHtml escapes '<' in embedded #wips-office-data JSON to prevent script tag breakout", () => {
+  const maliciousTitle = "</script><script>window.__xss=1</script>";
+  const html = buildOfficeHtml({
+    rootDir: ROOT,
+    snapshot: {
+      snapshotDate: "2026-11-27",
+      sourceUrl: "",
+      results: [{ id: "t1", title: maliciousTitle, owner: "sb", status: "진행" }],
+    },
+  });
+
+  assert.equal(html.includes(maliciousTitle), false);
+  assert.match(serializeJsonForHtmlScript({ title: maliciousTitle }), /\\u003c\/script>/);
+  const dataMatch = html.match(/<script type="application\/json" id="wips-office-data">([\s\S]*?)<\/script>/);
+  assert.ok(dataMatch);
+  const parsed = JSON.parse(dataMatch[1]);
+  assert.equal(parsed.results[0].title, maliciousTitle);
 });
