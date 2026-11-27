@@ -387,9 +387,14 @@ export function outerHostBridge() {
       try {
         const url = new URL(rawHref, document.baseURI);
         if (url.protocol === "notion:") {
-          const notionHosts = ["app.notion.com", "notion.so", "www.notion.so"];
+          const allowedNotionHost =
+            url.hostname === "app.notion.com" ||
+            url.hostname === "notion.so" ||
+            (url.hostname.endsWith(".notion.so") &&
+              !url.hostname.startsWith("."));
           if (
-            !notionHosts.includes(url.hostname) ||
+            !allowedNotionHost ||
+            url.port !== "" ||
             url.host !== url.hostname ||
             url.username !== "" ||
             url.password !== ""

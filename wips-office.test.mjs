@@ -851,6 +851,13 @@ test("converts verified Notion links to notion:// app URLs without popup target 
           status: "대기",
           url: "https://notion.so/abcd",
         },
+        {
+          id: "t4",
+          title: "workspace notion",
+          owner: "sb",
+          status: "검증",
+          url: "https://team-space.notion.so/task-123",
+        },
       ],
     },
   });
@@ -866,6 +873,7 @@ test("converts verified Notion links to notion:// app URLs without popup target 
     [
       "notion://notion.so/abcd",
       "notion://www.notion.so/Page-Title-1234?pvs=4#block",
+      "notion://team-space.notion.so/task-123",
     ],
   );
   assert.doesNotMatch(fragment, /<a id="wips-office-source"[^>]*target="_blank"/);
@@ -947,8 +955,11 @@ test("outer host open-external launches allowlisted notion:// URLs directly with
   for (const href of [
     "notion://www.notion.so/Page-1234?pvs=4",
     "notion://app.notion.com/p/1234",
+    "notion://team-space.notion.so/task-123",
     "https://example.com/docs",
     "notion://evil.example/page",
+    "notion://evil-notion.so/page",
+    "notion://.notion.so/page",
     "notion:www.notion.so/page",
     "notion://www.notion.so:8443/page",
     "notion://user:pass@www.notion.so/page",
@@ -961,6 +972,7 @@ test("outer host open-external launches allowlisted notion:// URLs directly with
   assert.deepEqual(clicked, [
     { href: "notion://www.notion.so/Page-1234?pvs=4", target: undefined, rel: undefined },
     { href: "notion://app.notion.com/p/1234", target: undefined, rel: undefined },
+    { href: "notion://team-space.notion.so/task-123", target: undefined, rel: undefined },
     { href: "https://example.com/docs", target: "_blank", rel: "noopener noreferrer" },
   ]);
 });

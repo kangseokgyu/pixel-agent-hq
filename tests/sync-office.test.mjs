@@ -3,10 +3,12 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
+import { buildOfficeHtml } from "../scripts/bundle-office.mjs";
 import {
   BANNED_CDN_HOSTS,
   OUTER_CSP,
   SRCDOC_CSP,
+  buildShellIndexHtml,
   buildSyncedIndexHtml,
   syncOfficeHtml,
   unescapeHtmlAttr,
@@ -107,4 +109,46 @@ test("srcdoc places inner host bridge after body opening tag so ResizeObserver o
   const bodyIdx = srcdoc.indexOf("<body>");
   const observerIdx = srcdoc.indexOf("ResizeObserver");
   assert.ok(bodyIdx !== -1 && observerIdx !== -1 && bodyIdx < observerIdx);
+});
+
+test("buildShellIndexHtml escapes '<' inside #wips-office-data for both populated and empty snapshots", () => {
+  const maliciousTitle = "</script><script>window.__xss=1</script>";
+  const officeWithPayload = buildOfficeHtml({
+    rootDir,
+    snapshot: {
+      snapshotDate: "2026-11-27",
+      sourceUrl: "",
+      results: [{ id: "t1", title: maliciousTitle, owner: "sb", status: "진행" }],
+    },
+  });
+
+  const populatedShell = buildShellIndexHtml({
+    rootDir,
+    officeHtml: officeWithPayload,
+    emptySnapshot,
+    empty: false,
+  });
+  const populatedSrcdoc = unescapeHtmlAttr(populatedShell.match(/\bdata-srcdoc="([\s\S]*?)"/)?.[1]);
+  assert.equal(populatedSrcdoc.includes(maliciousTitle), false);
+  const populatedData = JSON.parse(
+    populatedSrcdoc.match(/<script type="application\/json" id="wips-office-data">([\s\S]*?)<\/script>/)?.[1],
+  );
+  assert.equal(populatedData.results[0].title, maliciousTitle);
+
+  const emptyPayload = {
+    ...emptySnapshot,
+    results: [{ id: "t2", title: maliciousTitle }],
+  };
+  const emptyShell = buildShellIndexHtml({
+    rootDir,
+    officeHtml: officeWithPayload,
+    emptySnapshot: emptyPayload,
+    empty: true,
+  });
+  const emptySrcdoc = unescapeHtmlAttr(emptyShell.match(/\bdata-srcdoc="([\s\S]*?)"/)?.[1]);
+  assert.equal(emptySrcdoc.includes(maliciousTitle), false);
+  const parsedEmptyData = JSON.parse(
+    emptySrcdoc.match(/<script type="application\/json" id="wips-office-data">([\s\S]*?)<\/script>/)?.[1],
+  );
+  assert.equal(parsedEmptyData.results[0].title, maliciousTitle);
 });
