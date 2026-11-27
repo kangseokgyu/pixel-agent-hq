@@ -1941,6 +1941,19 @@ html&gt;body {
   gap: calc(var(--font-size-base) * 0.45);
   min-width: 0;
 }
+#wips-office-root .kanban-col[data-lane-id=&quot;done&quot;]:only-child {
+  grid-column: 1 / -1;
+}
+#wips-office-root .kanban-col[data-lane-id=&quot;done&quot;]:only-child .kanban-col-body {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: calc(var(--font-size-base) * 0.65);
+  align-items: start;
+  min-width: 0;
+}
+#wips-office-root .kanban-col[data-lane-id=&quot;done&quot;]:only-child .kanban-empty {
+  grid-column: 1 / -1;
+}
 #wips-office-root .kanban-col-head {
   display: flex;
   align-items: center;
@@ -2334,13 +2347,15 @@ html&gt;body {
 }
 @media (max-width: 900px) {
   #wips-office-root .kanban-board,
-  #wips-office-root .task-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #wips-office-root .task-list,
+  #wips-office-root .kanban-col[data-lane-id=&quot;done&quot;]:only-child .kanban-col-body { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 620px) {
   #wips-office-root .task-list { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 560px) {
-  #wips-office-root .kanban-board { grid-template-columns: minmax(0, 1fr); }
+  #wips-office-root .kanban-board,
+  #wips-office-root .kanban-col[data-lane-id=&quot;done&quot;]:only-child .kanban-col-body { grid-template-columns: minmax(0, 1fr); }
 }
 #wips-office-root [hidden] { display: none !important; }
 #wips-office-root .sync-button--danger {
@@ -2724,6 +2739,7 @@ const KANBAN_LANES = [
 { id: &quot;progress&quot;, title: &quot;진행&quot;, dot: &quot;진행&quot;, statuses: [&quot;진행&quot;] },
 { id: &quot;review&quot;, title: &quot;검증 · 테스트&quot;, dot: &quot;검증&quot;, statuses: [&quot;검증&quot;, &quot;장시간 테스트 중&quot;] },
 ];
+const DONE_KANBAN_LANE = { id: &quot;done&quot;, title: &quot;완료&quot;, dot: &quot;완료&quot;, statuses: [&quot;완료&quot;] };
 const EMPLOYEES = [&quot;sb&quot;, &quot;이요원&quot;, &quot;여이전트&quot;, &quot;석규&quot;, &quot;UI&quot;];
 const SHARED_OWNER = &quot;공통&quot;;
 const ACTIVE_TICKER_STATUSES = new Set([&quot;진행&quot;, &quot;검증&quot;, &quot;장시간 테스트 중&quot;]);
@@ -2792,6 +2808,9 @@ if (task.endDate) return &quot;~ &quot; + task.endDate;
 return &quot;미지정&quot;;
 }
 function computeScheduleGauge(task, referenceDateIso) {
+if (task?.status === &quot;완료&quot;) {
+return { dDayLabel: &quot;완료&quot;, diffDays: null, progress: 100, tone: &quot;green&quot; };
+}
 const todayIso = referenceDateIso || todayKstIso();
 const todayMs = parseIsoDayMs(todayIso);
 const targetIso = task?.startDate || task?.endDate || null;
@@ -2976,15 +2995,20 @@ unassigned: shown.filter((task) =&gt; isSharedOwner(task.owner)).length,
 statuses: statusCounts,
 };
 }
+function includeCompleted(filters) {
+return filters?.status === &quot;완료&quot;;
+}
 function employeeTasks(owner, filters) {
-return filteredTasks(filters).filter((task) =&gt; task.owner === owner &amp;&amp; task.status !== &quot;완료&quot;);
+const allowDone = includeCompleted(filters);
+return filteredTasks(filters).filter((task) =&gt; task.owner === owner &amp;&amp; (allowDone || task.status !== &quot;완료&quot;));
 }
 function unassignedTasks(filters) {
-return filteredTasks(filters).filter((task) =&gt; isSharedOwner(task.owner) &amp;&amp; task.status !== &quot;완료&quot;);
+const allowDone = includeCompleted(filters);
+return filteredTasks(filters).filter((task) =&gt; isSharedOwner(task.owner) &amp;&amp; (allowDone || task.status !== &quot;완료&quot;));
 }
 function billboardView(filters, referenceDateIso) {
 const todayIso = referenceDateIso || todayKstIso();
-const shared = unassignedTasks(filters);
+const shared = filteredTasks(filters).filter((task) =&gt; isSharedOwner(task.owner) &amp;&amp; task.status !== &quot;완료&quot;);
 const scheduleTasks = shared
 .map((task, index) =&gt; ({
 task,
@@ -3072,22 +3096,39 @@ button.focus();
 return button;
 }
 function groupTasksByLane(tasks) {
+const list = Array.isArray(tasks) ? tasks : [];
 const byStatus = new Map();
 for (const lane of KANBAN_LANES) {
 for (const status of lane.statuses) byStatus.set(status, lane.id);
 }
 const buckets = new Map(KANBAN_LANES.map((lane) =&gt; [lane.id, []]));
-for (const task of Array.isArray(tasks) ? tasks : []) {
+const doneTasks = [];
+for (const task of list) {
+if (task?.status === &quot;완료&quot;) {
+doneTasks.push(task);
+continue;
+}
 const laneId = byStatus.get(task?.status) || KANBAN_LANES[0].id;
 buckets.get(laneId).push(task);
 }
-return KANBAN_LANES.map((lane) =&gt; ({
+const doneLane = {
+id: DONE_KANBAN_LANE.id,
+title: DONE_KANBAN_LANE.title,
+dot: DONE_KANBAN_LANE.dot,
+showExactStatus: false,
+tasks: doneTasks,
+};
+if (list.length &gt; 0 &amp;&amp; doneTasks.length === list.length) {
+return [doneLane];
+}
+const activeLanes = KANBAN_LANES.map((lane) =&gt; ({
 id: lane.id,
 title: lane.title,
 dot: lane.dot,
 showExactStatus: lane.statuses.length &gt; 1,
 tasks: buckets.get(lane.id),
 }));
+return doneTasks.length &gt; 0 ? activeLanes.concat([doneLane]) : activeLanes;
 }
 return {
 employees,
@@ -3110,7 +3151,7 @@ describeTask,
 billboardView,
 };
 }
-return { STATUS_ORDER: STATUS_ORDER, KANBAN_LANES: KANBAN_LANES, EMPLOYEES: EMPLOYEES, SHARED_OWNER: SHARED_OWNER, ACTIVE_TICKER_STATUSES: ACTIVE_TICKER_STATUSES, ALL_STATUS: ALL_STATUS, ALL_PROJECTS: ALL_PROJECTS, UNSPECIFIED_PROJECT: UNSPECIFIED_PROJECT, isSharedOwner: isSharedOwner, todayKstIso: todayKstIso, safeNotionUrl: safeNotionUrl, toNotionAppUrl: toNotionAppUrl, computeScheduleGauge: computeScheduleGauge, normalizeTaskId: normalizeTaskId, extractTaskId: extractTaskId, createOfficeModel: createOfficeModel };
+return { STATUS_ORDER: STATUS_ORDER, KANBAN_LANES: KANBAN_LANES, DONE_KANBAN_LANE: DONE_KANBAN_LANE, EMPLOYEES: EMPLOYEES, SHARED_OWNER: SHARED_OWNER, ACTIVE_TICKER_STATUSES: ACTIVE_TICKER_STATUSES, ALL_STATUS: ALL_STATUS, ALL_PROJECTS: ALL_PROJECTS, UNSPECIFIED_PROJECT: UNSPECIFIED_PROJECT, isSharedOwner: isSharedOwner, todayKstIso: todayKstIso, safeNotionUrl: safeNotionUrl, toNotionAppUrl: toNotionAppUrl, computeScheduleGauge: computeScheduleGauge, normalizeTaskId: normalizeTaskId, extractTaskId: extractTaskId, createOfficeModel: createOfficeModel };
 })();
 const __wips_mod_2 = (() =&gt; {
 function setSafeHref(anchor, url, toNotionAppUrl) {
@@ -3696,7 +3737,11 @@ onRender,
 };
 nodes.employeeNode.replaceChildren(...seatingOrder.map((owner) =&gt; createWorkstation(wsCtx, owner)));
 nodes.selectedTitle.textContent = selectedEmployee + &quot;의 일감 · &quot; + view.tasks.length + &quot;개&quot;;
-nodes.selectedNote.textContent = view.empty ? &quot;선택한 직원은 유지되며, 조건에 맞는 일감이 없습니다.&quot; : &quot;대표 일감 외 &quot; + view.otherCount + &quot;개를 포함합니다.&quot;;
+nodes.selectedNote.textContent = view.empty
+? &quot;선택한 직원은 유지되며, 조건에 맞는 일감이 없습니다.&quot;
+: filters.status === &quot;완료&quot;
+? &quot;완료된 일감 &quot; + view.tasks.length + &quot;개를 표시합니다.&quot;
+: &quot;대표 일감 외 &quot; + view.otherCount + &quot;개를 포함합니다.&quot;;
 nodes.selectedEmpty.hidden = !view.empty;
 nodes.selectedEmpty.textContent = &quot;현재 필터에 맞는 &quot; + selectedEmployee + &quot;의 일감이 없습니다.&quot;;
 if (view.empty) {

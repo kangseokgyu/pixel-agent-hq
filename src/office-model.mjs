@@ -5,6 +5,7 @@ export const KANBAN_LANES = [
   { id: "progress", title: "진행", dot: "진행", statuses: ["진행"] },
   { id: "review", title: "검증 · 테스트", dot: "검증", statuses: ["검증", "장시간 테스트 중"] },
 ];
+export const DONE_KANBAN_LANE = { id: "done", title: "완료", dot: "완료", statuses: ["완료"] };
 export const EMPLOYEES = ["sb", "이요원", "여이전트", "석규", "UI"];
 export const SHARED_OWNER = "공통";
 export const ACTIVE_TICKER_STATUSES = new Set(["진행", "검증", "장시간 테스트 중"]);
@@ -84,6 +85,9 @@ function formatGoalDate(task) {
 }
 
 export function computeScheduleGauge(task, referenceDateIso) {
+  if (task?.status === "완료") {
+    return { dDayLabel: "완료", diffDays: null, progress: 100, tone: "green" };
+  }
   const todayIso = referenceDateIso || todayKstIso();
   const todayMs = parseIsoDayMs(todayIso);
   const targetIso = task?.startDate || task?.endDate || null;
@@ -287,17 +291,23 @@ export function createOfficeModel(snapshot) {
     };
   }
 
+  function includeCompleted(filters) {
+    return filters?.status === "완료";
+  }
+
   function employeeTasks(owner, filters) {
-    return filteredTasks(filters).filter((task) => task.owner === owner && task.status !== "완료");
+    const allowDone = includeCompleted(filters);
+    return filteredTasks(filters).filter((task) => task.owner === owner && (allowDone || task.status !== "완료"));
   }
 
   function unassignedTasks(filters) {
-    return filteredTasks(filters).filter((task) => isSharedOwner(task.owner) && task.status !== "완료");
+    const allowDone = includeCompleted(filters);
+    return filteredTasks(filters).filter((task) => isSharedOwner(task.owner) && (allowDone || task.status !== "완료"));
   }
 
   function billboardView(filters, referenceDateIso) {
     const todayIso = referenceDateIso || todayKstIso();
-    const shared = unassignedTasks(filters);
+    const shared = filteredTasks(filters).filter((task) => isSharedOwner(task.owner) && task.status !== "완료");
     const scheduleTasks = shared
       .map((task, index) => ({
         task,
@@ -393,22 +403,39 @@ export function createOfficeModel(snapshot) {
   }
 
   function groupTasksByLane(tasks) {
+    const list = Array.isArray(tasks) ? tasks : [];
     const byStatus = new Map();
     for (const lane of KANBAN_LANES) {
       for (const status of lane.statuses) byStatus.set(status, lane.id);
     }
     const buckets = new Map(KANBAN_LANES.map((lane) => [lane.id, []]));
-    for (const task of Array.isArray(tasks) ? tasks : []) {
+    const doneTasks = [];
+    for (const task of list) {
+      if (task?.status === "완료") {
+        doneTasks.push(task);
+        continue;
+      }
       const laneId = byStatus.get(task?.status) || KANBAN_LANES[0].id;
       buckets.get(laneId).push(task);
     }
-    return KANBAN_LANES.map((lane) => ({
+    const doneLane = {
+      id: DONE_KANBAN_LANE.id,
+      title: DONE_KANBAN_LANE.title,
+      dot: DONE_KANBAN_LANE.dot,
+      showExactStatus: false,
+      tasks: doneTasks,
+    };
+    if (list.length > 0 && doneTasks.length === list.length) {
+      return [doneLane];
+    }
+    const activeLanes = KANBAN_LANES.map((lane) => ({
       id: lane.id,
       title: lane.title,
       dot: lane.dot,
       showExactStatus: lane.statuses.length > 1,
       tasks: buckets.get(lane.id),
     }));
+    return doneTasks.length > 0 ? activeLanes.concat([doneLane]) : activeLanes;
   }
 
   return {
