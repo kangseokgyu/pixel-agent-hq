@@ -836,6 +836,19 @@
   gap: calc(var(--font-size-base) * 0.45);
   min-width: 0;
 }
+#wips-office-root .kanban-col[data-lane-id="done"]:only-child {
+  grid-column: 1 / -1;
+}
+#wips-office-root .kanban-col[data-lane-id="done"]:only-child .kanban-col-body {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: calc(var(--font-size-base) * 0.65);
+  align-items: start;
+  min-width: 0;
+}
+#wips-office-root .kanban-col[data-lane-id="done"]:only-child .kanban-empty {
+  grid-column: 1 / -1;
+}
 #wips-office-root .kanban-col-head {
   display: flex;
   align-items: center;
@@ -1229,13 +1242,15 @@
 }
 @media (max-width: 900px) {
   #wips-office-root .kanban-board,
-  #wips-office-root .task-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #wips-office-root .task-list,
+  #wips-office-root .kanban-col[data-lane-id="done"]:only-child .kanban-col-body { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 620px) {
   #wips-office-root .task-list { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 560px) {
-  #wips-office-root .kanban-board { grid-template-columns: minmax(0, 1fr); }
+  #wips-office-root .kanban-board,
+  #wips-office-root .kanban-col[data-lane-id="done"]:only-child .kanban-col-body { grid-template-columns: minmax(0, 1fr); }
 }
 #wips-office-root [hidden] { display: none !important; }
 #wips-office-root .sync-button--danger {

@@ -1219,6 +1219,19 @@
   gap: calc(var(--font-size-base) * 0.45);
   min-width: 0;
 }
+#wips-office-root .kanban-col[data-lane-id="done"]:only-child {
+  grid-column: 1 / -1;
+}
+#wips-office-root .kanban-col[data-lane-id="done"]:only-child .kanban-col-body {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: calc(var(--font-size-base) * 0.65);
+  align-items: start;
+  min-width: 0;
+}
+#wips-office-root .kanban-col[data-lane-id="done"]:only-child .kanban-empty {
+  grid-column: 1 / -1;
+}
 #wips-office-root .kanban-col-head {
   display: flex;
   align-items: center;
@@ -1612,13 +1625,15 @@
 }
 @media (max-width: 900px) {
   #wips-office-root .kanban-board,
-  #wips-office-root .task-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #wips-office-root .task-list,
+  #wips-office-root .kanban-col[data-lane-id="done"]:only-child .kanban-col-body { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 620px) {
   #wips-office-root .task-list { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 560px) {
-  #wips-office-root .kanban-board { grid-template-columns: minmax(0, 1fr); }
+  #wips-office-root .kanban-board,
+  #wips-office-root .kanban-col[data-lane-id="done"]:only-child .kanban-col-body { grid-template-columns: minmax(0, 1fr); }
 }
 #wips-office-root [hidden] { display: none !important; }
 #wips-office-root .sync-button--danger {
@@ -2002,6 +2017,7 @@ const KANBAN_LANES = [
 { id: "progress", title: "진행", dot: "진행", statuses: ["진행"] },
 { id: "review", title: "검증 · 테스트", dot: "검증", statuses: ["검증", "장시간 테스트 중"] },
 ];
+const DONE_KANBAN_LANE = { id: "done", title: "완료", dot: "완료", statuses: ["완료"] };
 const EMPLOYEES = ["sb", "이요원", "여이전트", "석규", "UI"];
 const SHARED_OWNER = "공통";
 const ACTIVE_TICKER_STATUSES = new Set(["진행", "검증", "장시간 테스트 중"]);
@@ -2070,6 +2086,9 @@ if (task.endDate) return "~ " + task.endDate;
 return "미지정";
 }
 function computeScheduleGauge(task, referenceDateIso) {
+if (task?.status === "완료") {
+return { dDayLabel: "완료", diffDays: null, progress: 100, tone: "green" };
+}
 const todayIso = referenceDateIso || todayKstIso();
 const todayMs = parseIsoDayMs(todayIso);
 const targetIso = task?.startDate || task?.endDate || null;
@@ -2254,15 +2273,20 @@ unassigned: shown.filter((task) => isSharedOwner(task.owner)).length,
 statuses: statusCounts,
 };
 }
+function includeCompleted(filters) {
+return filters?.status === "완료";
+}
 function employeeTasks(owner, filters) {
-return filteredTasks(filters).filter((task) => task.owner === owner && task.status !== "완료");
+const allowDone = includeCompleted(filters);
+return filteredTasks(filters).filter((task) => task.owner === owner && (allowDone || task.status !== "완료"));
 }
 function unassignedTasks(filters) {
-return filteredTasks(filters).filter((task) => isSharedOwner(task.owner) && task.status !== "완료");
+const allowDone = includeCompleted(filters);
+return filteredTasks(filters).filter((task) => isSharedOwner(task.owner) && (allowDone || task.status !== "완료"));
 }
 function billboardView(filters, referenceDateIso) {
 const todayIso = referenceDateIso || todayKstIso();
-const shared = unassignedTasks(filters);
+const shared = filteredTasks(filters).filter((task) => isSharedOwner(task.owner) && task.status !== "완료");
 const scheduleTasks = shared
 .map((task, index) => ({
 task,
@@ -2350,22 +2374,39 @@ button.focus();
 return button;
 }
 function groupTasksByLane(tasks) {
+const list = Array.isArray(tasks) ? tasks : [];
 const byStatus = new Map();
 for (const lane of KANBAN_LANES) {
 for (const status of lane.statuses) byStatus.set(status, lane.id);
 }
 const buckets = new Map(KANBAN_LANES.map((lane) => [lane.id, []]));
-for (const task of Array.isArray(tasks) ? tasks : []) {
+const doneTasks = [];
+for (const task of list) {
+if (task?.status === "완료") {
+doneTasks.push(task);
+continue;
+}
 const laneId = byStatus.get(task?.status) || KANBAN_LANES[0].id;
 buckets.get(laneId).push(task);
 }
-return KANBAN_LANES.map((lane) => ({
+const doneLane = {
+id: DONE_KANBAN_LANE.id,
+title: DONE_KANBAN_LANE.title,
+dot: DONE_KANBAN_LANE.dot,
+showExactStatus: false,
+tasks: doneTasks,
+};
+if (list.length > 0 && doneTasks.length === list.length) {
+return [doneLane];
+}
+const activeLanes = KANBAN_LANES.map((lane) => ({
 id: lane.id,
 title: lane.title,
 dot: lane.dot,
 showExactStatus: lane.statuses.length > 1,
 tasks: buckets.get(lane.id),
 }));
+return doneTasks.length > 0 ? activeLanes.concat([doneLane]) : activeLanes;
 }
 return {
 employees,
@@ -2388,7 +2429,7 @@ describeTask,
 billboardView,
 };
 }
-return { STATUS_ORDER: STATUS_ORDER, KANBAN_LANES: KANBAN_LANES, EMPLOYEES: EMPLOYEES, SHARED_OWNER: SHARED_OWNER, ACTIVE_TICKER_STATUSES: ACTIVE_TICKER_STATUSES, ALL_STATUS: ALL_STATUS, ALL_PROJECTS: ALL_PROJECTS, UNSPECIFIED_PROJECT: UNSPECIFIED_PROJECT, isSharedOwner: isSharedOwner, todayKstIso: todayKstIso, safeNotionUrl: safeNotionUrl, toNotionAppUrl: toNotionAppUrl, computeScheduleGauge: computeScheduleGauge, normalizeTaskId: normalizeTaskId, extractTaskId: extractTaskId, createOfficeModel: createOfficeModel };
+return { STATUS_ORDER: STATUS_ORDER, KANBAN_LANES: KANBAN_LANES, DONE_KANBAN_LANE: DONE_KANBAN_LANE, EMPLOYEES: EMPLOYEES, SHARED_OWNER: SHARED_OWNER, ACTIVE_TICKER_STATUSES: ACTIVE_TICKER_STATUSES, ALL_STATUS: ALL_STATUS, ALL_PROJECTS: ALL_PROJECTS, UNSPECIFIED_PROJECT: UNSPECIFIED_PROJECT, isSharedOwner: isSharedOwner, todayKstIso: todayKstIso, safeNotionUrl: safeNotionUrl, toNotionAppUrl: toNotionAppUrl, computeScheduleGauge: computeScheduleGauge, normalizeTaskId: normalizeTaskId, extractTaskId: extractTaskId, createOfficeModel: createOfficeModel };
 })();
 const __wips_mod_2 = (() => {
 function setSafeHref(anchor, url, toNotionAppUrl) {
@@ -2974,7 +3015,11 @@ onRender,
 };
 nodes.employeeNode.replaceChildren(...seatingOrder.map((owner) => createWorkstation(wsCtx, owner)));
 nodes.selectedTitle.textContent = selectedEmployee + "의 일감 · " + view.tasks.length + "개";
-nodes.selectedNote.textContent = view.empty ? "선택한 직원은 유지되며, 조건에 맞는 일감이 없습니다." : "대표 일감 외 " + view.otherCount + "개를 포함합니다.";
+nodes.selectedNote.textContent = view.empty
+? "선택한 직원은 유지되며, 조건에 맞는 일감이 없습니다."
+: filters.status === "완료"
+? "완료된 일감 " + view.tasks.length + "개를 표시합니다."
+: "대표 일감 외 " + view.otherCount + "개를 포함합니다.";
 nodes.selectedEmpty.hidden = !view.empty;
 nodes.selectedEmpty.textContent = "현재 필터에 맞는 " + selectedEmployee + "의 일감이 없습니다.";
 if (view.empty) {

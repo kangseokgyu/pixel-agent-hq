@@ -422,7 +422,11 @@ export function renderOfficeView(ctx) {
   nodes.employeeNode.replaceChildren(...seatingOrder.map((owner) => createWorkstation(wsCtx, owner)));
 
   nodes.selectedTitle.textContent = selectedEmployee + "의 일감 · " + view.tasks.length + "개";
-  nodes.selectedNote.textContent = view.empty ? "선택한 직원은 유지되며, 조건에 맞는 일감이 없습니다." : "대표 일감 외 " + view.otherCount + "개를 포함합니다.";
+  nodes.selectedNote.textContent = view.empty
+    ? "선택한 직원은 유지되며, 조건에 맞는 일감이 없습니다."
+    : filters.status === "완료"
+      ? "완료된 일감 " + view.tasks.length + "개를 표시합니다."
+      : "대표 일감 외 " + view.otherCount + "개를 포함합니다.";
   nodes.selectedEmpty.hidden = !view.empty;
   nodes.selectedEmpty.textContent = "현재 필터에 맞는 " + selectedEmployee + "의 일감이 없습니다.";
   if (view.empty) {

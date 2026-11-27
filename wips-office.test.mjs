@@ -600,7 +600,7 @@ test("keeps the embedded office source, styles, and script synchronized with ind
   assert.match(srcdoc, /\.workstation\.is-drop-target/);
 });
 
-test("excludes completed tasks from employee kanban, communal list, and active root count", () => {
+test("excludes completed tasks by default and includes them when status filter is 완료", () => {
   const active = createOfficeModel({ results: [
     { title: "open", owner: "sb", status: "진행" },
     { title: "done", owner: "sb", status: "완료" },
@@ -609,9 +609,79 @@ test("excludes completed tasks from employee kanban, communal list, and active r
   ] });
   assert.deepEqual(Array.from(active.employeeTasks("sb", allFilters), (t) => t.title), ["open"]);
   assert.deepEqual(Array.from(active.unassignedTasks(allFilters), (t) => t.title), ["unassigned open"]);
-  assert.equal(active.employeeTasks("sb", { ...allFilters, status: "완료" }).length, 0);
-  assert.equal(active.unassignedTasks({ ...allFilters, status: "완료" }).length, 0);
+  assert.deepEqual(Array.from(active.employeeTasks("sb", { ...allFilters, status: "완료" }), (t) => t.title), ["done"]);
+  assert.deepEqual(Array.from(active.unassignedTasks({ ...allFilters, status: "완료" }), (t) => t.title), ["unassigned done"]);
+
+  const doneView = active.viewForEmployee("sb", { ...allFilters, status: "완료" });
+  assert.equal(doneView.tasks.length, 1);
+  assert.equal(doneView.topLevelCount, 0);
+  assert.equal(doneView.representative, null);
+  assert.equal(doneView.empty, false);
   assert.equal(active.viewForEmployee("sb", allFilters).topLevelCount, 1);
+});
+
+test("renders completed tasks in a dedicated done lane and communal board when status=완료 is selected", () => {
+  const custom = createOfficeModel({ results: [] });
+  const mixedLanes = custom.groupTasksByLane([
+    { title: "active", status: "진행" },
+    { title: "finished", status: "완료" },
+  ]);
+  assert.deepEqual(
+    mixedLanes.map((lane) => [lane.id, lane.tasks.map((t) => t.title)]),
+    [
+      ["planned", []],
+      ["progress", ["active"]],
+      ["review", []],
+      ["done", ["finished"]],
+    ],
+  );
+
+  const env = createOfficeDomHarness({
+    customSnapshot: {
+      snapshotDate: "2026-11-27",
+      results: [
+        { title: "진행 일감", owner: "sb", status: "진행", project: "2.3", startDate: "2026-11-26" },
+        { title: "완료 일감", owner: "sb", status: "완료", project: "2.3", startDate: "2026-11-10" },
+        { title: "공용 진행", owner: "공통", status: "예정", project: "2.3", startDate: "2026-11-28" },
+        { title: "공용 완료", owner: "공통", status: "완료", project: "2.3", startDate: "2026-11-05" },
+      ],
+    },
+  });
+
+  const statusSelect = env.byId.get("wips-office-status");
+  statusSelect.value = "완료";
+  statusSelect.dispatchEvent({ type: "change" });
+
+  assert.equal(env.byId.get("wips-office-selected-title").textContent, "sb의 일감 · 1개");
+  assert.equal(env.byId.get("wips-office-selected-note").textContent, "완료된 일감 1개를 표시합니다.");
+  assert.equal(env.byId.get("wips-office-selected-empty").hidden, true);
+
+  const cols = env.byId.get("wips-office-selected-tasks").querySelectorAll(".kanban-col");
+  assert.equal(cols.length, 1);
+  assert.equal(cols[0].dataset.laneId, "done");
+  assert.equal(cols[0].querySelector(".kanban-col-count")?.textContent, "1");
+  const doneCard = cols[0].querySelector(".kanban-card");
+  assert.equal(doneCard?.dataset.taskTitle, "완료 일감");
+  assert.equal(doneCard?.querySelector(".kanban-dday")?.textContent, "완료");
+  assert.equal(doneCard?.querySelector(".kanban-dday")?.dataset.tone, "green");
+  assert.equal(doneCard?.querySelector(".kanban-progress-pct")?.textContent, "100%");
+
+  const communalCards = env.byId.get("wips-office-communal-tasks").querySelectorAll(".kanban-card");
+  assert.equal(env.byId.get("wips-office-communal-count").textContent, "1개");
+  assert.deepEqual(communalCards.map((c) => c.dataset.taskTitle), ["공용 완료"]);
+
+  const sbStation = env.byId.get("wips-office-employees").querySelector(".workstation");
+  assert.equal(sbStation?.dataset.activity, "idle");
+  assert.equal(env.byId.get("wips-office-billboard").querySelectorAll(".hq-step-card").length, 0);
+
+  statusSelect.value = "전체 상태";
+  statusSelect.dispatchEvent({ type: "change" });
+  const restoredCols = env.byId.get("wips-office-selected-tasks").querySelectorAll(".kanban-col");
+  assert.equal(restoredCols.length, 3);
+  assert.deepEqual(
+    env.byId.get("wips-office-communal-tasks").querySelectorAll(".kanban-card").map((c) => c.dataset.taskTitle),
+    ["공용 진행"],
+  );
 });
 
 test("treats 공통 owner as shared schedule tasks and builds stepper + live ticker data", () => {
